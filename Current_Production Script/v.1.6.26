@@ -77,7 +77,7 @@ const RFF_FORMATTER_DATE_PROMPT = "Enter any date in the report month. Example: 
 
 const RFF_DASHBOARD_CONFIG_MAX_READ_COLS = 13;
 
-const RFF_ARCHIVE_SPREADSHEET_ID = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_ID") || "1Gmx1KC-pZw0U_DS5pBmlhrQm84C19R5hzdqzy4vR87o";
+const RFF_ARCHIVE_SPREADSHEET_ID = "1Gmx1KC-pZw0U_DS5pBmlhrQm84C19R5hzdqzy4vR87o";
 
 const RFF_ENABLE_AUTO_ARCHIVE_RAW_DATA = false;
 
@@ -85,7 +85,7 @@ const RFF_DELETE_LOCAL_RAW_AFTER_ARCHIVE = true;
 
 const RFF_TEMPLATE_FIRST_BUILD_SHRINK_TO_TARGET = false;
 
-const RFF_OUTPUT_EXTEND_TEMPLATE_FORMATTING = false;
+const RFF_OUTPUT_EXTEND_TEMPLATE_FORMATTING = true;
 
 const RFF_SKIP_DUPLICATE_TEMPLATE_FORMAT_ENFORCEMENT = false;
 
@@ -180,7 +180,7 @@ const INDEX_DATA_START_ROW = 5;
 
 const INDEX_BUFFER_COLUMN = 5;
 
-const INDEX_TOTAL_COLUMNS = 4;
+const INDEX_TOTAL_COLUMNS = 9;
 
 const INDEX_FIXED_ROW_COUNT = 100;
 
@@ -559,8 +559,12 @@ function styleDashboard_(sheet) {
   });
 
 
-  const filter = sheet.getFilter();
-  if (filter) filter.remove();
+  try {
+    const filter = sheet.getFilter();
+    if (filter) filter.remove();
+  } catch (err) {
+    Logger.log("Dashboard filter remove skipped: " + err.message);
+  }
 }
 
 function setupReportFormattingDashboard() {
@@ -676,8 +680,12 @@ function writeDashboardDefaultsFast_(sheet) {
     }
   });
 
-  const filter = sheet.getFilter();
-  if (filter) filter.remove();
+  try {
+    const filter = sheet.getFilter();
+    if (filter) filter.remove();
+  } catch (err) {
+    Logger.log("Dashboard filter remove skipped: " + err.message);
+  }
   sheet.setFrozenRows(1);
 }
 
@@ -1647,13 +1655,21 @@ function safeSheetName_(value) {
 }
 
 
+function compareValues_(left, right) {
+  return normalizeText_(left) === normalizeText_(right);
+}
 
+function toBool_(value) {
+  return parseBoolean_(value);
+}
 
+function truthy_(value) {
+  return parseBoolean_(value);
+}
 
-
-
-
-
+function toNumber_(value, fallback) {
+  return numberOrDefault_(value, fallback || 0);
+}
 
 function resizeSheetMinimum_(sheet, rowCount, colCount) {
   const currentRows = sheet.getMaxRows();
@@ -2621,7 +2637,6 @@ const ML_MENU_CALLBACKS = Object.freeze({
   ]),
   sheetLayout: Object.freeze([
     "enforceGlobalSheetSortOrder_",
-    "refreshCloudArchiveIndex",
     "hideMonthlyImportSheets",
     "archiveMonthlyImportSheets",
     "hideMonthlyActiveSheets",
@@ -2687,7 +2702,6 @@ function onOpen() {
 
   const sheetLayoutMenu = ui.createMenu("⚙️ Sheet & Layout Management")
     .addItem("🧭 Enforce Global Tab Sorting Order", "enforceGlobalSheetSortOrder_")
-    .addItem("☁️ Refresh Cloud Archive Index", "refreshCloudArchiveIndex")
     .addSubMenu(monthlyImportSheetsMenu)
     .addSubMenu(monthlyActiveSheetsMenu)
     .addSubMenu(templatesMenu)
@@ -6519,7 +6533,6 @@ function deleteSheetIfExists_(ss, sheetName, protectedName1, protectedName2) {
 
   if (replacement) ss.setActiveSheet(replacement);
   ss.deleteSheet(sheet);
-  clearMonthlySheetLookupCache_();
 }
 
 function writeBannerReportDates_(sheet, reportDate) {
@@ -8313,7 +8326,56 @@ function getRawDataDemoPSourceHeaders_() {
   ];
 }
 
-
+function getRawDataDisallowedWorkingColumns_() {
+  return [
+    "Banner Summary",
+    "Phone 1 - Label",
+    "Phone 1 - Value",
+    "Phone 2 - Label",
+    "Phone 2 - Value",
+    "Phone 3 - Label",
+    "Phone 3 - Value",
+    "Phone 4 - Label",
+    "Phone 4 - Value",
+    "Address 1 - Street",
+    "Custom Field 1 - Label",
+    "Custom Field 1 - Value",
+    "Contact - 1",
+    "Contact - 2",
+    "Contact - 3",
+    "Contact - 4",
+    "Contact - 5",
+    "Contact - 6",
+    "Contact - 7",
+    "Contact - 8",
+    "Contact - Summary",
+    "Sort Order",
+    "Participant Name",
+    "IDT Meeting Date",
+    "Care Plan Start Date",
+    "Enrollment Date",
+    "Last Care Plan",
+    "Next Care Plan Due",
+    "CP Type",
+    "CP Updated",
+    "Equipment",
+    "Face Sheet",
+    "HHA",
+    "HHA CP",
+    "HHA CP link",
+    "HHA ISR",
+    "HHA ISR link",
+    "O2 Auth",
+    "O2 Auth link",
+    "O2 Education",
+    "PAP Auth",
+    "PAP Auth link",
+    "PAP Education",
+    "PAP Supplies",
+    "PERS Auth",
+    "PERS Auth Link",
+  ];
+}
 
 function isOngoingOutputSheetType_(sheetType) {
   const value = String(sheetType || "").trim();
@@ -10087,11 +10149,60 @@ notify_(
 }
 
 function getOrBuildMonthlyChangeReport_(ss, monthParts, currentDemo, previousDemo, timing) {
-  const reportSheet = getMonthlySheetByPrefixAndDate_(ss, MONTHLY_CHANGE_REPORT_PREFIX, monthParts.firstDay, monthParts.lastDay);
-  if (reportSheet) return reportSheet;
-  return buildMonthlyChangeReportForMonth_(monthParts, timing);
-}
+  let reportSheet = getMonthlySheetByPrefixAndDate_(ss, MONTHLY_CHANGE_REPORT_PREFIX, monthParts.firstDay, monthParts.lastDay);
 
+
+  if (reportSheet) return reportSheet;
+
+
+  if (!currentDemo) {
+    throw new Error("Current month Raw Data was not found. Format Raw Data first.");
+  }
+
+
+  if (!previousDemo) {
+    throw new Error("Previous month Raw Data was not found. Format the previous Raw Data first.");
+  }
+
+
+
+
+  const sectionData = compareRawDemoPForSectionReport_(previousDemo, currentDemo, monthParts);
+  markRuntimeStep_(timing, "Monthly Change datasets compiled in-memory");
+  const totalPMRs =
+    sectionData.enrollmentPMRs.size +
+    sectionData.disenrollmentPMRs.size +
+    sectionData.demographicPMRs.size +
+    sectionData.caseloadPMRs.size +
+    sectionData.contactPMRs.size +
+    sectionData.bannerPMRs.size +
+    sectionData.otherPMRs.size;
+
+
+  if (totalPMRs === 0) return null;
+
+
+  const reportName = buildMonthlySheetName_(MONTHLY_CHANGE_REPORT_PREFIX, monthParts.firstDay, monthParts.lastDay);
+  const dashboard = loadDashboardConfig_();
+  const sheetDef = getSheetDefinitionByType_(dashboard, SHEET_TYPE.MONTHLY_CHANGE);
+  const template = ss.getSheetByName(sheetDef.templateName);
+  if (!template) throw new Error("Template not found: " + sheetDef.templateName + ". Run Create / Refresh All Templates first.");
+  reportSheet = template.copyTo(ss);
+  reportSheet.showSheet();
+  setUniqueSheetName_(reportSheet, reportName);
+  markRuntimeStep_(timing, "Monthly Change report sheet created from template");
+
+  buildMonthlyChangeReportSectionLayout_(reportSheet, currentDemo, sectionData.currentData.headers, monthParts);
+  markRuntimeStep_(timing, "Monthly Change section layout prepared");
+  populateMonthlyChangeReportSections_(reportSheet, sectionData, monthParts);
+  markRuntimeStep_(timing, "Monthly Change section rows populated");
+  formatMonthlyChangeReportSectionSheet_(reportSheet, sectionData.currentData.headers);
+  markRuntimeStep_(timing, "Monthly Change report drawn and subheaders formatted");
+  setUniqueSheetName_(reportSheet, reportName);
+
+
+  return reportSheet;
+}
 
 
 function compareRawDemoPForSectionReport_(previousDemo, currentDemo, monthParts) {
@@ -11237,11 +11348,6 @@ function createMasterList() {
       writeRuntimeTimingReport_(timing);
       return;
     }
-    const demoHeaders = getHeaders_(demoSheet, HEADER_ROW);
-    const demoHeaderMap = buildHeaderIndexMap_(demoHeaders);
-    if (demoHeaderMap["Primary PMR Row"] === undefined) {
-      throw new Error("Dependency Failure: Demo P has not been fully processed. Missing Primary PMR Row.");
-    }
     const masterName = buildMonthlySheetName_(MASTER_LIST_PREFIX, monthParts.firstDay, monthParts.lastDay);
     masterSheet = ss.getSheetByName(masterName);
     if (masterSheet) {
@@ -11613,36 +11719,65 @@ function createIndexSheet() {
     RFF_BASE_TEMPLATE_NAME
   ]);
 
+  const archiveRows = [];
+  try {
+    const archiveSs = SpreadsheetApp.openById(RFF_ARCHIVE_SPREADSHEET_ID);
+    archiveSs.getSheets().forEach(function(ash) {
+      archiveRows.push([
+        ash.getName(),
+        '=HYPERLINK("https://docs.google.com/spreadsheets/d/' + RFF_ARCHIVE_SPREADSHEET_ID + '/edit#gid=' + ash.getSheetId() + '","Open Archive Tab")',
+        ash.isSheetHidden() ? "Archived (Hidden)" : "Visible in Cold Storage",
+        "Drive Cloud File"
+      ]);
+    });
+    archiveRows.sort((a, b) => a[0].localeCompare(b[0]));
+  } catch (err) {
+    archiveRows.push(["Archive Spreadsheet Unreachable", "", "Verify permissions/ID", ""]);
+  }
+
+  const totalRows = Math.max(localRows.length, archiveRows.length);
   const finalIndexMatrix = [
-    ["Active Operational Sheets Workspace", "", "", ""],
-    ["Generated", new Date(), "", ""],
-    ["", "", "", ""],
-    ["Section", "Sheet Tab Name", "Workspace Link", "Visibility"]
+    ["Active Operational Sheets Workspace", "", "", "", "", "External Drive Cold-Storage Archives", "", "", ""],
+    ["Generated", new Date(), "", "", "", "Archive File ID", RFF_ARCHIVE_SPREADSHEET_ID, "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["Section", "Sheet Tab Name", "Workspace Link", "Visibility", "", "Archive Sheet Name", "Link to Sheet", "Status", "Location"]
   ];
 
   if (finalIndexMatrix.length !== INDEX_HEADER_ROW_COUNT || INDEX_DATA_START_ROW !== INDEX_HEADER_ROW_COUNT + 1) {
     throw new Error("Index Sheet header matrix must remain exactly 4 rows so records start on row 5.");
   }
 
-  localRows.forEach(function(row) {
-    finalIndexMatrix.push(row);
-  });
+  for (let i = 0; i < totalRows; i++) {
+    const localPart = localRows[i] || ["", "", "", ""];
+    const archivePart = archiveRows[i] || ["", "", "", ""];
+    finalIndexMatrix.push([
+      localPart[0], localPart[1], localPart[2], localPart[3],
+      "",
+      archivePart[0], archivePart[1], archivePart[2], archivePart[3]
+    ]);
+  }
 
-  resizeSheetGrid_(sheet, INDEX_FIXED_ROW_COUNT, 4);
-  sheet.getRange(1, 1, finalIndexMatrix.length, 4).setValues(finalIndexMatrix);
+  resizeSheetGrid_(sheet, INDEX_FIXED_ROW_COUNT, INDEX_TOTAL_COLUMNS);
+  sheet.getRange(1, 1, finalIndexMatrix.length, INDEX_TOTAL_COLUMNS).setValues(finalIndexMatrix);
 
   sheet.getRange(1, 1, 1, 4).merge().setFontSize(12).setFontWeight("bold").setBackground(theme.level3).setFontColor("#FFFFFF");
+  sheet.getRange(1, 6, 1, 4).merge().setFontSize(12).setFontWeight("bold").setBackground("#79b5d2").setFontColor("#FFFFFF");
   sheet.getRange(4, 1, 1, 4).setFontWeight("bold").setBackground(theme.level2);
+  sheet.getRange(4, 6, 1, 4).setFontWeight("bold").setBackground("#9fcadf");
   sheet.getRange(2, 1, 1, 4).setBackground(theme.level4);
-  sheet.getRange(3, 1, 1, 4).setBackground("#FFFFFF");
+  sheet.getRange(2, 6, 1, 4).setBackground("#f2f7f9");
+  sheet.getRange(3, 1, 1, 9).setBackground("#FFFFFF");
 
   const dataRowCount = Math.max(finalIndexMatrix.length - 4, 0);
   if (dataRowCount > 0) {
-    const backgrounds = [];
+    const leftBackgrounds = [];
+    const rightBackgrounds = [];
     for (let r = 0; r < dataRowCount; r++) {
-      backgrounds.push(new Array(4).fill(r % 2 === 0 ? theme.level4 : "#FFFFFF"));
+      leftBackgrounds.push(new Array(4).fill(r % 2 === 0 ? theme.level4 : "#FFFFFF"));
+      rightBackgrounds.push(new Array(4).fill(r % 2 === 0 ? "#f2f7f9" : "#FFFFFF"));
     }
-    sheet.getRange(5, 1, dataRowCount, 4).setBackgrounds(backgrounds);
+    sheet.getRange(5, 1, dataRowCount, 4).setBackgrounds(leftBackgrounds);
+    sheet.getRange(5, 6, dataRowCount, 4).setBackgrounds(rightBackgrounds);
     const sectionRows = [];
     for (let r = 5; r <= finalIndexMatrix.length; r++) {
       const label = String(finalIndexMatrix[r - 1][0] || "");
@@ -11657,75 +11792,14 @@ function createIndexSheet() {
     }
   }
 
-  [1, 2, 3, 4].forEach(function(col) {
-    sheet.setColumnWidth(col, 150);
-  });
+  sheet.getRange(1, INDEX_BUFFER_COLUMN, finalIndexMatrix.length, 1).setBackground("#EDEDED");
+  sheet.setColumnWidth(INDEX_BUFFER_COLUMN, 30);
+  [1, 2, 3, 4, 6, 7, 8, 9].forEach(col => sheet.setColumnWidth(col, 150));
 
   sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
   applyGlobalDefaultRowHeightsToSheet_(sheet, "Index Dashboard");
   return sheet;
 }
-
-function refreshCloudArchiveIndex() {
-  return runFrameworkTimed_("Refresh Cloud Archive Index", function(timing) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const dashboard = loadDashboardConfig_();
-    const globals = dashboard.globals || {};
-    const theme = getThemeColorsFromBase_("#668BCC", globals);
-    const sheetName = "Archive Index";
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-    } else {
-      try {
-        sheet.getDataRange().clearContent().clearFormat().breakApart();
-      } catch (err) {
-        Logger.log("Archive Index reset skipped: " + err.message);
-      }
-    }
-
-    const archiveRows = [];
-    const archiveSs = SpreadsheetApp.openById(RFF_ARCHIVE_SPREADSHEET_ID);
-    archiveSs.getSheets().forEach(function(ash) {
-      archiveRows.push([
-        ash.getName(),
-        '=HYPERLINK("https://docs.google.com/spreadsheets/d/' + RFF_ARCHIVE_SPREADSHEET_ID + '/edit#gid=' + ash.getSheetId() + '","Open Archive Tab")',
-        ash.isSheetHidden() ? "Archived (Hidden)" : "Visible in Cold Storage",
-        "Drive Cloud File"
-      ]);
-    });
-    archiveRows.sort(function(a, b) { return a[0].localeCompare(b[0]); });
-
-    const rows = [
-      ["External Drive Cold-Storage Archives", "", "", ""],
-      ["Generated", new Date(), "Archive File ID", RFF_ARCHIVE_SPREADSHEET_ID],
-      ["", "", "", ""],
-      ["Archive Sheet Name", "Link to Sheet", "Status", "Location"]
-    ].concat(archiveRows);
-
-    resizeSheetGrid_(sheet, Math.max(INDEX_FIXED_ROW_COUNT, rows.length), 4);
-    sheet.getRange(1, 1, rows.length, 4).setValues(rows);
-    sheet.getRange(1, 1, 1, 4).merge().setFontSize(12).setFontWeight("bold").setBackground(theme.level3).setFontColor("#FFFFFF");
-    sheet.getRange(2, 1, 1, 4).setBackground(theme.level4);
-    sheet.getRange(3, 1, 1, 4).setBackground("#FFFFFF");
-    sheet.getRange(4, 1, 1, 4).setFontWeight("bold").setBackground(theme.level2);
-    if (archiveRows.length) {
-      const backgrounds = archiveRows.map(function(row, index) {
-        return new Array(4).fill(index % 2 === 0 ? theme.level4 : "#FFFFFF");
-      });
-      sheet.getRange(5, 1, archiveRows.length, 4).setBackgrounds(backgrounds);
-    }
-    [1, 2, 3, 4].forEach(function(col) {
-      sheet.setColumnWidth(col, 180);
-    });
-    sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
-    applyGlobalDefaultRowHeightsToSheet_(sheet, "Archive Index");
-    markFrameworkStep_(timing, "Cloud Archive Index refreshed", "Archive tabs indexed: " + archiveRows.length);
-    notify_("Cloud Archive Index refreshed. Archive tabs indexed: " + archiveRows.length + ".");
-    return sheet;
-  });
-}
-
 
 function generateArchiveFileIndex_() {
   return createIndexSheet();
@@ -14233,7 +14307,7 @@ const RFF_SYSTEM_SHEET_BORDER_COLOR = "#cccccc";
 
 const RFF_DASHBOARD_QUALITY_MIN_SECTION_ROWS = 5;
 
-let RFF_DASHBOARD_QUALITY_DEFER_WRITES_ = true;
+let RFF_DASHBOARD_QUALITY_DEFER_WRITES_ = false;
 
 function normalizeSectionRowForWidth_(row, width) {
   const out = (row || []).slice(0, width);
@@ -15527,10 +15601,14 @@ function normalizeFrameworkHealthCheckRows_(rows) {
 
 function getRequiredHelperFunctionNames_() {
   return [
+    "toBool_",
+    "truthy_",
+    "toNumber_",
     "normalizeHeader_",
     "normalizeText_",
     "normalizeKey_",
     "toWrapStrategy_",
+    "compareValues_",
     "normalizeHex_",
     "safeSheetName_"
   ];
