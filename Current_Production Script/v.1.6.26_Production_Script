@@ -1,5 +1,9 @@
 /**
+<<<<<<< HEAD
  * Master List Framework v1.6.26.3 Full Script
+=======
+ * Master List Framework v1.6.26.2 Full Script
+>>>>>>> origin/main
  *
  * Required section structure for this and all future full-script rebuilds:
  * 1. CONFIGURATION
@@ -29,7 +33,11 @@
 // CONFIGURATION
 // ============================================================================
 
+<<<<<<< HEAD
 const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.3";
+=======
+const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.2";
+>>>>>>> origin/main
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
