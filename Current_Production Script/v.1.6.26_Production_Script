@@ -1,5 +1,5 @@
 /**
- * Master List Framework v1.6.26.3 Full Script
+ * Master List Framework v1.6.26.4 Full Script
  *
  * Required section structure for this and all future full-script rebuilds:
  * 1. CONFIGURATION
@@ -29,7 +29,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.3";
+const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.4";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -88,8 +88,6 @@ const RFF_TEMPLATE_FIRST_BUILD_SHRINK_TO_TARGET = false;
 const RFF_OUTPUT_EXTEND_TEMPLATE_FORMATTING = true;
 
 const RFF_SKIP_DUPLICATE_TEMPLATE_FORMAT_ENFORCEMENT = false;
-
-const RFF_REPAIR_DATE_FORMATS_DURING_SECTION_G = true;
 
 const RFF_TEMPLATE_SIGNATURE_MAX_CHARS = 8500;
 
@@ -660,9 +658,9 @@ function writeDashboardDefaultsFast_(sheet) {
   for (let r = 0; r < rows.length; r++) {
     const first = String(rows[r][0] || "").trim();
     if (first.indexOf("SECTION ") === 0) {
-      sectionRanges.push(sheet.getRange(r + 1, 1, 1, width).getA1Notation());
+      sectionRanges.push(rowColToA1_(r + 1, 1) + ":" + rowColToA1_(r + 1, width));
       if (r + 2 <= rows.length) {
-        sectionHeaderRanges.push(sheet.getRange(r + 2, 1, 1, width).getA1Notation());
+        sectionHeaderRanges.push(rowColToA1_(r + 2, 1) + ":" + rowColToA1_(r + 2, width));
       }
     }
   }
@@ -806,13 +804,9 @@ function hideOldDisenrolledRows_(sheet) {
       .sort(function(a, b) { return b.getTime() - a.getTime(); })[0];
     if (matchedDate && matchedDate.getTime() < cutoff.getTime()) rowsToHide.push(DATA_START_ROW + index);
   });
-  rowsToHide.forEach(function(rowNumber) {
-    try {
-      sheet.hideRows(rowNumber);
-    } catch (err) {
-      Logger.log("Disenrolled old-row hide skipped at row " + rowNumber + ": " + err.message);
-    }
-  });
+  if (rowsToHide.length > 0) {
+    hideRowNumberBatches_(sheet, rowsToHide);
+  }
   return rowsToHide.length;
 }
 
@@ -2743,6 +2737,7 @@ function onOpen() {
 
   ui.createMenu("Master List")
     .addSubMenu(dataProcessingMenu)
+    .addItem("📅 Build Monthly Change Report", "buildMonthlyChangeReport")
     .addSubMenu(sheetLayoutMenu)
     .addSubMenu(quickStartMenu)
     .addSubMenu(maintenanceMenu)
@@ -5572,7 +5567,7 @@ function formatMonthlyDashboardSheetFromSource_(sourceSheet, sheetType, monthPar
     outputSheet.getRange("A1").setValue(sheetDef.reportTitle || sheetType);
     if (titleInfoText) outputSheet.getRange("C1").setValue(titleInfoText);
   } catch (err) {
-    Logger.log("Could not write " + sheetType + " title info: " + err.message);
+    throw new Error("Fatal: Could not write title info: " + err.message);
   }
   lockFinalOutputRowHeights_(outputSheet, sheetType);
   markFrameworkStep_(timing, "Locked monthly dashboard row heights: " + outputName);
@@ -7279,13 +7274,18 @@ function applyGovernedTextAndNumberFormats_(sheet, dashboard, headers, dataStart
     if (!format) {
       format = columnDef.dateColumn || isDateLikeHeader_(header) ? (globals.defaultDateFormat || "mm/dd/yyyy") : "@";
     }
-    const rangeA1 = sheet.getRange(startRow, index + 1, rows, 1).getA1Notation();
+    const column = index + 1;
+    const rangeA1 = rowColToA1_(startRow, column) + ":" + rowColToA1_(startRow + rows - 1, column);
     if (!formatsByA1[format]) formatsByA1[format] = [];
     formatsByA1[format].push(rangeA1);
   });
 
   Object.keys(formatsByA1).forEach(function(format) {
-    sheet.getRangeList(formatsByA1[format]).setNumberFormat(format);
+    try {
+      sheet.getRangeList(formatsByA1[format]).setNumberFormat(format);
+    } catch (err) {
+      throw new Error("Governed text/number format failed for " + sheet.getName() + " with format " + format + ": " + err.message);
+    }
   });
 }
 
@@ -7700,7 +7700,7 @@ function formatCarePlanDueOrUnlockedFromDashboard_(sheetType, promptTitle, start
       outputSheet.getRange("A1").setValue(sheetDef.reportTitle || sheetType);
       if (titleInfoText) outputSheet.getRange("C1").setValue(titleInfoText);
     } catch (err) {
-      Logger.log("Could not write " + sheetType + " title info: " + err.message);
+      throw new Error("Fatal: Could not write title info: " + err.message);
     }
 
 
@@ -10059,19 +10059,6 @@ function buildColumnSignaturesForSection_(items, headerMap, columnsToCompare) {
   return signatures;
 }
 
-function buildColumnSignatureForSection_(items, headerMap, columnsToCompare) {
-  return (items || [])
-    .map(item => {
-      return columnsToCompare.map(header => {
-        const idx = headerMap[header];
-        if (idx === undefined || idx === -1) return "";
-        return normalizeCompareValue_(item.values[idx]);
-      }).join("~");
-    })
-    .sort()
-    .join("||");
-}
-
 function compareRawDemoPForChanges_(previousDemo, currentDemo, monthParts) {
   const previousData = getRawDemoPDataForCompare_(previousDemo);
   const currentData = getRawDemoPDataForCompare_(currentDemo);
@@ -11411,7 +11398,7 @@ function createIndexSheet() {
     for (let r = 5; r <= finalIndexMatrix.length; r++) {
       const label = String(finalIndexMatrix[r - 1][0] || "");
       if (["Current Sheets", "Imported Data", "System Sheets", "Templates"].indexOf(label) !== -1) {
-        sectionRows.push(sheet.getRange(r, 1, 1, 4).getA1Notation());
+        sectionRows.push(rowColToA1_(r, 1) + ":" + rowColToA1_(r, 4));
       }
     }
     if (sectionRows.length) {
@@ -12893,42 +12880,32 @@ function moveDisenrolledPMRsFromDemoPToExclusion_(demoSheet, monthParts) {
     return result;
   }
 
-  const keepRows = [];
-  let removedCount = 0;
+  const rowNumbersToDelete = [];
   const rowsToAppendByPMR = new Map();
 
-  // 3. SEGREGATE RETAINED PARTICIPANTS FROM EXCLUDED BLOCKS
-  values.forEach(function(row) {
+  // 3. COLLECT DISENROLLED PARTICIPANT ROW NUMBERS FOR PHYSICAL DELETION
+  values.forEach(function(row, offset) {
     const pmr = normalizePMR_(row[pmrIdx]);
-    if (!pmr || !workspaceDisenrolledPMRs.has(pmr)) {
-      keepRows.push(row);
-      return;
-    }
+    if (!pmr || !workspaceDisenrolledPMRs.has(pmr)) return;
 
     if (!rowsToAppendByPMR.has(pmr)) {
       rowsToAppendByPMR.set(pmr, []);
     }
     rowsToAppendByPMR.get(pmr).push(row);
-    removedCount++;
+    rowNumbersToDelete.push(DATA_START_ROW + offset);
   });
 
   result.pmrsRemoved = workspaceDisenrolledPMRs.size;
-  result.rowsRemoved = removedCount;
+  result.rowsRemoved = rowNumbersToDelete.length;
 
   // Bulk write new delta rows directly into your database sheet
   result.rowsCopied = appendDisenrolledDeltasToExclusionSheet_(exclusionSheet, headers, rowsToAppendByPMR, monthParts);
 
-  // 4. BULK FLUSH DISENROLLED WORKSPACE LINES
-  demoDataRange.clearContent();
-  if (keepRows.length > 0) {
-    demoSheet.getRange(DATA_START_ROW, 1, keepRows.length, lastCol).setValues(keepRows);
+  // 4. BULK DELETE DISENROLLED WORKSPACE LINES AND COLLAPSE GRID BUFFER
+  if (rowNumbersToDelete.length > 0) {
+    deleteRowNumberBatches_(demoSheet, rowNumbersToDelete);
   }
-
-  const newLastRow = DATA_START_ROW + keepRows.length - 1;
-  const maxRows = demoSheet.getMaxRows();
-  if (maxRows > newLastRow) {
-    demoSheet.getRange(newLastRow + 1, 1, maxRows - newLastRow, lastCol).clearContent().breakApart();
-  }
+  trimExcessRows_(demoSheet, 500);
 
   clearSheetRuntimeCachesForSheet_(demoSheet);
   clearSheetRuntimeCachesForSheet_(exclusionSheet);
