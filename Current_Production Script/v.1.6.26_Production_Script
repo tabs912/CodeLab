@@ -29,7 +29,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.6";
+const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.7";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -6343,14 +6343,18 @@ function collectWorkflowSyncVerificationRows_() {
 }
 
 function runFrameworkSmokeValidation() {
-  const results = collectFrameworkSmokeValidationRows_();
+  const healthRows = collectFrameworkHealthCheckRows_();
+  writeFrameworkHealthCheckReport_(healthRows);
+  const results = healthRows.filter(function(row) {
+    return String(row && row[0] || "") === "Runtime Smoke Harness";
+  });
   const failures = results.filter(function(row) {
     return String(row && row[2] || "").trim().toUpperCase() === "FAIL";
   });
   if (failures.length) {
     throw new Error("Framework smoke validation failed: " + failures.map(function(row) { return row[1] + " - " + row[3]; }).join(" | "));
   }
-  notify_("Framework smoke validation passed: " + results.length + " checks.");
+  notify_("Framework smoke validation passed and Section H saved: " + results.length + " checks.");
   return results;
 }
 
