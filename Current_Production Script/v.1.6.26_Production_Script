@@ -29,7 +29,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.5";
+const MASTER_LIST_MERGE_ML_VERSION = "1.6.26.6";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -2647,7 +2647,8 @@ const ML_MENU_CALLBACKS = Object.freeze({
   quickStart: Object.freeze([
     "quickSystemSetup",
     "quickBuildAllTemplates",
-    "runDashboardQualityFull"
+    "runDashboardQualityFull",
+    "runFrameworkSmokeValidation"
   ]),
   maintenanceRebuild: Object.freeze([
     "runDashboardQualityStartUp",
@@ -2714,7 +2715,8 @@ function onOpen() {
   const qualityMenu = ui.createMenu("👌 Quality")
     .addItem("Dashboard Quality Start up", "runDashboardQualityStartUp")
     .addItem("Dashboard Quality Validate Templates", "runDashboardQualityValidateTemplates")
-    .addItem("Dashboard Quality Workflow", "runDashboardQualityFull");
+    .addItem("Dashboard Quality Workflow", "runDashboardQualityFull")
+    .addItem("Framework Smoke Validation", "runFrameworkSmokeValidation");
 
   const formatSheetsMenu = ui.createMenu("📝 Format Sheets")
     .addItem("Banner", "formatBannerReport")
@@ -6328,6 +6330,7 @@ function collectFrameworkHealthCheckRows_() {
   appendRequiredFunctionChecks_(results, "Template Functions", getRequiredTemplateFunctionNames_());
   appendRequiredFunctionChecks_(results, "Validation Functions", getRequiredValidationFunctionNames_());
   appendRequiredFunctionChecks_(results, "Timing Functions", getRequiredTimingFunctionNames_());
+  collectFrameworkSmokeValidationRows_().forEach(function(row) { results.push(row); });
   return results;
 }
 
@@ -6337,6 +6340,67 @@ function collectWorkflowSyncVerificationRows_() {
     ["Primary PMR Assignment", "Sequential Data Check", "PASS", "Primary PMR logic operational"],
     ["Source Map Integrity", "Composite Key Mapping", "PASS", "Source map builders operational"]
   ];
+}
+
+function runFrameworkSmokeValidation() {
+  const results = collectFrameworkSmokeValidationRows_();
+  const failures = results.filter(function(row) {
+    return String(row && row[2] || "").trim().toUpperCase() === "FAIL";
+  });
+  if (failures.length) {
+    throw new Error("Framework smoke validation failed: " + failures.map(function(row) { return row[1] + " - " + row[3]; }).join(" | "));
+  }
+  notify_("Framework smoke validation passed: " + results.length + " checks.");
+  return results;
+}
+
+function collectFrameworkSmokeValidationRows_() {
+  const rows = [];
+  appendFrameworkSmokeValidationRow_(rows, "Zero-row formatting guards",
+    functionSourceContainsAll_(applyGovernedTextAndNumberFormats_, ["requestedRows < 1", "return;"]) &&
+    functionSourceContainsAll_(applyUniversalFastCanvasFormatting_, ["lastRow < DATA_START_ROW", "return;"]) &&
+    functionSourceContainsAll_(applyDemoPDateFormattingByHeader_, ["lastRow < DATA_START_ROW", "return;"]),
+    "Governed formatting, universal canvas, and Demo P date formatting guard no-data ranges");
+
+  appendFrameworkSmokeValidationRow_(rows, "Title write failures are fatal",
+    functionSourceContainsAll_(formatMonthlyDashboardSheetFromSource_, ["Fatal: Could not write title info", "throw new Error"]),
+    "Monthly/care-plan dashboard title writes throw on structural failure");
+
+  appendFrameworkSmokeValidationRow_(rows, "Demo P disenrollment deletes and trims",
+    functionSourceContainsAll_(moveDisenrolledPMRsFromDemoPToExclusion_, ["deleteRowNumberBatches_(demoSheet, rowNumbersToDelete)", "trimExcessRows_(demoSheet, 500)"]),
+    "Demo P disenrollment path physically deletes rows and enforces the 500-row buffer");
+
+  const contactHeaderMap = {
+    "Contact - First Name": 0,
+    "Contact - Last Name": 1,
+    "Relationship": 2,
+    "AD1 - Phone": 3
+  };
+  const contactMap = buildContactCompareMap_([
+    { values: ["Jane", "Doe", "Spouse", "555-0100"] },
+    { values: ["Jane", "Doe", "Spouse", "555-0100"] }
+  ], contactHeaderMap, "PMR1");
+  appendFrameworkSmokeValidationRow_(rows, "Duplicate contact keys remain distinct",
+    contactMap.size === 2 && Array.from(contactMap.keys()).some(function(key) { return key.indexOf("dup#") !== -1; }),
+    "Duplicate contact-key rows receive deterministic duplicate suffixes");
+
+  appendFrameworkSmokeValidationRow_(rows, "Monthly Change menu callback registered",
+    ML_MENU_CALLBACKS.dataProcessing.indexOf("buildMonthlyChangeReport") !== -1 &&
+    functionSourceContainsAll_(onOpen, ["Build Monthly Change Report", "buildMonthlyChangeReport"]),
+    "Monthly Change remains reachable from callback registry and the root menu");
+
+  return rows;
+}
+
+function appendFrameworkSmokeValidationRow_(rows, item, passed, notes) {
+  rows.push(["Runtime Smoke Harness", item, passed ? "PASS" : "FAIL", notes]);
+}
+
+function functionSourceContainsAll_(fn, tokens) {
+  const source = String(fn || "");
+  return (tokens || []).every(function(token) {
+    return source.indexOf(token) !== -1;
+  });
 }
 
 function runDashboardQualityMasterListHealthCheck_() {
@@ -15100,6 +15164,7 @@ function getRequiredMenuFunctionNames_() {
     "runDashboardQualityStartUp",
     "runDashboardQualityValidateTemplates",
     "runDashboardQualityFull",
+    "runFrameworkSmokeValidation",
     "createIndexSheet",
     "formatMonthlySheets",
     "buildDemoPFromScratch",
