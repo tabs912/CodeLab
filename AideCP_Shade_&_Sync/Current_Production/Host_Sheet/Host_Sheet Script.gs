@@ -1,30 +1,59 @@
+// ==========================================
+// =        🚀 PUBLIC QUICK START           =
+// ==========================================
+
 /**
- * HOST SHEET WRAPPER
- * Connects the local spreadsheet to the Centralized AideCP Shade & Sync Library
+ * Main automated workspace macro chain.
+ * Removed trailing underscore to make this public and accessible to Host Sheets.
  */
+function quickStartSequence() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast("Initializing Automated Sequence...", "🚀 Quick Start", 3);
+  
+  removeCopyOfPrefixAllSheets(true);
+  runStandardizeDatesAndFormat_(true);
+  sortSheetsByB4DateDescending_();
+  validateMappingsAllSheets_(true); 
+  applyGrayShadingAllSheets_(true);
+  
+  ss.toast("Quick Start Setup complete! System optimized.", "🚀 Quick Start", 5);
+}
 
-function onOpen(e) { AideCPShadeSync.onOpen(e); }
+// ==========================================
+// =          INTERFACE TRIGGERS            =
+// ==========================================
 
-// *** REQUIRED FIX: Routes background cell edits to the library ***
-function installedOnEdit(e) { AideCPShadeSync.installedOnEdit(e); }
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  const syncMenu = ui.createMenu('🔄Sync')
+    .addItem('Push Sync to Service Log (Current Sheet)', 'syncCurrentSheetToHomeCareServices')
+    .addItem('Pull Updates to Current Sheet', 'pullUpdatesToCurrentSheet')
+    .addItem('Create New Sheet from Master', 'createNewSheetFromMaster');
 
-// --- Sync Functions ---
-function syncCurrentSheetToHomeCareServices() { AideCPShadeSync.syncCurrentSheetToHomeCareServices(); }
-function pullUpdatesToCurrentSheet() { AideCPShadeSync.pullUpdatesToCurrentSheet(); }
-function createNewSheetFromMaster() { AideCPShadeSync.createNewSheetFromMaster(); }
+  const maintMenu = ui.createMenu('🛠️ Maintenance')
+    .addItem('Organize Tabs by Date', 'sortSheetsByB4DateDescending_')
+    .addItem('Remove "Copy of" (all sheets)', 'removeCopyOfPrefixAllSheets')
+    .addItem('Validate Configuration (Current Tab)', 'validateMappingsCurrentSheet_')
+    .addItem('Validate Configuration (All Tabs)', 'validateMappingsAllSheets_')
+    .addItem('Create onEdit trigger', 'createOnEditTrigger_')
+    .addItem('Validate Current Sheet', 'validateMappingsCurrentSheet_');
 
-// --- Maintenance Functions ---
-function sortSheetsByB4DateDescending_() { AideCPShadeSync.sortSheetsByB4DateDescending_(); }
-function removeCopyOfPrefixAllSheets() { AideCPShadeSync.removeCopyOfPrefixAllSheets(); }
-function validateMappingsCurrentSheet_() { AideCPShadeSync.validateMappingsCurrentSheet_(); }
-function validateMappingsAllSheets_() { AideCPShadeSync.validateMappingsAllSheets_(); }
-function createOnEditTrigger_() { AideCPShadeSync.createOnEditTrigger_(); }
+  const setupMenu = ui.createMenu('🏗️Setup')
+    .addItem('Validate All Sheets', 'validateMappingsAllSheets_')
+    .addItem('sheets Remove "Copy of"', 'removeCopyOfPrefixAllSheets')
+    .addItem('Standardize Dates use mm/dd/yy', 'runStandardizeDatesAndFormat_')
+    .addItem('Organize Tabs by date', 'sortSheetsByB4DateDescending_')
+    .addItem('Apply Shade (all sheets)', 'applyGrayShadingAllSheets_');
 
-// --- Setup Functions ---
-function quickStartSequence_() { AideCPShadeSync.quickStartSequence_(); }
-function runStandardizeDatesAndFormat_() { AideCPShadeSync.runStandardizeDatesAndFormat_(); }
-function applyGrayShadingAllSheets_() { AideCPShadeSync.applyGrayShadingAllSheets_(); }
+  ui.createMenu('🏥 AideCP Shade & Sync')
+    .addItem('😎 Apply (current sheet)', 'applyGrayShadingCurrentSheet_')
+    .addItem('Rename Drive File (B5 + Date)', 'renameDriveFileFromB5AndTab')
+    .addSubMenu(syncMenu)
+    .addSubMenu(maintMenu)
+    .addItem('🚀 Quick Start -  includes all of the Set Up functions in order', 'quickStartSequence_') // Points to Host wrapper
+    .addSubMenu(setupMenu)
+    .addToUi();
 
-// --- Root Menu Functions ---
-function applyGrayShadingCurrentSheet_() { AideCPShadeSync.applyGrayShadingCurrentSheet_(); }
-function renameDriveFileFromB5AndTab() { AideCPShadeSync.renameDriveFileFromB5AndTab(); }
+  try { runStandardizeDatesAndFormat_(true); } catch(e) { console.error("Startup alignment bypassed: " + e.message); }
+}

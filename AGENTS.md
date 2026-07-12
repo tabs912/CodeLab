@@ -1,829 +1,511 @@
-# EXHAUSTIVE GOOGLE APPS SCRIPT CODE REVIEW
+# CodeLab Engineering Agent Instructions
 
-You are acting as the Lead Google Apps Script Engineer and Code Auditor.
-
-Perform a complete, exhaustive review of the Google Apps Script code in this repository.
-
-## PRIMARY OBJECTIVE
-
-Review the entire script or library for:
-
-* Runtime errors
-* Logic errors
-* Missing dependencies
-* Undefined functions, variables, constants, or configuration values
-* Duplicate functions
-* Orphaned functions
-* Dead code
-* Unreachable code
-* Obsolete compatibility code
-* Performance bottlenecks
-* Excessive Spreadsheet service calls
-* Incorrect Google Apps Script API usage
-* Incorrect array indexing
-* Incorrect row or column calculations
-* Data-loss risks
-* Concurrency risks
-* Trigger risks
-* Library compatibility risks
-* Maintainability problems
-* Inconsistent naming
-* Incomplete error handling
-* Incomplete validation
-* Security or authorization concerns
-* Logging and diagnostic weaknesses
-
-Do not make assumptions based only on function names or comments. Trace the actual execution paths and dependencies.
+These instructions apply to all AI coding agents working within this repository.
 
 ---
 
-# REQUIRED STARTUP REVIEW
+# Purpose
 
-Before reviewing code:
+CodeLab is an engineering repository for reviewing, maintaining, improving, and producing production-quality software.
 
-1. Determine the repository root.
-2. Read `README.md`.
-3. Read `AGENTS.md`, `AGENT.md`, or other repository instructions if present.
-4. Read all specification, governance, architecture, mapping, and configuration documents.
-5. Identify the current approved production script or library entry point.
-6. Identify all supporting `.gs`, `.js`, `.html`, `.json`, `.txt`, and configuration files.
-7. Identify the Apps Script manifest, including `appsscript.json`, if present.
-8. Report any missing files required for a complete review.
+Repository-wide engineering standards are maintained in the Framework (or root spec folder for legacy repositories).
 
-Do not begin modifying code during the audit phase.
+Project-specific documentation supplements these standards but does not replace them unless explicitly documented.
 
 ---
 
-# PHASE 1 — REPOSITORY AND FILE INVENTORY
+# Startup
 
-Create a complete inventory showing:
+Before beginning work:
 
-* File name
-* File type
-* Purpose
-* Approximate responsibility
-* Whether it is production code, testing code, configuration, documentation, archived code, or unknown
-* Whether it appears to be loaded or referenced
-* Whether it contains global declarations
-* Whether it contains public library functions
-* Whether it contains triggers or menu entry points
+1. Read `README.md`.
+2. Determine the active project.
+3. Determine the requested task.
+4. Determine the requested review depth.
+5. Review applicable engineering standards from:
 
-Identify:
+```
+Framework/spec/
+```
 
-* Duplicate files
-* Outdated versions
-* Archived scripts located in production folders
-* Test code mixed into production code
-* Files that are not referenced
-* Conflicting copies of the same function
+or
 
----
+```
+spec/
+```
 
-# PHASE 2 — FUNCTION INVENTORY
+depending on repository structure.
 
-Build a complete function inventory.
+6. Review project documentation if it exists.
+7. Begin analysis.
 
-For every function, document:
-
-* Function name
-* File name
-* Parameters
-* Return value
-* Direct callers
-* Direct dependencies
-* Google Apps Script services used
-* Spreadsheet sheets or ranges accessed
-* Global variables or constants used
-* Side effects
-* Whether it reads data
-* Whether it writes data
-* Whether it deletes data
-* Whether it creates or removes sheets
-* Whether it is public, private, helper, trigger, menu function, test function, or library entry point
-* Whether it is reachable
-* Whether it appears duplicated
-* Whether it appears obsolete
-* Risk level
-
-Create a call graph from public entry points down through all helper functions.
-
-Do not classify a function as orphaned until all of the following have been checked:
-
-* Direct calls
-* Indirect calls
-* Trigger execution
-* Menu execution
-* Dynamic invocation
-* Function-name strings
-* `google.script.run`
-* Library consumers
-* Apps Script API execution
-* Time-driven triggers
-* Spreadsheet triggers
-* Form triggers
-* Web app handlers
-* HTML service callbacks
+Do not require project-specific documentation when none exists.
 
 ---
 
-# PHASE 3 — STATIC ERROR REVIEW
+# Repository Synchronization Policy
 
-Inspect all code for syntax and runtime risks, including:
+Repository synchronization should be performed only when repository state may have changed or when the requested work depends on recently uploaded repository files.
 
-* Missing braces, parentheses, commas, or quotes
-* Incorrect object or array syntax
-* Invalid Apps Script methods
-* Misspelled service methods
-* Undefined functions
-* Undefined constants
-* Undefined configuration keys
-* Scope errors
-* Shadowed variables
-* Accidental globals
-* Incorrect `this` usage
-* Incorrect callback scope
-* Incorrect use of arrow functions where Apps Script compatibility may matter
-* Missing return statements
-* Functions returning inconsistent data types
-* Incorrect default values
-* Null or undefined dereferencing
-* Incorrect date parsing
-* Incorrect comparison operators
-* Assignment used instead of comparison
-* Incorrect truthiness checks
-* Case-sensitive string comparison problems
-* Incorrect use of `getLastRow()` or `getLastColumn()`
-* Off-by-one row or column errors
-* Zero-based versus one-based indexing errors
-* Incorrect range dimensions
-* Mismatched array and range dimensions
-* Empty-array writes
-* Invalid sheet references
-* Invalid named-range references
-* Incorrect use of active spreadsheet, active sheet, or active range
-* Implicit dependence on user selection
-* Incorrect assumptions about headers or title rows
-* Missing sheet-existence checks
-* Missing data-existence checks
+Examples include:
 
-For each issue, identify:
+- Newly uploaded production scripts
+- Newly uploaded reports
+- Newly uploaded specifications
+- Newly uploaded documentation
+- User explicitly requests synchronization
+- Repository files cannot be located
+- Current workspace may be stale
 
-* Severity
-* File
-* Function
-* Relevant line or code block
-* Why it is a problem
-* Likely failure behavior
-* Recommended correction
+Before beginning a synchronization-dependent review:
 
----
+Verify repository status:
 
-# PHASE 4 — EXECUTION PATH REVIEW
+```bash
+git branch --show-current
+git status -sb
+git remote -v
+```
 
-Trace every major workflow from its entry point to completion.
+If `origin` is not configured:
 
-For each workflow, document:
+```bash
+git remote add origin https://github.com/tabs912/CodeLab.git
+```
 
-1. Entry function
-2. Validation steps
-3. Sheets accessed
-4. Data read
-5. In-memory transformations
-6. Data written
-7. Formatting applied
-8. Sheets created, copied, renamed, hidden, or deleted
-9. Rows deleted or filtered
-10. Logging performed
-11. Error handling
-12. Cleanup steps
-13. Final expected result
+If necessary:
 
-Identify any workflow that:
+```bash
+git remote set-url origin https://github.com/tabs912/CodeLab.git
+```
 
-* Can partially complete and leave corrupted output
-* Deletes data before validating inputs
-* Writes data before confirming range size
-* Creates duplicate sheets
-* Renames a sheet to an existing name
-* Depends on the active spreadsheet or active sheet
-* Continues after validation failure
-* Suppresses errors
-* Produces inconsistent output
-* Leaves temporary sheets, properties, locks, or triggers behind
+Refresh repository references:
+
+```bash
+git fetch origin --prune
+```
+
+Run the synchronization tool:
+
+```bash
+./Framework/tools/sync_workspace.sh
+```
+
+or
+
+```bash
+./tools/sync_workspace.sh
+```
+
+depending on repository structure.
+
+If requested files still cannot be located:
+
+- Report searched paths.
+- Report active branch.
+- Report repository status.
+- Do not assume files are missing until synchronization has been attempted.
 
 ---
 
-# PHASE 5 — DEPENDENCY AUDIT
+# Workspace Refresh
 
-Perform a full dependency audit.
+If the user indicates repository files were uploaded after the current workspace was created:
 
-Identify:
+Assume the workspace may be stale.
 
-* Missing helper functions
-* Missing constants
-* Missing configuration objects
-* Missing named ranges
-* Missing sheets
-* Missing library references
-* Missing OAuth scopes
-* Missing advanced services
-* Missing external API dependencies
-* Missing HTML files
-* Missing trigger installation functions
-* Missing manifest configuration
-* Circular dependencies
-* Hidden dependencies on execution order
-* Hidden dependencies on file load order
-* Hidden dependencies on prior function execution
-* Hidden dependencies on script properties, document properties, or user properties
+Before reporting missing files:
 
-Determine whether every referenced dependency is:
-
-* Defined
-* Reachable
-* Correctly scoped
-* Initialized before use
-* Compatible with library use
-* Documented
+1. Verify Git remote.
+2. Fetch repository updates.
+3. Synchronize workspace.
+4. Search again.
+5. Report searched locations.
 
 ---
 
-# PHASE 6 — GOOGLE APPS SCRIPT LIBRARY REVIEW
+# Branch Awareness
 
-Because this code may be used as an Apps Script library, specifically review:
+Many CodeLab reviews occur on project branches such as:
 
-* Which functions are intentionally public
-* Which functions unintentionally become public
-* Whether public function names are stable
-* Whether consumers rely on global variables
-* Whether private helpers are properly isolated
-* Whether library functions depend on the active spreadsheet
-* Whether the library incorrectly assumes container-bound execution
-* Whether consumer spreadsheets must pass spreadsheet IDs, sheet objects, ranges, or configuration
-* Whether mutable global state is used
-* Whether cache, properties, or locks are scoped correctly
-* Whether return values are serializable and appropriate for library consumers
-* Whether errors are meaningful to calling scripts
-* Whether library versioning is documented
-* Whether breaking changes exist
-* Whether deprecated functions need compatibility wrappers
-* Whether internal functions could conflict with consumer functions
-* Whether required OAuth scopes are documented
-* Whether installable triggers can safely call library functions
-* Whether trigger event objects are validated
-* Whether the library can be executed concurrently by multiple consumer spreadsheets
+- main
+- general
+- work
+- codex_Master_List
+- codex_AideCP_Shade_&_Sync
 
-Recommend a clear public API boundary.
+When reviewing repository artifacts uploaded to `main`:
 
-Separate functions into:
+- Fetch `origin/main`
+- Compare active branch against `origin/main`
+- Confirm requested files are visible before beginning analysis.
 
-* Public supported API
-* Internal helpers
-* Trigger handlers
-* Administrative functions
-* Diagnostic functions
-* Test-only functions
-* Deprecated functions
-* Removal candidates
+Never change branches without user approval.
 
 ---
 
-# PHASE 7 — PERFORMANCE REVIEW
+# Safety
 
-Inspect performance at the workflow, function, and loop level.
+Never automatically execute:
 
-Identify:
+- git reset --hard
+- git clean
+- git push --force
+- git push --force-with-lease
+- branch deletion
+- branch switching
 
-* `getValue()` or `setValue()` calls inside loops
-* `getRange()` calls inside loops
-* Repeated `getLastRow()` or `getLastColumn()` calls
-* Repeated sheet lookups
-* Repeated header lookups
-* Repeated calls to `SpreadsheetApp.flush()`
-* Repeated formatting calls
-* Row-by-row deletion
-* Column-by-column deletion
-* Cell-by-cell formatting
-* Repeated full-sheet reads
-* Repeated full-sheet writes
-* Unnecessary sorting
-* Unnecessary sheet copies
-* Excessive logging
-* Inefficient use of filters
-* Inefficient use of text finder
-* Inefficient use of `appendRow()`
-* Inefficient use of Maps, Sets, arrays, or object lookups
-* Repeated parsing of dates, headers, or identifiers
-* Algorithms with avoidable O(n²) behavior
-* Quota risks
-* Execution-time risks
-* Memory risks
-* Large-spreadsheet risks
+Never overwrite local work.
 
-For each major workflow, estimate:
+If synchronization cannot complete safely:
 
-* Number of spreadsheet reads
-* Number of spreadsheet writes
-* Number of formatting operations
-* Number of delete operations
-* Number of service calls inside loops
-* Approximate time complexity
-* Primary bottleneck
-
-Recommend optimizations based on:
-
-* One read
-* In-memory processing
-* One write
-* Batch formatting
-* Batch deletion
-* Cached header maps
-* Cached sheet references
-* Map or Set lookups
-* Reduced flush calls
-* Buffered logging
-* Locking only where needed
-
-Do not recommend changes that alter business logic unless explicitly identified.
+Stop and report why.
 
 ---
 
-# PHASE 8 — DATA INTEGRITY AND DELETION REVIEW
+# Project Discovery
 
-Treat all deletion, replacement, clearing, filtering, and sheet-removal code as high risk.
+Determine whether the request is for:
 
-Review every use of:
+- Production Project
+- Google Apps Script Library
+- General Script
+- Experimental Project
 
-* `clear()`
-* `clearContent()`
-* `clearFormat()`
-* `deleteRow()`
-* `deleteRows()`
-* `deleteColumn()`
-* `deleteColumns()`
-* `deleteSheet()`
-* `removeDuplicates()`
-* Filters
-* Sorting
-* Overwriting ranges
-* Replacing sheet contents
-* Copying templates over existing sheets
-
-For each destructive operation, verify:
-
-* The target sheet is correct
-* Header rows are protected
-* Title rows are protected
-* Data start row is correct
-* The range does not exceed actual data
-* Empty datasets are handled
-* The operation cannot affect unrelated sheets
-* The operation cannot delete the wrong reporting period
-* The operation cannot run before validation
-* The operation can recover or fail safely
-
-Identify every possible data-loss scenario.
+Adjust review depth accordingly.
 
 ---
 
-# PHASE 9 — CONCURRENCY, LOCKING, AND TRIGGER REVIEW
+# Project Review Order
+
+Unless instructed otherwise:
+
+Review in the following order:
+
+1. Current_Production
+2. Reports
+3. Audit_Summary
+4. README
+5. Project specifications
+6. Supporting scripts
+7. Remaining project files
+
+Current_Production is the governing implementation source.
+
+Reports validate production behavior.
+
+Audit summaries provide supplemental review information.
+
+Archived material is not governing unless explicitly requested.
+
+---
+
+# Library Projects
+
+For Google Apps Script Library projects:
+
+Review order:
+
+1. Library Current_Production
+2. Host_Sheet Current_Production
+3. Reports
+4. Integration
+5. Public API compatibility
+6. appsscript.json
+7. Deployment compatibility
+
+Treat the Library as the governing business logic source.
 
 Review:
 
-* Simple triggers
-* Installable triggers
-* Time-driven triggers
-* Edit triggers
-* Open triggers
-* Form-submit triggers
-* Web app handlers
-* Menu functions
-* Manual execution entry points
-
-Determine whether workflows could overlap.
-
-Inspect use of:
-
-* `LockService`
-* Script locks
-* Document locks
-* User locks
-* Properties used as busy flags
-* Temporary state
-* Cache
-* Trigger creation and deletion
-
-Identify:
-
-* Duplicate execution risks
-* Race conditions
-* Concurrent writes
-* Duplicate sheet creation
-* Partial output caused by overlapping executions
-* Stale lock or busy-state risks
-* Triggers calling functions with incompatible arguments
-* Trigger functions that depend on active user context
-
-Recommend the minimum safe locking strategy.
+- Public API
+- Library version
+- Host compatibility
+- OAuth scopes
+- Manifest
+- Trigger compatibility
+- Deployment readiness
 
 ---
 
-# PHASE 10 — ERROR HANDLING AND LOGGING REVIEW
+# Review Levels
 
-Inspect all:
+## Quick Review
 
-* `try/catch/finally` blocks
-* Silent catches
-* Rethrown errors
-* Custom error messages
-* Logger calls
-* Console calls
-* Spreadsheet logging
-* Timing reports
-* Validation reports
-* Toasts and UI alerts
-* Email notifications
+Use for:
 
-Identify:
+- Standalone scripts
+- General scripts
+- Error checking
+- Cleanup
+- Performance suggestions
 
-* Errors that are hidden
-* Errors that lose stack context
-* Errors that continue execution incorrectly
-* Errors that are too vague
-* Logging that exposes sensitive information
-* Logging that creates excessive spreadsheet growth
-* Logging that slows execution
-* Missing workflow start and completion records
-* Missing failure records
-* Missing row counts
-* Missing timing records
+Review only supplied code.
 
-Recommend a consistent error and diagnostic structure.
+Apply repository engineering standards.
+
+Do not perform full project audits.
 
 ---
 
-# PHASE 11 — SECURITY AND AUTHORIZATION REVIEW
+## Standard Review
+
+Use for:
+
+- Production reviews
+- Project reviews
+- Release readiness
+- Report comparisons
 
 Review:
 
-* OAuth scopes
-* External requests
-* API keys
-* Tokens
-* Credentials
-* Spreadsheet IDs
-* Drive file IDs
-* Email addresses
-* Personally identifiable information
-* Logs containing protected data
-* Script, user, and document properties
-* Web app access settings
-* HTML output
-* User-provided data
-* Formula injection
-* Spreadsheet formula creation
-* URL fetching
-* Email sending
-* Drive permissions
+- Current_Production
+- Reports
+- Documentation
+- Repository standards
 
-Identify any hard-coded secrets or sensitive identifiers.
-
-Do not expose secret values in the report. Report only their location and risk.
+Provide prioritized recommendations.
 
 ---
 
-# PHASE 12 — CODE QUALITY AND MAINTAINABILITY REVIEW
+## Exhaustive Review
 
-Review consistency of:
+Use only when explicitly requested.
 
-* Naming
-* Function size
-* File organization
-* Constants
-* Configuration
-* Comments
-* JSDoc
-* Return types
-* Parameter validation
-* Error messages
-* Logging
-* Header handling
-* Date handling
-* Sheet naming
-* Range handling
-* Service wrappers
-* Public API design
+Follow:
 
-Identify:
+```
+Framework/spec/EXHAUSTIVE_CODE_REVIEW_PROTOCOL.md
+```
 
-* Functions with too many responsibilities
-* Repeated logic
-* Copy-and-paste variants
-* Magic numbers
-* Magic strings
-* Inconsistent naming
-* Stale comments
-* Comments that describe old behavior
-* Excessive explanatory text inside production code
-* Complex functions that should be decomposed
-* Functions that should remain combined for performance
-* Premature abstractions
-* Over-engineered code
+or
 
-Do not recommend splitting code solely for style. Consider execution speed, traceability, and Apps Script file-loading behavior.
+```
+spec/EXHAUSTIVE_CODE_REVIEW_PROTOCOL.md
+```
+
+Deliver:
+
+- Executive Summary
+- Functional Summary
+- Function Inventory
+- Dependency Review
+- Architecture Review
+- Public API Review
+- Performance Review
+- Runtime Review
+- Orphan Code Report
+- Duplicate Code Report
+- Risk Assessment
+- Prioritized Recommendations
+- Testing Recommendations
+
+Do not modify code during an exhaustive review.
 
 ---
 
-# PHASE 13 — DUPLICATE, DEAD, AND ORPHAN CODE AUDIT
+# Development Rules
 
-Identify:
+Always:
 
-* Exact duplicate functions
-* Near-duplicate functions
-* Functions replaced by newer versions
-* Helpers used only by obsolete workflows
-* Constants with no references
-* Configuration keys with no references
-* Menus pointing to missing functions
-* Functions not reachable from any supported entry point
-* Test functions mixed into production
-* Commented-out code
-* Compatibility wrappers
-* Deprecated entry points
+- Preserve approved business logic.
+- Follow repository engineering standards.
+- Remove obsolete code when safe.
+- Remove duplicate code when safe.
+- Preserve backward compatibility unless instructed otherwise.
+- Consider dependencies before recommendations.
+- Recommend improvements before major rewrites.
 
-For every removal candidate, provide:
+Before recommending removal of any function verify:
 
-* Function or declaration name
-* File
-* Evidence that it is unused
-* Dependencies that would also become unused
-* Risk of removal
-* Whether removal is safe now or requires consumer verification
+- Direct callers
+- Indirect callers
+- Trigger references
+- Menu references
+- HTML references
+- Library exports
+- Dynamic invocation
 
-Do not delete any suspected public library function without explicitly flagging the potential breaking change.
+Never:
 
----
-
-# PHASE 14 — TESTABILITY REVIEW
-
-Determine whether the code can be safely tested.
-
-Identify tests needed for:
-
-* Empty sheets
-* Missing sheets
-* Missing headers
-* Duplicate headers
-* Renamed headers
-* Zero data rows
-* One data row
-* Large datasets
-* Duplicate identifiers
-* Blank identifiers
-* Invalid dates
-* Mixed date formats
-* Invalid configuration
-* Existing destination sheet
-* Template mismatch
-* Partial prior execution
-* Concurrent execution
-* API failure
-* Trigger execution
-* Library consumer execution
-* Authorization failure
-
-Separate proposed tests into:
-
-* Unit-like pure-function tests
-* Spreadsheet integration tests
-* Destructive workflow tests
-* Regression tests
-* Performance tests
-* Library compatibility tests
-
-Do not run destructive tests against production data.
+- Rewrite working projects from scratch.
+- Leave placeholder code.
+- Leave TODOs in production.
+- Rename public APIs without approval.
+- Remove code without dependency analysis.
 
 ---
 
-# PHASE 15 — SEVERITY CLASSIFICATION
+# Google Apps Script Standards
 
-Classify every finding as:
+Prefer:
 
-## CRITICAL
+- Batch reads
+- Batch writes
+- Cached sheet references
+- Cached headers
+- Cached configuration
+- Array processing
+- One-pass processing
+- Maps and Sets
+- In-memory transforms
 
-Likely to cause:
+Avoid:
 
-* Data loss
-* Corruption
-* Security exposure
-* Wrong reporting output
-* Complete workflow failure
-* Destructive action on the wrong sheet or range
-
-## HIGH
-
-Likely to cause:
-
-* Frequent runtime failure
-* Missing dependencies
-* Incorrect results
-* Trigger conflicts
-* Severe performance degradation
-* Library consumer failures
-
-## MEDIUM
-
-Likely to cause:
-
-* Edge-case failures
-* Maintainability problems
-* Inconsistent behavior
-* Difficult troubleshooting
-* Unnecessary service calls
-
-## LOW
-
-Includes:
-
-* Naming problems
-* Documentation gaps
-* Minor duplication
-* Nonessential cleanup
-* Style inconsistencies
-
-Separate confirmed defects from suspected risks.
-
-Use these labels:
-
-* Confirmed defect
-* Probable defect
-* Conditional risk
-* Optimization opportunity
-* Maintainability issue
-* Documentation issue
+- getValue() in loops
+- setValue() in loops
+- getRange() in loops
+- Cell-by-cell updates
+- Row-by-row deletion
+- Repeated SpreadsheetApp.flush()
+- Repeated Spreadsheet service calls
 
 ---
 
-# REQUIRED DELIVERABLES
+# Versioning
 
-Produce the following files or report sections.
+Production versions follow:
 
-## 1. Executive Review Summary
+```
+vX
+```
 
-Include:
+Production release
 
-* Overall health rating
-* Production readiness
-* Library readiness
-* Number of critical findings
-* Number of high findings
-* Number of medium findings
-* Number of low findings
-* Highest-risk workflows
-* Primary performance bottlenecks
-* Primary maintainability concerns
-* Recommended next action
+```
+vX.XX
+```
 
-## 2. Complete Findings Register
+Major enhancement
 
-Use a table with:
+```
+vX.XX.XX
+```
 
-* Finding ID
-* Severity
-* Confidence
-* Category
-* File
-* Function
-* Description
-* Evidence
-* Impact
-* Recommended correction
-* Breaking-change risk
-* Testing required
+Minor enhancement
 
-## 3. Function and Dependency Inventory
+Correction
 
-Include every function, caller, dependency, side effect, and status.
+Cleanup
 
-## 4. Public Library API Report
+Optimization
 
-Include:
+Every production code generation receives a new version.
 
-* Supported public functions
-* Suspected accidental public functions
-* Deprecated functions
-* Breaking-change risks
-* Required consumer inputs
-* Recommended API boundary
-
-## 5. Orphan and Duplicate Code Report
-
-Include evidence for every removal candidate.
-
-## 6. Performance Report
-
-Include:
-
-* Bottlenecks by workflow
-* Spreadsheet service call risks
-* Loop-level inefficiencies
-* Batch-processing opportunities
-* Quota and runtime risks
-* Prioritized optimization recommendations
-
-## 7. Data Integrity Risk Report
-
-Include every destructive operation and possible data-loss scenario.
-
-## 8. Trigger and Concurrency Report
-
-Include trigger inventory, overlap risks, and locking recommendations.
-
-## 9. Remediation Plan
-
-Organize fixes into:
-
-### Phase A — Critical correctness and data safety
-
-### Phase B — Missing dependencies and runtime stability
-
-### Phase C — Performance improvements
-
-### Phase D — Duplicate and orphan cleanup
-
-### Phase E — Public library API cleanup
-
-### Phase F — Maintainability and documentation
-
-For each phase include:
-
-* Exact scope
-* Files affected
-* Functions affected
-* Risk
-* Required tests
-* Expected benefit
-
-## 10. Test Plan
-
-Provide exact manual and automated tests required before release.
+Never overwrite an earlier production release.
 
 ---
 
-# CHANGE CONTROL RULES
+# Production Code Generation
 
-During the initial review:
+When generating production code:
 
-* Do not modify code.
-* Do not rename functions.
-* Do not delete functions.
-* Do not change public APIs.
-* Do not rewrite working logic.
-* Do not create a new architecture.
-* Do not make speculative corrections.
-* Do not assume an unused-looking library function is safe to remove.
-
-After completing the audit, propose changes separately.
-
-If later instructed to repair the code:
-
-1. Preserve confirmed working business logic.
-2. Correct critical defects first.
-3. Avoid unrelated changes.
-4. Remove orphaned dependencies only after proving they are unused.
-5. Update every affected caller.
-6. Preserve public library compatibility unless a breaking change is approved.
-7. Add defensive validation.
-8. Use batch operations where practical.
-9. Return complete replacement files, not partial snippets.
-10. Include a complete change log and test plan.
-11. Identify every intentionally unchanged known issue.
-12. Ensure no placeholder functions, TODOs, stubs, or incomplete code remain.
+- Preserve approved business logic.
+- Replace complete affected functions whenever practical.
+- Update dependent helpers.
+- Remove obsolete implementations.
+- Increment version.
+- Include release notes.
+- Include testing recommendations.
+- Return complete production-ready files.
 
 ---
 
-# FINAL REVIEW REQUIREMENT
+# Deliverables
 
-Before completing the report, perform a second-pass verification.
+When appropriate provide:
 
-Confirm that:
+- Executive Summary
+- Functional Summary
+- Architecture Review
+- Dependency Review
+- Performance Review
+- Runtime Review
+- Risk Assessment
+- Recommended Improvements
+- Version Recommendation
+- Release Notes
+- Testing Recommendations
 
-* Every source file was reviewed.
-* Every function was inventoried.
-* Every entry point was traced.
-* Every referenced helper was located.
-* Every destructive operation was reviewed.
-* Every trigger was reviewed.
-* Every suspected orphan was checked for dynamic or external use.
-* Every critical and high finding includes evidence.
-* Recommendations do not unintentionally alter business logic.
-* Library consumers and public API compatibility were considered.
+Depth should match request scope.
 
-End with one of these conclusions:
+---
 
-* Approved for production
-* Approved with documented low-risk issues
-* Not approved until critical findings are corrected
-* Review incomplete because required artifacts are missing
+# Excluded Areas
 
-Do not state that the code is safe or production-ready unless the evidence supports that conclusion.
+Unless explicitly requested ignore:
+
+```
+Archive_To_Move/
+```
+
+Do not use archived material for:
+
+- Code Review
+- Architecture Decisions
+- Production Comparisons
+- Release Preparation
+
+---
+
+# Repository Tools
+
+Repository utilities are located in:
+
+```
+Framework/tools/
+```
+
+or
+
+```
+tools/
+```
+
+depending on repository layout.
+
+Tools are optional.
+
+Do not execute maintenance tools automatically unless:
+
+- User requests it.
+- Repository synchronization is required.
+- A startup verification has been requested.
+
+---
+
+# General Principles
+
+Never assume:
+
+- Missing files
+- Missing reports
+- Missing branches
+- Missing documentation
+- Missing project structure
+
+Verify before reporting.
+
+When uncertain:
+
+State assumptions clearly.
+
+---
+
+# Completion Checklist
+
+Before completing work verify:
+
+✓ Repository standards applied
+
+✓ Business logic preserved
+
+✓ Dependencies considered
+
+✓ Recommendations prioritized
+
+✓ Version updated (if code generated)
+
+✓ Release notes included (if applicable)
+
+✓ Testing recommendations included (if applicable)
