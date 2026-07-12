@@ -3,7 +3,77 @@
 These instructions apply to all AI coding agents working within this repository.
 
 ---
+## Repository Synchronization Policy
 
+Before beginning any review, implementation, or analysis that depends on repository files:
+
+1. Verify the current repository status:
+
+```bash
+git branch --show-current
+git status -sb
+git remote -v
+```
+
+2. If `origin` is not configured, configure it:
+
+```bash
+git remote add origin https://github.com/tabs912/CodeLab.git
+```
+
+If `origin` already exists, update it if necessary:
+
+```bash
+git remote set-url origin https://github.com/tabs912/CodeLab.git
+```
+
+3. Refresh repository references:
+
+```bash
+git fetch origin --prune
+```
+
+4. Run the repository synchronization tool:
+
+```bash
+./Framework/tools/sync_workspace.sh
+```
+
+or
+
+```bash
+./tools/sync_workspace.sh
+```
+
+depending on the repository layout.
+
+5. If the user requests review of newly uploaded scripts, reports, or other repository artifacts:
+
+- Confirm the files are present after synchronization.
+- If the files are still not present, report exactly which paths were searched.
+- Do not assume files are missing until synchronization has been attempted.
+
+### Branch Awareness
+
+Many CodeLab reviews occur on project or Codex branches (for example `work`, `general`, `codex_Master_List`, or `codex_AideCP_Shade_&_Sync`).
+
+When reviewing repository artifacts uploaded to `main`:
+
+- Fetch `origin/main`.
+- Compare the active branch against `origin/main`.
+- Confirm that requested files are visible before beginning analysis.
+
+### Safety
+
+Repository synchronization must never:
+
+- run `git reset --hard`
+- run `git clean`
+- overwrite local work
+- switch branches without user approval
+- force-push changes
+
+If synchronization cannot complete safely, stop and report the reason.
 # Startup
 
 Before beginning work:
@@ -16,7 +86,19 @@ Before beginning work:
 6. Begin analysis.
 
 Do not require project-specific documentation when none exists.
+### Newly Uploaded Repository Files
 
+If the user states that new files, reports, scripts, or documents were uploaded to the repository after the current workspace was created:
+
+Assume the workspace may be stale.
+
+Before reporting that files cannot be found:
+
+1. Verify the Git remote.
+2. Fetch the latest repository state.
+3. Synchronize the workspace.
+4. Search again.
+5. Only then report missing files.
 ---
 
 # Project Discovery
