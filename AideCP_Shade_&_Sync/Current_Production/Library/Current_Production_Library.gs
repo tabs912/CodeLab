@@ -409,7 +409,7 @@ function syncDataToHomeCareServices_(sheet, isManual) {
   } finally { if (lockAcquired) lock.releaseLock(); }
 }
 
-function syncCurrentSheetToHomeCareServices() {
+function syncCurrentSheetToHomeCareServices_() {
   syncDataToHomeCareServices_(SpreadsheetApp.getActiveSpreadsheet().getActiveSheet(), true);
 }
 
@@ -451,7 +451,7 @@ function applyServiceLogRowToLocalSheet_(sheet, data) {
   }
 }
 
-function pullUpdatesToCurrentSheet() {
+function pullUpdatesToCurrentSheet_() {
   const activeSS = SpreadsheetApp.getActiveSpreadsheet(), sheet = activeSS.getActiveSheet();
   const pmr = getRangeText_(sheet, "V1");
   const name = getRangeText_(sheet, "B5");
@@ -495,7 +495,7 @@ function pullUpdatesToCurrentSheet() {
   }
 }
 
-function createNewSheetFromMaster() {
+function createNewSheetFromMaster_() {
   const activeSS = SpreadsheetApp.getActiveSpreadsheet(), ui = SpreadsheetApp.getUi();
   const resp = ui.prompt("Import Profile", "Enter Name or PMR#:", ui.ButtonSet.OK_CANCEL);
   if (resp.getSelectedButton() !== ui.Button.OK) return;
@@ -536,7 +536,7 @@ function sortSheetsByB4DateDescending_() {
   if (template) { ss.setActiveSheet(template); ss.moveActiveSheet(ss.getNumSheets()); }
 }
 
-function renameDriveFileFromB5AndTab() {
+function renameDriveFileFromB5AndTab_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet(), file = DriveApp.getFileById(ss.getId());
   const sheet = ss.getActiveSheet();
   const rawName = sheet.getRange('B5').getDisplayValue().trim();
@@ -574,7 +574,7 @@ function renameSheetFromB4_(sheet) {
   }
 }
 
-function removeCopyOfPrefixAllSheets(isSilent) {
+function removeCopyOfPrefixAllSheets_(isSilent) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let renamedCount = 0; let failedCount = 0;
   ss.getSheets().forEach(sheet => {
@@ -679,11 +679,11 @@ function runStandardizeDatesAndFormat_(isSilent) {
  * Main automated workspace macro chain.
  * Public execution layout accessible across cross-script bounds.
  */
-function quickStartSequence() {
+function quickStartSequence_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast("Initializing Automated Sequence...", "🚀 Quick Start", 3);
   
-  removeCopyOfPrefixAllSheets(true);
+  removeCopyOfPrefixAllSheets_(true);
   runStandardizeDatesAndFormat_(true);
   sortSheetsByB4DateDescending_();
   validateMappingsAllSheets_(true); 
@@ -693,9 +693,44 @@ function quickStartSequence() {
 }
 
 // ==========================================
+// =          CONTROLLED HOST API           =
+// ==========================================
+
+const PUBLIC_ACTIONS_ = Object.freeze({
+  syncCurrentSheetToHomeCareServices: syncCurrentSheetToHomeCareServices_,
+  pullUpdatesToCurrentSheet: pullUpdatesToCurrentSheet_,
+  createNewSheetFromMaster: createNewSheetFromMaster_,
+  sortSheetsByB4DateDescending: sortSheetsByB4DateDescending_,
+  removeCopyOfPrefixAllSheets: removeCopyOfPrefixAllSheets_,
+  validateMappingsCurrentSheet: validateMappingsCurrentSheet_,
+  validateMappingsAllSheets: validateMappingsAllSheets_,
+  createOnEditTrigger: createOnEditTrigger_,
+  runStandardizeDatesAndFormat: runStandardizeDatesAndFormat_,
+  applyGrayShadingAllSheets: applyGrayShadingAllSheets_,
+  applyGrayShadingCurrentSheet: applyGrayShadingCurrentSheet_,
+  renameDriveFileFromB5AndTab: renameDriveFileFromB5AndTab_,
+  quickStartSequence: quickStartSequence_
+});
+
+function runPublicAction(actionName) {
+  const action = PUBLIC_ACTIONS_[String(actionName || '')];
+  if (!action) throw new Error('Unsupported AideCP host action: ' + actionName);
+  return action();
+}
+
+// ==========================================
 // =          INTERFACE TRIGGERS            =
 // ==========================================
 
+/**
+ * Builds the host spreadsheet menu.
+ *
+ * Operational note: after adding the menu, this startup hook intentionally runs
+ * date/format standardization. Opening the spreadsheet can therefore update
+ * sheet formatting, normalize B4 dates, and rename tabs when the current sheet
+ * data requires it. This is retained because the project is intended to make
+ * controlled changes to individual participant sheets.
+ */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   
@@ -705,26 +740,26 @@ function onOpen() {
     .addItem('Create New Sheet from Master', 'createNewSheetFromMaster');
 
   const maintMenu = ui.createMenu('🛠️ Maintenance')
-    .addItem('Organize Tabs by Date', 'sortSheetsByB4DateDescending_')
+    .addItem('Organize Tabs by Date', 'sortSheetsByB4DateDescending')
     .addItem('Remove "Copy of" (all sheets)', 'removeCopyOfPrefixAllSheets')
-    .addItem('Validate Configuration (Current Tab)', 'validateMappingsCurrentSheet_')
-    .addItem('Validate Configuration (All Tabs)', 'validateMappingsAllSheets_')
-    .addItem('Create onEdit trigger', 'createOnEditTrigger_')
-    .addItem('Validate Current Sheet', 'validateMappingsCurrentSheet_');
+    .addItem('Validate Configuration (Current Tab)', 'validateMappingsCurrentSheet')
+    .addItem('Validate Configuration (All Tabs)', 'validateMappingsAllSheets')
+    .addItem('Create onEdit trigger', 'createOnEditTrigger')
+    .addItem('Validate Current Sheet', 'validateMappingsCurrentSheet');
 
   const setupMenu = ui.createMenu('🏗️Setup')
-    .addItem('Validate All Sheets', 'validateMappingsAllSheets_')
+    .addItem('Validate All Sheets', 'validateMappingsAllSheets')
     .addItem('sheets Remove "Copy of"', 'removeCopyOfPrefixAllSheets')
-    .addItem('Standardize Dates use mm/dd/yy', 'runStandardizeDatesAndFormat_')
-    .addItem('Organize Tabs by date', 'sortSheetsByB4DateDescending_')
-    .addItem('Apply Shade (all sheets)', 'applyGrayShadingAllSheets_');
+    .addItem('Standardize Dates use mm/dd/yy', 'runStandardizeDatesAndFormat')
+    .addItem('Organize Tabs by date', 'sortSheetsByB4DateDescending')
+    .addItem('Apply Shade (all sheets)', 'applyGrayShadingAllSheets');
 
   ui.createMenu('🏥 AideCP Shade & Sync')
-    .addItem('😎 Apply (current sheet)', 'applyGrayShadingCurrentSheet_')
+    .addItem('😎 Apply (current sheet)', 'applyGrayShadingCurrentSheet')
     .addItem('Rename Drive File (B5 + Date)', 'renameDriveFileFromB5AndTab')
     .addSubMenu(syncMenu)
     .addSubMenu(maintMenu)
-    .addItem('🚀 Quick Start -  includes all of the Set Up functions in order', 'quickStartSequence_')
+    .addItem('🚀 Quick Start -  includes all of the Set Up functions in order', 'quickStartSequence')
     .addSubMenu(setupMenu)
     .addToUi();
 
