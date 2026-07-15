@@ -89,6 +89,27 @@ or, for legacy layouts:
 
 Do not report a repository file as missing until synchronization has been attempted and the expected paths have been searched again.
 
+- ## Binary File Policy
+
+Unless explicitly instructed by the user:
+
+Do not stage, commit, or include binary files in implementation branches or pull requests.
+
+This includes:
+
+- *.pdf
+- *.xlsx
+- *.xlsm
+- *.docx
+- *.pptx
+- *.png
+- *.jpg
+- *.jpeg
+- *.gif
+- *.zip
+
+These files may be reviewed as inputs but should not be modified or included in generated diffs unless the user explicitly requests it.
+
 ## Newly Uploaded Repository Files
 
 If the user says files were uploaded after the workspace was created, assume the workspace may be stale.
@@ -189,26 +210,7 @@ If synchronization cannot complete safely, report:
 - Relevant remote branch
 - Recommended next action
 
-- ## Binary File Policy
 
-Unless explicitly instructed by the user:
-
-Do not stage, commit, or include binary files in implementation branches or pull requests.
-
-This includes:
-
-- *.pdf
-- *.xlsx
-- *.xlsm
-- *.docx
-- *.pptx
-- *.png
-- *.jpg
-- *.jpeg
-- *.gif
-- *.zip
-
-These files may be reviewed as inputs but should not be modified or included in generated diffs unless the user explicitly requests it.
 
 ## Project Discovery
 
