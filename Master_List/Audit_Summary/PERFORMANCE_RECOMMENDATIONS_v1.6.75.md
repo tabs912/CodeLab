@@ -1,5 +1,7 @@
 # Master List v1.6.75 Performance Optimization Recommendations
 
+**Status:** Accepted for implementation planning. All seven v1.6.75 optimization priorities listed in this report are accepted for the next targeted performance optimization wave.
+
 ## Purpose
 
 This report records performance optimization recommendations after reviewing:
@@ -29,6 +31,20 @@ The performance evidence does not support another broad cleanup pass. It support
 7. Dashboard Quality diagnostic write cost.
 
 The highest-priority recommendation is to optimize the Create Monthly Update chain and Create Disenrolled List, not templates or general dashboard configuration. Template creation and metadata refresh are within benchmark in v1.6.75.
+
+## Accepted Optimization Scope
+
+The following recommendations are accepted for the next performance optimization wave:
+
+1. Priority 1 — Create Monthly Update evidence and optimization actions.
+2. Priority 2 — Create Disenrolled List.
+3. Priority 3 — Format Monthly Sheets and fast-canvas sheet insertion.
+4. Priority 4 — Monthly Change dataset compilation.
+5. Priority 5 — Index refresh and tab organization, with the governed sheet order policy below.
+6. Priority 6 — Build Demo P.
+7. Priority 7 — Dashboard Quality Workflow.
+
+The accepted direction is to place each sheet into its governed final order when it is created. If sheets are inserted in the correct position up front, system sheets and templates should not need repeated global resorting during later workflow cleanup.
 
 ## Quality Report Findings
 
@@ -229,21 +245,62 @@ Index refresh and tab organization remained slow in both reviewed timing reports
 
 ### Recommendation
 
-Add a sheet-order and Index signature so refresh and move operations can be skipped when no meaningful state changed.
+Add a sheet-order and Index signature so refresh and move operations can be skipped when no meaningful state changed. The stronger accepted implementation direction is to insert new sheets directly into their governed final positions at creation time. Correct initial placement should eliminate most follow-up resorting of active sheets, system sheets, and templates.
+
+### Governed Sheet Order
+
+Use this target order when creating or organizing sheets:
+
+| Order | Sheet |
+| ---: | --- |
+| 1 | `Index` |
+| 2 | `Demo P` |
+| 3 | `Master List mm.yy` |
+| 4 | `Monthly Change mm.yy` |
+| 5 | `Disenrolled Exclusion` |
+| 6 | `Raw Data mm.yy` |
+| 7 | `Banners mm.yy` |
+| 8 | `CP Due mm.yy` |
+| 9 | `Unlock CP mm.yy` |
+| 10 | `B` |
+| 11 | `CD` |
+| 12 | `UC` |
+| 13 | `RD` |
+| 14 | `Archive - Demo P` |
+| 15 | `Framework Timing Report` |
+| 16 | `Dashboard Quality Report` |
+| 17 | `Format Dashboard` |
+| 18 | `Template - Banner Report` |
+| 19 | `Template - Care Plan Due` |
+| 20 | `Template - Unlocked Care Plan` |
+| 21 | `Template - Raw Data` |
+| 22 | `Template - Demo P` |
+| 23 | `Template - Disenrolled Exclusion` |
+| 24 | `Template - Master List` |
+| 25 | `Template - Monthly Change` |
+| 26 | `RFF_BASE_TEMPLATE` |
+| 27 | Any other sheets not listed |
+
+No operational output sheet should be placed after `Framework Timing Report`. Only the listed system/dashboard/template/base-template group and then unlisted miscellaneous sheets should appear after `Framework Timing Report`.
 
 ### Specific Actions
 
-1. Compute an Index signature from sheet names, visibility, sheet type, month label, and target order.
-2. Skip Index payload write when the signature matches the last written signature.
-3. Precompute desired sheet order and skip already-correct moves.
-4. Batch or defer moves until the end of chained workflows.
-5. Maintain the rule that hidden system/template sheets are not shown during organization.
+1. Update sheet creation helpers so new governed sheets are inserted at the target final position immediately.
+2. Compute an Index signature from sheet names, visibility, sheet type, month label, and target order.
+3. Skip Index payload write when the signature matches the last written signature.
+4. Precompute desired sheet order and skip already-correct moves.
+5. Use targeted placement for newly created monthly outputs, import sheets, archive/helper sheets, system sheets, dashboard sheets, and templates instead of broad global resorting.
+6. Batch or defer any remaining required moves until the end of chained workflows.
+7. Maintain the rule that hidden system/template sheets are not shown during organization.
 
 ### Acceptance Criteria
 
+- New sheets are created in the governed final order shown above.
+- No active/operational sheet is placed after `Framework Timing Report`.
 - Create Monthly Update final organization remains below 10 seconds.
 - Standalone Create Disenrolled Index refresh no longer reaches bottleneck range.
 - Index content remains accurate.
+- System sheets and templates do not require repeated resorting after they have been placed correctly.
 
 ## Priority 6 — Build Demo P
 
@@ -333,7 +390,7 @@ For each test, capture total runtime, slow steps, bottleneck steps, row counts, 
 2. Optimize Monthly Change dataset compilation.
 3. Optimize Disenrolled Exclusion append writes and Index refresh.
 4. Optimize Create Monthly Update Master List canvas creation and dashboard-config caching.
-5. Optimize final Index refresh/tab organization using signatures and skip logic.
+5. Optimize sheet creation placement so sheets are inserted directly into governed order, then add Index/tab organization signatures and skip logic.
 6. Optimize monthly archive workbook reuse and fast-canvas sheet insertion.
 7. Optimize Dashboard Quality H-N diagnostic writes.
 8. Revisit Build Demo P contact compression only after higher-priority bottlenecks are resolved.
