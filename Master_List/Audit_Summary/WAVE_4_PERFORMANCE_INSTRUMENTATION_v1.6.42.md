@@ -124,3 +124,38 @@ Validation focus:
 - Rerun `Clear Timing & Quality Logs`, then confirm Dashboard Quality sections remain in place without requiring Dashboard Quality Startup to rebuild them.
 - Rerun `Create Monthly Update`, then confirm hidden system/template sheets stay hidden after final active-tab organization.
 - Confirm newly created Monthly Change and Master List sheets appear before `Framework Timing Report`, not after `Format Dashboard` or after the system/template block.
+
+## Runtime Correction — Direct Operational Sheet Insertion v1.6.63
+
+`v1.6.63` changes governed output-sheet creation so operational sheets are inserted into their intended active position immediately when possible. For example, a newly created `Demo P` sheet is inserted behind `Index` in the #2 slot rather than relying on a later global sort. This should reduce post-create tab movement and avoid showing hidden system/template sheets just to correct active sheet order.
+
+Validation focus:
+
+- Build Demo P from scratch and confirm `Demo P` appears immediately after `Index`.
+- Create Monthly Change and Master List outputs and confirm they insert into the active operational block before the `Framework Timing Report` boundary.
+- Confirm final Monthly Update active-tab organization reports few or zero moves when sheets were inserted directly into position.
+
+## Runtime Correction — Monthly Update Deferred Index Refresh v1.6.64
+
+Latest timing shows `Create Monthly Update 05.01.26` completes functionally at 490.764 seconds. Several prior bottlenecks improved materially: Disenrolled append values for 8 rows × 66 columns dropped to 2.210 seconds, and old-row hiding dropped to 2.673 seconds. Remaining critical/slow candidates are now concentrated in wrapper-level waits and Master List copy/update work.
+
+| Workflow | Step | Delta Seconds | Status |
+|---|---:|---:|---|
+| Build Demo P | Demo P unified values flushed to spreadsheet canvas | 18.254 | SLOW |
+| Build Demo P | Demo P in-memory flat-record contact compression complete | 16.186 | SLOW |
+| Create Master List | Locate current processed Demo P sheet | 94.104 | CRITICAL |
+| Update Master List | Copy previous Master List to current month | 81.617 | CRITICAL |
+| Create Monthly Update 05.01.26 | Update Demo P - Archive Demo P primary rows | 26.106 | SLOW |
+| Create Monthly Update 05.01.26 | Disenrolled List complete wrapper gap | 167.785 | CRITICAL |
+| Create Monthly Update 05.01.26 | Master List complete wrapper gap | 177.515 | CRITICAL |
+| Create Monthly Update 05.01.26 | Final Index / active tab organization | 17.248 | SLOW |
+
+Correction captured in `v1.6.64`:
+
+- `Create Monthly Update` no longer refreshes the Index inside the Update Demo P and Create/Update Disenrolled substeps. Those substeps now defer Index refresh to the final Monthly Update organization pass, reducing duplicate Index work and targeting the large Disenrolled completion wrapper gap.
+
+Validation focus:
+
+- Rerun `Create Monthly Update` and confirm the `Create Monthly Update - Disenrolled List complete` wrapper step drops materially from 167.785 seconds.
+- Confirm the final Index/active-tab organization remains the only Index refresh near the end of Monthly Update.
+- Continue treating Master List copy/update as not Wave 4 clear until the 81.617-second copy and 177.515-second wrapper timing are explained or reduced.
