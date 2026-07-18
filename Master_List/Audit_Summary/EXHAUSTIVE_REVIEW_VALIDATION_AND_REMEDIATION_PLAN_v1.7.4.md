@@ -5,8 +5,8 @@
 - Current branch at startup: `work`
 - Governing production source: `Master_List/Current Production Script/v.1.7.4_Current_Production_Script`
 - Exhaustive review results validated: `Master_List/Audit_Summary/EXHAUSTIVE_CODE_REVIEW_v1.7.4.md`
-- Supporting report requested but not present on the working branch: `Master_List/Previous Audits/EXHAUSTIVE_REMEDIATION_VALIDATION_WAVES_2_8_v1.6.84.1.md`
-- Supporting report availability: the requested Previous Audits report is visible in `origin/main`, but the repository sync tool did not merge/rebase because `work` has a local commit and is behind `origin/main`.
+- Supporting report reviewed: `Master_List/Previous Audits/EXHAUSTIVE_REMEDIATION_VALIDATION_WAVES_2_8_v1.6.84.1.md`
+- Supporting report availability: the requested Previous Audits report is now present in the working tree; it was restored from `origin/main` because the sync tool would not merge/rebase while `work` has local commits and is behind `origin/main`.
 - Supporting reference directory reviewed: `Master_List/v2_Framework_Reference/`
 - Scope: validation, consolidation, prioritization, and remediation planning only. No production code was modified.
 
@@ -19,7 +19,7 @@
 | Synchronization | Partially complete | `./Framework/tools/sync_workspace.sh` fetched remote refs but did not merge/rebase because `work` is ahead by 1 local commit and behind `origin/main` by 4 commits. |
 | Exhaustive review results | Confirmed visible | `Master_List/Audit_Summary/EXHAUSTIVE_CODE_REVIEW_v1.7.4.md` |
 | Governing production source | Confirmed visible | `Master_List/Current Production Script/v.1.7.4_Current_Production_Script` |
-| Requested previous audit report | Missing locally; visible remotely | Missing on current branch at `Master_List/Previous Audits/...`; visible in `origin/main` and read through `git show`. |
+| Requested previous audit report | Confirmed visible | `Master_List/Previous Audits/EXHAUSTIVE_REMEDIATION_VALIDATION_WAVES_2_8_v1.6.84.1.md` is present in the working tree and reviewed. |
 | Framework reference reports | Confirmed visible | `Master_List/v2_Framework_Reference/` |
 | Excluded areas | Honored | `Archive_To_Move/` was not used. |
 
@@ -274,7 +274,7 @@ No finding was classified as already corrected or outdated against the current v
 | Readiness item | Status | Note |
 |---|---|---|
 | Current production source complete | Confirmed | Governing v1.7.4 script is visible and parseable by copied `.js` syntax check. |
-| Required reports visible | Partially confirmed | Exhaustive review and v2 framework references are visible locally; requested Previous Audits report is visible in `origin/main` but not merged into `work`. |
+| Required reports visible | Confirmed | Exhaustive review, the requested Previous Audits report, and v2 framework references are visible locally. |
 | Project documentation visible | Confirmed | README, AGENTS, Framework specs, Master_List README/spec, and v2 references were reviewed. |
 | Every critical/high finding has current evidence | Confirmed except runtime-only items | Critical/high items have current static evidence or are explicitly marked as user decision/runtime evidence. |
 | Outdated findings removed | Confirmed | None were classified as outdated. |
