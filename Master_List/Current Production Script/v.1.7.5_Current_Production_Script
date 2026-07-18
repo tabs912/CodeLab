@@ -3886,8 +3886,18 @@ function loadDashboardConfig_(forceRefresh) {
   }
 
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(RFF_DASHBOARD_SHEET);
+  const ss = SpreadsheetApp.getActive();
+  let sheet = ss.getSheetByName(RFF_DASHBOARD_SHEET);
+
+
+  if (!sheet) {
+    try {
+      sheet = SpreadsheetApp.openById(ss.getId()).getSheetByName(RFF_DASHBOARD_SHEET);
+    } catch (err) {
+      void err;
+      // Fallback can fail in detached or unauthorized execution contexts; preserve the canonical missing-dashboard error below.
+    }
+  }
 
 
   if (!sheet) {
@@ -7448,13 +7458,16 @@ function createOutputSheetFromDashboardTemplate_(sheetType, outputName, outputRo
   return sheet;
 }
 
-function createRawDataOutputSheetFromTemplateFast_(sheetType, outputName, outputRows, firstDay, endDate, sourceName) {
+function createRawDataOutputSheetFromTemplateFast_(sheetType, outputName, outputRows, firstDay, endDate, sourceName, timing) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboard = loadDashboardConfig_();
   const normalizedSheetType = normalizeDashboardSheetTypeKey_(sheetType);
   const sheetDef = getSheetDefinitionByType_(dashboard, normalizedSheetType);
   const headers = getHeadersForSheetType_(dashboard, normalizedSheetType);
   const template = ss.getSheetByName(sheetDef.templateName);
+  const markCanvasStep = function(label, details) {
+    if (timing) markFrameworkStep_(timing, "Raw Data fast canvas - " + label + ": " + outputName, details || "");
+  };
 
   if (!template) {
     throw new Error("Template not found: " + sheetDef.templateName);
