@@ -562,8 +562,10 @@ function writeDashboardDefaultsFast_(sheet) {
     sheet.getRangeList(sectionHeaderRanges)
       .setFontWeight("bold")
       .setBackground("#D9EAF7")
-      .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+      .setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
   }
+
+  sheet.getRange(1, 1, Math.min(3, rows.length), width).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
 
   const widths = [250, 160, 240, 180, 130, 120, 160, 150, 140, 120, 120, 120, 120];
   widths.forEach(function(colWidth, index) {
@@ -2056,7 +2058,7 @@ function trimSheetToColumnCount_(sheet, requiredCols, label) {
 function styleFrameworkTimingReport_(sheet, sectionIds) {
   if (!sheet) return;
 
-  const widths = [180, 180, 260, 140, 140, 260, 120, 120];
+  const widths = [220, 180, 475, 140, 140, 260, 120, 120];
   trimSheetToColumnCount_(sheet, widths.length, "Framework Timing Report");
   for (let i = 0; i < widths.length; i++) {
     try {
@@ -3227,7 +3229,7 @@ function getDefaultGlobalSettingsRows_() {
 function getDefaultTitleRowRows_() {
   return [
     ["GLOBAL", 1, "Report Title", "Sheet Definition", "", "A1", 25, 14, "Bold", "Level 3", "Left", "Overflow", "Default title row"],
-    ["GLOBAL", 2, "Date Range", "Runtime Month", "Date", "A2:D2", 20, 10, "Normal", "Level 3", "Left", "Clip", "A2=Date, B2=start, C2=to, D2=end"],
+    ["GLOBAL", 2, "Date Range", "Runtime Month", "Date", "A2:D2", 20, 10, "Normal", "Level 3", "Left", "Overflow", "A2=Date, B2=start, C2=to, D2=end"],
     ["GLOBAL", 3, "Spacer", "None", "", "A3:D3", 10, 10, "Normal", "Level 1", "Left", "Clip", "Spacer row"],
     ["GLOBAL", 4, "Header Row", "Dashboard Headers", "", "Row 4", 40, 10, "Bold", "Level 2", "Left", "Wrap", "Governed header row"]
   ];
@@ -3235,14 +3237,14 @@ function getDefaultTitleRowRows_() {
 
 function getDefaultSheetDefinitionRows_() {
   return [
-  ["Banners", "Banner Report", "Template - Banner Report", "Banners mm.yy", "#65A9CC", true, "Last Day of Prompt Month", 500, "FIXED", 100, 25, 0, false],
-  ["CP Due Date", "Care Plan Due Date Report", "Template - Care Plan Due", "CP Due mm.yy", "#65CC99", true, "Pulled From Spreadsheet", 500, "FIXED", 100, 25, 0, false],
-  ["Unlock CP", "Unlocked Care Plan Report", "Template - Unlocked Care Plan", "Unlock CP mm.yy", "#65CCC3", true, "Pulled From Spreadsheet", 500, "FIXED", 100, 25, 0, false],
-  ["Raw Data", "Raw Data", "Template - Raw Data", "Raw Data mm.yy", "#657FCC", true, "Last Day of Prompt Month", 6500, "FIXED", 100, 25, 0, false],
-  ["Demo P", "Demo P", "Template - Demo P", "Demo P", "#657FCC", true, "Last Day of Prompt Month", 2500, "FIXED", 100, 25, 0, false],
-  ["Disenrolled Exclusion", "Disenrolled Exclusion", "Template - Disenrolled Exclusion", "Disenrolled", "#CC65A1", true, "Last Day of Prompt Month", 1000, "FIXED", 100, 25, 0, false],
-  ["Master List", "Master List", "Template - Master List", "Master List mm.yy", "#7665CC", true, "Last Day of Prompt Month", 500, "FIXED", 100, 25, 0, false],
-  ["Monthly Change", "Monthly Change Report", "Template - Monthly Change", "Monthly Change mm.yy", "#A165CC", true, "Last Day of Prompt Month", 1000, "FIXED", 100, 25, 0, false]
+  ["Banners", "Banner Report", "Template - Banner Report", "Banners mm.yy", "#65A9CC", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false],
+  ["CP Due Date", "Care Plan Due Date Report", "Template - Care Plan Due", "CP Due mm.yy", "#65CC99", true, "Pulled From Spreadsheet", 100, "FIXED", 100, 25, 0, false],
+  ["Unlock CP", "Unlocked Care Plan Report", "Template - Unlocked Care Plan", "Unlock CP mm.yy", "#65CCC3", true, "Pulled From Spreadsheet", 100, "FIXED", 100, 25, 0, false],
+  ["Raw Data", "Raw Data", "Template - Raw Data", "Raw Data mm.yy", "#657FCC", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false],
+  ["Demo P", "Demo P", "Template - Demo P", "Demo P", "#657FCC", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false],
+  ["Disenrolled Exclusion", "Disenrolled Exclusion", "Template - Disenrolled Exclusion", "Disenrolled", "#CC65A1", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false],
+  ["Master List", "Master List", "Template - Master List", "Master List mm.yy", "#7665CC", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false],
+  ["Monthly Change", "Monthly Change Report", "Template - Monthly Change", "Monthly Change mm.yy", "#A165CC", true, "Last Day of Prompt Month", 100, "FIXED", 100, 25, 0, false]
 ];
 }
 
@@ -3267,7 +3269,7 @@ function getDefaultBehaviorRows_() {
   ["CP Due Date", true, true, true, false, true, "HIDDEN"],
   ["Unlock CP", true, true, true, false, true, "HIDDEN"],
   ["Raw Data", true, true, true, false, true, "HIDDEN"],
-  ["Demo P", true, true, false, false, true, "VISIBLE"],
+  ["Demo P", true, true, true, false, true, "VISIBLE"],
   ["Disenrolled Exclusion", true, true, true, false, true, "VISIBLE"],
   ["Master List", true, true, true, false, true, "VISIBLE"],
   ["Monthly Change", true, true, false, true, true, "VISIBLE"]
@@ -11066,7 +11068,7 @@ function createIndexSheet() {
     const sectionRows = [];
     for (let r = 5; r <= finalIndexMatrix.length; r++) {
       const label = String(finalIndexMatrix[r - 1][0] || "");
-      if (["Current Sheets", "Imported Data", "Unformatted Sheets", "Archive / System Sheets", "System Sheets", "Templates", "Other Live Sheets"].indexOf(label) !== -1) {
+      if (["Current Sheets", "Unformatted Sheets", "Archive / System Sheets", "System Sheets", "Templates", "Other Live Sheets"].indexOf(label) !== -1 || label.indexOf("Imported Data - ") === 0) {
         sectionRows.push(rowColToA1_(r, 1) + ":" + rowColToA1_(r, 4));
       }
     }
@@ -13629,7 +13631,7 @@ function applyDashboardQualityReportColumnSettings_(sheet, options) {
       .setHorizontalAlignment("left")
       .setBorder(true, true, true, true, true, true, globals.globalBorderColor || "#CCCCCC", getGlobalBorderStyle_(globals));
 
-    sheet.getRange(1, 1, Math.min(3, lastRow), lastCol).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
+    sheet.getRange(1, 1, 3, lastCol).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
     if (lastRow >= 4) {
       sheet.getRange(4, 1, lastRow - 3, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
       sheet.getRange(4, 2, lastRow - 3, Math.max(lastCol - 1, 1)).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);

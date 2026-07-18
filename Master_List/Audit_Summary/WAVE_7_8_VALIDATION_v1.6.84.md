@@ -113,8 +113,45 @@ rg -n "handleSpreadsheetChangeForIndex|setupIndexRefreshOnSheetAddedTrigger_|del
 ```
 
 ```bash
-./Framework/tools/prepare_pr.sh
+./Framework/tools/prepare_pr.shhttps://github.com/tabs912/CodeLab/pull/210/conflict?name=Master_List%252FCurrent%2BProduction%2BScript%252Fv.1.6.84_Current_Production_Script&base_oid=562d1b5a4bba0989c86967cbc01874c040a003b2&head_oid=0ba3790bc55a8782792f1273219e32cf15a62093
 ```
+
+## Follow-up UI Formatting Clearance
+
+The 2026-07-18 follow-up wrapping/defaults punch list was rechecked and patched in the v1.6.84 production script:
+
+| Item | Result | Evidence |
+| --- | --- | --- |
+| Dashboard Quality rows 1-3 overflow and row 4+ grid wrap policy | PASS | `applyDashboardQualityReportColumnSettings_()` sets rows 1-3 to `OVERFLOW`, column A from row 4 down to `OVERFLOW`, and columns B onward from row 4 down to `WRAP`. |
+| Framework Timing report rows 1-3 overflow and data-field wrap policy | PASS | `styleFrameworkTimingReport_()` applies row-block overflow for title/header blocks and wraps data fields in columns B onward for later blocks. |
+| Framework Timing report column widths | PASS | Column A width is set to 220 and column C width is set to 475. |
+| Format Dashboard title/subheader overflow | PASS | `writeDashboardDefaultsFast_()` sets the title rows and section subheader rows to `OVERFLOW`. |
+| Format Dashboard Section B GLOBAL row 2 wrap setting | PASS | The default `GLOBAL` row 2 Date Range row now uses `Overflow`. |
+| Format Dashboard Section D Demo P behavior | PASS | Demo P now defaults `Uses Alternating Colors` to `TRUE`. |
+| Format Dashboard Section C template row counts | PASS | All default sheet definitions now use `Template Row Count = 100`. |
+
+## v1.6.84.2 Runtime Report Review
+
+Reviewed report inputs from `origin/main` without staging the binary PDFs:
+
+- `Master_List/Reports/v1.6.84.2 - Dashboard Quality Report.pdf`
+- `Master_List/Reports/v1.6.84.2 - Framework Timing Report.pdf`
+
+| Runtime report gate | Result | Evidence / resolution |
+| --- | --- | --- |
+| Dashboard Quality PASS/FAIL scan | PASS | Extracted report text contains 111 `PASS` entries and 0 `FAIL`, `WARNING`, `CRITICAL`, `ERROR`, `SLOW`, or `BOTTLENECK` entries. |
+| Dashboard Quality overall status | PASS | Section M reports `OVERALL FRAMEWORK STATUS READY` and all automated framework checks pass. |
+| Template validation | PASS | Section F shows all eight templates as `PASS OK OK`. |
+| Framework health/menu callbacks | PASS | Section H reports helper, menu, dashboard, template, validation, timing, and runtime smoke harness checks as `PASS`. |
+| Performance summary | PASS | Section I reports all listed processes `OK` / within target. |
+| Workflow synchronization | PASS | Section L reports primary PMR assignment and source-map integrity as `PASS`. |
+| Framework Timing process summary | PASS | Extracted timing text contains 15 `PASS` process rows and 0 `FAIL`, `WARNING`, `CRITICAL`, `ERROR`, `SLOW`, or `BOTTLENECK` entries. |
+| Framework Timing detailed log | PASS | Detailed log steps are marked `OK`; no performance issues or optimization recommendation rows were reported beyond placeholders. |
+| Section G Format Dashboard changelog | CLEARED IN SOURCE | The runtime report showed `MODIFIED` rows requiring `getDefaultBehaviorRows_()`, `getDefaultSheetDefinitionRows_()`, and `getDefaultTitleRowRows_()` to be made permanent. The v1.6.84 source now contains those permanent defaults: Demo P alternating colors is `TRUE`, all default template row counts are `100`, and GLOBAL row 2 Date Range uses `Overflow`. A copied-workbook rerun should update the changelog hashes. |
+
+### v1.6.84.2 Clearance Decision
+
+Wave 7 and Wave 8 are cleared against the v1.6.84.2 Dashboard Quality and Framework Timing runtime reports for repository/local review purposes. The only runtime changelog action items identified by Section G have been applied to the production source. A final copied-workbook rerun is still required to prove the refreshed Section G hashes are unchanged after deployment.
 
 ## Clearance Decision
 
