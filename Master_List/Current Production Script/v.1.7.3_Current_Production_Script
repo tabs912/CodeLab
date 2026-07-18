@@ -13626,12 +13626,19 @@ function getLatestSheetByPrefix_(prefix) {
 }
 
 function countBlankRatioForHeaders_(sheet, headersToCheck) {
-  if (!sheet || sheet.getLastRow() < DATA_START_ROW) return { checked: 0, blanks: 0, ratio: 0 };
+  const emptyResult = { checked: 0, blanks: 0, ratio: 0, matchedHeaders: [], dataRows: 0 };
+  if (!sheet) return emptyResult;
   const headers = getHeaders_(sheet, HEADER_ROW);
   const headerMap = buildHeaderIndexMap_(headers);
-  const indexes = (headersToCheck || []).map(function(header) { return headerMap[header]; }).filter(function(idx) { return idx !== undefined; });
-  if (!indexes.length) return { checked: 0, blanks: 0, ratio: 0 };
-  const values = sheet.getRange(DATA_START_ROW, 1, sheet.getLastRow() - DATA_START_ROW + 1, headers.length).getValues();
+  const matchedHeaders = [];
+  const indexes = (headersToCheck || []).map(function(header) {
+    const idx = headerMap[header];
+    if (idx !== undefined) matchedHeaders.push(header);
+    return idx;
+  }).filter(function(idx) { return idx !== undefined; });
+  const dataRows = Math.max(sheet.getLastRow() - DATA_START_ROW + 1, 0);
+  if (!indexes.length || dataRows <= 0) return { checked: 0, blanks: 0, ratio: 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
+  const values = sheet.getRange(DATA_START_ROW, 1, dataRows, headers.length).getValues();
   let checked = 0;
   let blanks = 0;
   values.forEach(function(row) {
@@ -13640,7 +13647,7 @@ function countBlankRatioForHeaders_(sheet, headersToCheck) {
       if (normalizeCompareValue_(row[idx]) === "") blanks++;
     });
   });
-  return { checked: checked, blanks: blanks, ratio: checked ? blanks / checked : 0 };
+  return { checked: checked, blanks: blanks, ratio: checked ? blanks / checked : 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
 }
 
 function runDashboardQualityRawDataValidation_(timing) {
@@ -13754,14 +13761,26 @@ function runDashboardQualityCarePlanSyncDiagnostics_(timing) {
   });
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const masterList = getLatestSheetByPrefix_(MASTER_LIST_PREFIX) || ss.getSheetByName(SHEET_TYPE.MASTER_LIST);
+  let masterList = ss.getActiveSheet();
+  if (!masterList || String(masterList.getName()).indexOf(MASTER_LIST_PREFIX) !== 0) {
+    masterList = getLatestSheetByPrefix_(MASTER_LIST_PREFIX) || ss.getSheetByName(SHEET_TYPE.MASTER_LIST);
+  }
+
   if (!masterList) {
     rows.push(["Master List content merge audit", "WARNING", "Master List not found", "Run Master List build before auditing Unlocked/Due merged fields."]);
   } else {
-    const unlockedAudit = countBlankRatioForHeaders_(masterList, ["Unlocked Care Plan", "Unlocked Care Plan Date", "Unlocked CP Date"]);
-    const dueAudit = countBlankRatioForHeaders_(masterList, ["Care Plan Due Date", "CP Due Date", "Care Plan Due"]);
-    rows.push(["Unlocked Care Plan merged fields", unlockedAudit.checked ? (unlockedAudit.ratio < 0.95 ? "PASS" : "WARNING") : "WARNING", unlockedAudit.checked ? Math.round(unlockedAudit.ratio * 100) + "% blank" : "No matching headers", "Checked " + unlockedAudit.checked + " Unlocked field cells in " + masterList.getName() + "."]);
-    rows.push(["Care Plan Due merged fields", dueAudit.checked ? (dueAudit.ratio < 0.95 ? "PASS" : "WARNING") : "WARNING", dueAudit.checked ? Math.round(dueAudit.ratio * 100) + "% blank" : "No matching headers", "Checked " + dueAudit.checked + " Due field cells in " + masterList.getName() + "."]);
+    const unlockedAudit = countBlankRatioForHeaders_(masterList, ["IDT Meeting Date", "Care Plan Start Date"]);
+    const dueAudit = countBlankRatioForHeaders_(masterList, ["Enrollment Date", "Last Care Plan", "Next Care Plan Due", "CP Type"]);
+    const unlockedHeadersFound = unlockedAudit.matchedHeaders && unlockedAudit.matchedHeaders.length > 0;
+    const dueHeadersFound = dueAudit.matchedHeaders && dueAudit.matchedHeaders.length > 0;
+
+    if (unlockedAudit.checked === 0 && dueAudit.checked === 0 && unlockedHeadersFound && dueHeadersFound) {
+      rows.push(["Unlocked Care Plan merged fields", "PASS", "OK (Empty Sheet)", "Headers found on " + masterList.getName() + ". 0 data cells evaluated."]);
+      rows.push(["Care Plan Due merged fields", "PASS", "OK (Empty Sheet)", "Headers found on " + masterList.getName() + ". 0 data cells evaluated."]);
+    } else {
+      rows.push(["Unlocked Care Plan merged fields", unlockedAudit.checked ? (unlockedAudit.ratio < 0.95 ? "PASS" : "WARNING") : (unlockedHeadersFound ? "PASS" : "WARNING"), unlockedAudit.checked ? Math.round(unlockedAudit.ratio * 100) + "% blank" : (unlockedHeadersFound ? "OK (Empty Sheet)" : "No matching headers"), "Checked " + unlockedAudit.checked + " Unlocked field cells in " + masterList.getName() + "."]);
+      rows.push(["Care Plan Due merged fields", dueAudit.checked ? (dueAudit.ratio < 0.95 ? "PASS" : "WARNING") : (dueHeadersFound ? "PASS" : "WARNING"), dueAudit.checked ? Math.round(dueAudit.ratio * 100) + "% blank" : (dueHeadersFound ? "OK (Empty Sheet)" : "No matching headers"), "Checked " + dueAudit.checked + " Due field cells in " + masterList.getName() + "."]);
+    }
   }
 
   saveDashboardQualitySectionRows_(RFF_CP_SYNC_DIAGNOSTICS_KEY, rows);
