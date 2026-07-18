@@ -110,8 +110,8 @@ function recordWave1StaticCommandEvidence(w1t01NodeCheckOutput, w1t02ManifestJso
     'Central destructive guard',
     w1t03DeleteSheetSearchOutput ? 'PASS/REVIEW' : 'MISSING',
     'deleteSheet search command output recorded.',
-    'rg -n "\\.deleteSheet\\("',
-    w1t03DeleteSheetSearchOutput || 'Paste W1-T03 deleteSheet search output here or attach W1-T01_T03_command_output.txt.'
+    'rg -n "\\.deleteSheet\\(" or python3 single-file fallback',
+    w1t03DeleteSheetSearchOutput || 'Paste W1-T03 deleteSheet search output here or attach W1-T01_T03_command_output.txt. If rg is unavailable, use the documented python3 fallback command.'
   );
   return getWave1EvidenceSheet_();
 }

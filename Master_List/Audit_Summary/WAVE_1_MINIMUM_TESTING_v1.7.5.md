@@ -28,6 +28,19 @@ A failed or skipped required test blocks release until either:
 | W1-T01 | Required | Static syntax | Local repository checkout with v1.7.5 script. | Copy `v.1.7.5_Current_Production_Script` to a `.js` file and run `node --check`. | Syntax check passes with no parser errors. | Any syntax/parser error occurs. |
 | W1-T02 | Required | Manifest parse | Local repository checkout. | Run `python3 -m json.tool` against both committed manifests. | Both manifests parse as valid JSON. | Either manifest is invalid JSON. |
 | W1-T03 | Required | Central destructive guard | Local repository checkout. | Search v1.7.5 for `.deleteSheet(`. | The only remaining `deleteSheet()` call is inside `deleteSheetSafely_()`. | Any direct `deleteSheet()` call exists outside the centralized helper. |
+
+If `rg` is not installed for W1-T03, use this single-file Python fallback instead of recursive grep:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+path = Path('Master_List/Current Production Script/v.1.7.5_Current_Production_Script')
+for line_no, line in enumerate(path.read_text().splitlines(), 1):
+    if '.deleteSheet(' in line:
+        print(f'{path}:{line_no}:{line}')
+PY
+```
+
 | W1-T04 | Required | Existing Master List replacement — cancel | Copied workbook with an existing Master List for the selected month. | Run `createMasterList`; choose `No` at the replacement prompt. | Existing Master List remains unchanged; no staged sheet remains; timing/log message indicates cancellation. | Existing sheet is modified/deleted or a staged sheet remains after cancellation. |
 | W1-T05 | Required | Existing Master List replacement — success | Copied workbook with valid Demo P, templates, Care Plan source sheets, and an existing Master List for the selected month. | Run `createMasterList`; choose `Yes`; allow completion. | Existing sheet remains until staged build validates; final sheet has the original Master List name; no `__STAGED` sheet remains; row/header/date outputs match expected v1.7.4 business logic. | Existing sheet is deleted before successful staged validation, final output is missing/wrong, or staged sheet remains after success. |
 | W1-T06 | Required | Existing Master List replacement — forced failure | Copied workbook with an existing Master List. Temporarily remove or rename the Master List template in the copy only. | Run `createMasterList`; choose `Yes`. | Workflow fails closed; original Master List remains available; staged sheet is removed or hidden for inspection; error message identifies missing template/build failure. | Original Master List is deleted, corrupted, hidden unexpectedly, or unrecoverable. |
