@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.7.6.3";
+const MASTER_LIST_MERGE_ML_VERSION = "1.7.6.4";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -672,6 +672,7 @@ function createTemplateFromScriptDefaultsForActiveBuild_(ss, sheetDef) {
   const baseTemplate = ss.getSheetByName(RFF_BASE_TEMPLATE_NAME);
   const template = baseTemplate ? baseTemplate.copyTo(ss) : insertGovernedOutputSheet_(ss, sheetDef.templateName);
   setUniqueSheetName_(template, sheetDef.templateName);
+  placeCreatedSheetInConfiguredOrder_(template);
   const width = Math.max(headers.length, Number(sheetDef.templateColumnCount || 0), 1);
   const rowCount = Math.max(Number(sheetDef.templateRowCount || RFF_DEFAULTS.templateRows || DATA_START_ROW), DATA_START_ROW);
   resizeSheetGrid_(template, rowCount, width);
@@ -1597,7 +1598,71 @@ function clearMonthlySheetLookupCache_() {
 
 function insertGovernedOutputSheet_(ss, sheetName) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
-  return ss.insertSheet(sheetName);
+  const insertIndex = getConfiguredSheetCreationIndex_(ss, sheetName);
+  return ss.insertSheet(sheetName, Math.max(0, insertIndex - 1));
+}
+
+function getConfiguredSheetCreationIndex_(ss, sheetName, ignoreSheetId) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  const targetName = String(sheetName || "").trim();
+  const targetRecord = { name: targetName };
+  const targetProfile = getSheetSortProfileByName_(targetName);
+  targetRecord.rank = targetProfile.rank;
+  targetRecord.tail = targetProfile.tail === true;
+  const targetDate = extractFirstDateFromSheetName_(targetName);
+  targetRecord.monthSort = targetDate ? -targetDate.getTime() : 0;
+
+  const sheets = ss.getSheets().filter(function(sheet) {
+    return !ignoreSheetId || sheet.getSheetId() !== ignoreSheetId;
+  });
+  const sheetRecords = sheets.map(function(sheet) { return buildSheetSortRecord_(sheet); });
+  const tailRecords = sheetRecords.filter(function(record) { return record.tail; });
+  const firstTailIndex = tailRecords.reduce(function(minIndex, record) {
+    return Math.min(minIndex, record.sheet.getIndex());
+  }, ss.getNumSheets() + 1);
+
+  if (!targetRecord.tail) {
+    let targetIndex = Math.min(firstTailIndex, sheets.length + 1);
+    sheetRecords.forEach(function(record) {
+      if (record.tail) return;
+      if (compareSheetSortRecords_(record, targetRecord) <= 0) {
+        targetIndex = Math.max(targetIndex, record.sheet.getIndex() + 1);
+      }
+    });
+    return Math.max(1, Math.min(targetIndex, firstTailIndex));
+  }
+
+  let targetTailIndex = sheets.length + 1;
+  tailRecords.forEach(function(record) {
+    if (compareSheetSortRecords_(targetRecord, record) < 0) {
+      targetTailIndex = Math.min(targetTailIndex, record.sheet.getIndex());
+    }
+  });
+  return Math.max(1, Math.min(targetTailIndex, sheets.length + 1));
+}
+
+function placeCreatedSheetInConfiguredOrder_(sheet) {
+  if (!sheet || !sheet.getParent) return false;
+  const ss = sheet.getParent();
+  const targetIndex = getConfiguredSheetCreationIndex_(ss, sheet.getName(), sheet.getSheetId());
+  if (sheet.getIndex() === targetIndex) return false;
+  const wasHidden = typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden();
+  try {
+    if (wasHidden && typeof sheet.showSheet === "function") sheet.showSheet();
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(Math.max(1, Math.min(targetIndex, ss.getNumSheets())));
+    clearMonthlySheetLookupCache_();
+    return true;
+  } catch (err) {
+    logBestEffortWarning_("Created-sheet placement skipped for " + sheet.getName() + ": " + err.message);
+    return false;
+  } finally {
+    if (wasHidden && typeof sheet.hideSheet === "function") {
+      try { sheet.hideSheet(); } catch (hideErr) {
+        logBestEffortWarning_("Created-sheet placement visibility restore skipped for " + sheet.getName() + ": " + hideErr.message);
+      }
+    }
+  }
 }
 
 
@@ -4350,6 +4415,7 @@ function createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing) {
     const baseSheet = ss.getSheetByName(RFF_BASE_TEMPLATE_NAME) || ensureGoldenMasterTemplate_(dashboard, timing);
     sheet = baseSheet.copyTo(ss);
     sheet.setName(sheetDef.templateName);
+    placeCreatedSheetInConfiguredOrder_(sheet);
   }
   markFrameworkStep_(timing, "Open/create sheet: " + sheetDef.templateName);
 
@@ -4489,6 +4555,7 @@ function promoteStagedTemplateBuild_(ss, buildSheet, existingSheet, sheetDef, ti
     markFrameworkStep_(timing, "Previous template replaced after staged validation: " + sheetDef.templateName);
   }
   buildSheet.setName(sheetDef.templateName);
+  placeCreatedSheetInConfiguredOrder_(buildSheet);
   if (!RFF_DEFER_TEMPLATE_HIDE_DURING_BATCH_ && typeof buildSheet.hideSheet === "function") {
     hideSheetIfNeeded_(buildSheet, timing, "Hide promoted template: " + sheetDef.templateName);
   }
@@ -5675,6 +5742,7 @@ function formatMonthlyBannerSheet_(rawSheet, parsedMonth, timing) {
   deleteSheetIfExists_(ss, outputName, rawSheet.getName(), templateName);
   const outputSheet = templateSheet.copyTo(ss);
   outputSheet.setName(outputName);
+  placeCreatedSheetInConfiguredOrder_(outputSheet);
   showSheetIfNeeded_(outputSheet, timing, "Banner output sheet shown: " + outputName);
   writeBannerReportDates_(outputSheet, reportDate);
   copyRawBannerDataToOutput_(rawSheet, outputSheet);
@@ -5764,8 +5832,9 @@ function formatBannerReport() {
     deleteSheetIfExists_(ss, outputName, rawSheet.getName(), templateName);
     const outputSheet = templateSheet.copyTo(ss);
     outputSheet.setName(outputName);
+    placeCreatedSheetInConfiguredOrder_(outputSheet);
     showSheetIfNeeded_(outputSheet, timing, "Banner output sheet shown: " + outputName);
-    markFrameworkStep_(timing, "Template duplicated as output sheet without automatic sorting: " + outputName);
+    markFrameworkStep_(timing, "Template duplicated as output sheet in configured creation order: " + outputName);
 
 
     writeBannerReportDates_(outputSheet, reportDate);
@@ -6610,6 +6679,7 @@ function promoteStagedMasterListSheet_(ss, stagedSheet, existingSheet, masterNam
     deleteSheetSafely_(ss, existingSheet, "Master List staged swap", [stagedSheet.getName()]);
     if (markStep) markStep("Delete previous Master List after staged replacement validation");
     stagedSheet.setName(masterName);
+    placeCreatedSheetInConfiguredOrder_(stagedSheet);
     showSheetIfNeeded_(stagedSheet, timing, "Master List staged swap - final sheet visibility enforced visible: " + masterName);
     clearSheetRuntimeCachesForSheet_(stagedSheet);
     clearMonthlySheetLookupCache_();
@@ -7218,7 +7288,8 @@ function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn)
   deleteSheetIfExists_(ss, outputName, sourceName, sheetDef.templateName);
   if (sourceSheet.getName() !== outputName) {
     sourceSheet.setName(outputName);
-    step(timing, "Rename Raw Data import sheet in place: " + sourceName + " -> " + outputName);
+    placeCreatedSheetInConfiguredOrder_(sourceSheet);
+    step(timing, "Rename Raw Data import sheet in place and place in configured creation order: " + sourceName + " -> " + outputName);
   }
 
 
@@ -7483,7 +7554,7 @@ function createOutputSheetFromDashboardTemplate_(sheetType, outputName, outputRo
   // 1. FAST CANVAS: Insert a perfectly blank sheet (zero overhead)
   const sheet = insertGovernedOutputSheet_(ss, outputName);
   showSheetIfNeeded_(sheet, timing, String(timingLabel || "Dashboard fast canvas") + " - sheet visibility enforced visible: " + outputName);
-  markCanvasStep("blank sheet inserted without automatic sorting");
+  markCanvasStep("blank sheet inserted in configured creation order");
 
   const width = Math.max(headers.length, 1);
   const rows = outputRows || [];
@@ -8836,10 +8907,11 @@ function getOrCreateDemoPArchiveSheet_(ss, sourceHeaders, timing, timingPrefix) 
       sheet = template.copyTo(ss);
       markArchiveStep("template copied for archive sheet");
       setUniqueSheetName_(sheet, DEMO_P_ARCHIVE_SHEET);
-      markArchiveStep("archive sheet named without automatic sorting");
+      placeCreatedSheetInConfiguredOrder_(sheet);
+      markArchiveStep("archive sheet named and placed in configured creation order");
     } else {
       sheet = insertGovernedOutputSheet_(ss, DEMO_P_ARCHIVE_SHEET);
-      markArchiveStep("blank archive sheet inserted without automatic sorting");
+      markArchiveStep("blank archive sheet inserted in configured creation order");
     }
   }
   if (sheet.getMaxColumns() < archiveHeaders.length) {
@@ -9912,8 +9984,9 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
   reportSheet = template.copyTo(ss);
   markRuntimeStep_(timing, "Monthly Change detail - template copied: " + sheetDef.templateName);
   setUniqueSheetName_(reportSheet, reportName);
+  placeCreatedSheetInConfiguredOrder_(reportSheet);
   showSheetIfNeeded_(reportSheet, timing, "Monthly Change detail - report sheet shown");
-  markRuntimeStep_(timing, "Monthly Change report sheet created from template; automatic sheet sorting skipped by design");
+  markRuntimeStep_(timing, "Monthly Change report sheet created from template; full-workbook sheet sorting skipped by design");
 
   buildMonthlyChangeReportSectionLayout_(reportSheet, currentDemo, sectionData.currentData.headers, monthParts);
   markRuntimeStep_(timing, "Monthly Change section layout prepared");
@@ -10699,7 +10772,7 @@ function runMonthlyUpdate() {
 
     try {
       createIndexSheet();
-      markFrameworkStep_(timing, "Create Monthly Update - Index refreshed; automatic sheet sorting skipped by design");
+      markFrameworkStep_(timing, "Create Monthly Update - Index refreshed; full-workbook sheet sorting skipped by design");
     } catch (err) {
       logBestEffortWarning_("Monthly Update final index refresh skipped: " + err.message);
     }
@@ -10886,7 +10959,8 @@ function createMasterListForMonth_(monthParts, parentTiming) {
       masterSheet = promoteStagedMasterListSheet_(ss, masterSheet, existingMasterSheet, masterName, copiedRowCount || 0, timing, markStep);
     } else {
       setUniqueSheetName_(masterSheet, masterName);
-      markStep("Set final Master List sheet name");
+      placeCreatedSheetInConfiguredOrder_(masterSheet);
+      markStep("Set final Master List sheet name and place in configured creation order");
     }
     lockFinalOutputRowHeights_(masterSheet, "Master List");
     markStep("Lock Master List final row heights");
@@ -11026,7 +11100,7 @@ function createMasterListSheetFromTemplate_(ss, targetName, monthParts, timing, 
   const requiredRows = Math.max(template.getMaxRows(), DATA_START_ROW);
 
   const sheet = insertGovernedOutputSheet_(ss, targetName);
-  markCanvasStep("blank sheet inserted without automatic sorting", "Required rows: " + requiredRows + "; Columns: " + width);
+  markCanvasStep("blank sheet inserted in configured creation order", "Required rows: " + requiredRows + "; Columns: " + width);
   showSheetIfNeeded_(sheet, timing, prefix + " - sheet visibility enforced visible: " + targetName);
   resizeSheetGrid_(sheet, requiredRows, width);
   markCanvasStep("grid resized", "Rows: " + requiredRows + "; Columns: " + width);
@@ -11479,6 +11553,7 @@ function restoreSheetFromArchiveWorkbook(targetSheetName) {
   mainSs.toast("Retrieving '" + targetSheetName + "' from archive drive...", "Data Transfer Running", 5);
   var restoredSheet = archiveSourceSheet.copyTo(mainSs);
   restoredSheet.setName(targetSheetName);
+  placeCreatedSheetInConfiguredOrder_(restoredSheet);
 
   if (typeof restoredSheet.showSheet === "function") {
     restoredSheet.showSheet();
@@ -11551,10 +11626,9 @@ function getSheetSortProfileByName_(sheetName) {
   const isTemplate = name.indexOf("Template - ") === 0 || name.indexOf("Template") !== -1;
   if (name === INDEX_SHEET) return { rank: 5, group: "index", operational: true, tail: false };
   if (name === SHEET_TYPE.DEMO_P || name === DEMO_P_PREFIX) return { rank: 10, group: "demo_p", operational: true, tail: false };
-  if (name.indexOf(MONTHLY_CHANGE_REPORT_PREFIX) === 0) return { rank: 20, group: "monthly_change", operational: true, tail: false };
-  if (name.indexOf(MASTER_LIST_PREFIX) === 0) return { rank: 30, group: "master_list", operational: true, tail: false };
+  if (name.indexOf(MASTER_LIST_PREFIX) === 0) return { rank: 20, group: "master_list", operational: true, tail: false };
+  if (name.indexOf(MONTHLY_CHANGE_REPORT_PREFIX) === 0) return { rank: 30, group: "monthly_change", operational: true, tail: false };
   if (name === DISENROLLED_EXCLUSION_SHEET || (/^Disenrolled\b/i.test(name) && !isTemplate)) return { rank: 40, group: "disenrolled", operational: true, tail: false };
-  if (name === DEMO_P_ARCHIVE_SHEET || name.indexOf("Archive - Demo P") === 0) return { rank: 45, group: "demo_p_archive", operational: true, tail: false, forceHidden: true };
   if (name.indexOf("Raw Data ") === 0 && name.indexOf("Raw Data - ") === -1) return { rank: 50, group: "raw_data", operational: true, tail: false };
   if (name.indexOf(BANNER_PREFIX) === 0 || name.indexOf(BANNER_REPORT_ALT_PREFIX) === 0) return { rank: 60, group: "banner", operational: true, tail: false };
   if (name.indexOf(CARE_PLAN_DUE_PREFIX) === 0 || name.indexOf(CARE_PLAN_DUE_DATE_ALT_PREFIX) === 0) return { rank: 70, group: "care_plan_due", operational: true, tail: false };
@@ -11563,6 +11637,7 @@ function getSheetSortProfileByName_(sheetName) {
   if (name.indexOf("Raw Data - CP Due") === 0 || name.indexOf("Raw Data - Care Plan Due") === 0) return { rank: 100, group: "raw_care_plan_import", operational: true, tail: false };
   if (name.indexOf("Raw Data - Unlock CP") === 0 || name.indexOf("Raw Data - Unlocked") === 0) return { rank: 110, group: "raw_unlocked_import", operational: true, tail: false };
   if (/^B(\b|\s)/i.test(name) || /^CD(\b|\s)/i.test(name) || /^UC(\b|\s)/i.test(name) || /^RD(\b|\s)/i.test(name)) return { rank: 120, group: "short_import", operational: true, tail: false };
+  if (name === DEMO_P_ARCHIVE_SHEET || name.indexOf("Archive - Demo P") === 0) return { rank: 130, group: "demo_p_archive", operational: true, tail: false, forceHidden: true };
 
   if (name === RFF_TIMING_SHEET || name === "Framework Timing Report") return { rank: 500, group: "framework_timing", operational: false, tail: true };
   if (name === RFF_TEST_DASHBOARD_SHEET || name === "Dashboard Quality Report") return { rank: 510, group: "dashboard_quality", operational: false, tail: true };
@@ -12839,6 +12914,7 @@ function createDisenrolledExclusionSheetFromDashboardTemplate_(ss, monthParts) {
   const template = context.template;
   let sheet = template.copyTo(ss);
   setUniqueSheetName_(sheet, DISENROLLED_EXCLUSION_SHEET);
+  placeCreatedSheetInConfiguredOrder_(sheet);
   showSheetIfNeeded_(sheet, null, null);
 
   updateDisenrolledExclusionReportDates_(sheet, monthParts);
