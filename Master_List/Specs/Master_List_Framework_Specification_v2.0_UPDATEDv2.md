@@ -1,8 +1,12 @@
 <!-- markdownlint-disable MD013 MD022 MD024 MD032 MD033 MD056 MD058 MD060 -->
 
-# Master List Framework Specification v2.0
+# Master List Framework Specification v2.0 UPDATEDv2
 
 ## Governing Authority
+
+**Saved artifact:** `Master_List/Specs/Master_List_Framework_Specification_v2.0_UPDATEDv2.md`.
+
+**Source update file:** `Master_List/Specs/Master_List_Framework_Specification_v2.0.md`.
 
 **Authoritative implementation:** `Master_List/Current Production Script/v.1.7.6_Current_Production_Script`.
 
