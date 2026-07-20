@@ -113,7 +113,7 @@ rg -n "handleSpreadsheetChangeForIndex|setupIndexRefreshOnSheetAddedTrigger_|del
 ```
 
 ```bash
-./Framework/tools/prepare_pr.shhttps://github.com/tabs912/CodeLab/pull/210/conflict?name=Master_List%252FCurrent%2BProduction%2BScript%252Fv.1.6.84_Current_Production_Script&base_oid=562d1b5a4bba0989c86967cbc01874c040a003b2&head_oid=0ba3790bc55a8782792f1273219e32cf15a62093
+./Framework/tools/prepare_pr.sh
 ```
 
 ## Follow-up UI Formatting Clearance
