@@ -11738,7 +11738,7 @@ function getSheetSortProfileByName_(sheetName) {
   const monthDate = extractFirstDateFromSheetName_(name);
   const month = monthDate ? monthDate.getMonth() + 1 : 0;
 
-  if (name === INDEX_SHEET) return { rank: 5, group: "index", operational: true, tail: false };
+  if (name === INDEX_SHEET) return { rank: 503, group: "index", operational: false, tail: true };
   if (name === DISENROLLED_EXCLUSION_SHEET || (/^Disenrolled\b/i.test(name) && !isTemplate)) return { rank: 10, group: "disenrolled", operational: true, tail: false };
   if (name === SHEET_TYPE.DEMO_P || name === DEMO_P_PREFIX) return { rank: 15, group: "demo_p", operational: true, tail: false };
 
