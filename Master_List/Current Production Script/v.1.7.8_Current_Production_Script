@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.7.8.2";
+const MASTER_LIST_MERGE_ML_VERSION = "1.7.8.4";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -3509,11 +3509,11 @@ function getDefaultBehaviorRows_() {
 
 function getDefaultSystemSurfaceRows_() {
   return [
-    ["Framework Timing Report", "Framework Timing Report", 500, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Unified timing report surface"],
+    [RFF_DASHBOARD_SHEET, "Format Dashboard", 500, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Dashboard configuration surface"],
     ["Dashboard Quality Report", "Dashboard Quality Report", 501, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Unified quality report surface"],
-    [RFF_DASHBOARD_SHEET, "Format Dashboard", 520, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Dashboard configuration surface"],
+    ["Framework Timing Report", "Framework Timing Report", 502, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Unified timing report surface"],
     [DEMO_P_ARCHIVE_SHEET, DEMO_P_ARCHIVE_SHEET, 75, "HIDDEN", "#657FCC", "#000000", true, "Hidden Demo P row archive"],
-    [RFF_BASE_TEMPLATE_NAME, RFF_BASE_TEMPLATE_NAME, 900, "HIDDEN", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Hidden framework base template"]
+    [RFF_BASE_TEMPLATE_NAME, RFF_BASE_TEMPLATE_NAME, 504, "HIDDEN", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Hidden framework base template"]
   ];
 }
 
@@ -11581,6 +11581,9 @@ function createIndexSheet() {
 
   sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
   applyGlobalDefaultRowHeightsToSheet_(sheet, "Index Dashboard");
+  placeCreatedSheetInConfiguredOrder_(sheet);
+  enforceSystemTemplateTailBlockOrder_(ss);
+
   PropertiesService.getDocumentProperties().setProperty("RFF_INDEX_SHEET_SIGNATURE", ss.getSheets().map(function(sh) {
     return sh.getSheetId() + ":" + sh.getName();
   }).join("|"));
@@ -11765,13 +11768,13 @@ function getSheetSortProfileByName_(sheetName) {
   if (/^(B\s|CD\s|UC\s|RD\s)/i.test(name)) return { rank: 230, group: "short_import", operational: true, tail: false };
   if (name.indexOf("Archive - Demo P") === 0) return { rank: 240, group: "archive_demo", operational: true, tail: false, forceHidden: true };
 
-  if (name === RFF_TIMING_SHEET || name === "Framework Timing Report") return { rank: 500, group: "framework_timing", operational: false, tail: true };
+  if (name === RFF_DASHBOARD_SHEET || name === "Format Dashboard") return { rank: 500, group: "format_dashboard", operational: false, tail: true };
   if (name === RFF_TEST_DASHBOARD_SHEET || name === "Dashboard Quality Report") return { rank: 501, group: "dashboard_quality", operational: false, tail: true };
-  if (name === RFF_DASHBOARD_SHEET || name === "Format Dashboard") return { rank: 520, group: "format_dashboard", operational: false, tail: true };
+  if (name === RFF_TIMING_SHEET || name === "Framework Timing Report") return { rank: 502, group: "framework_timing", operational: false, tail: true };
 
   if (isTemplate) {
     if (name === "Template - Banner Report") return { rank: 800, group: "template_banner", operational: false, tail: true };
-    if (name === RFF_BASE_TEMPLATE_NAME) return { rank: 900, group: "base_template", operational: false, tail: true, forceHidden: true };
+    if (name === RFF_BASE_TEMPLATE_NAME) return { rank: 504, group: "base_template", operational: false, tail: true, forceHidden: true };
     return { rank: 850, group: "template_other", operational: false, tail: true };
   }
 
@@ -11785,9 +11788,10 @@ function getGlobalSheetSortRankByName_(sheetName) {
 
 function getSystemTemplateTailBlockNames_() {
   return [
-    RFF_TIMING_SHEET,
-    RFF_TEST_DASHBOARD_SHEET,
     RFF_DASHBOARD_SHEET,
+    RFF_TEST_DASHBOARD_SHEET,
+    RFF_TIMING_SHEET,
+    RFF_BASE_TEMPLATE_NAME,
     "Template - Banner Report",
     "Template - Care Plan Due",
     "Template - Unlocked Care Plan",
@@ -11795,8 +11799,7 @@ function getSystemTemplateTailBlockNames_() {
     "Template - Demo P",
     "Template - Disenrolled Exclusion",
     "Template - Master List",
-    "Template - Monthly Change",
-    RFF_BASE_TEMPLATE_NAME
+    "Template - Monthly Change"
   ];
 }
 
@@ -14533,11 +14536,11 @@ function initializeSystemSheets_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Build system sheets in configured tail-block order.
-  let timingSheet = ss.getSheetByName(RFF_TIMING_SHEET);
-  if (!timingSheet) {
-    timingSheet = insertGovernedOutputSheet_(ss, RFF_TIMING_SHEET);
+  let dashboardSheet = ss.getSheetByName(RFF_DASHBOARD_SHEET);
+  if (!dashboardSheet) {
+    dashboardSheet = insertGovernedOutputSheet_(ss, RFF_DASHBOARD_SHEET);
   } else {
-    placeCreatedSheetInConfiguredOrder_(timingSheet);
+    placeCreatedSheetInConfiguredOrder_(dashboardSheet);
   }
 
   let qualitySheet = ss.getSheetByName(RFF_TEST_DASHBOARD_SHEET);
@@ -14547,16 +14550,16 @@ function initializeSystemSheets_() {
     placeCreatedSheetInConfiguredOrder_(qualitySheet);
   }
 
-  let dashboardSheet = ss.getSheetByName(RFF_DASHBOARD_SHEET);
-  if (!dashboardSheet) {
-    dashboardSheet = insertGovernedOutputSheet_(ss, RFF_DASHBOARD_SHEET);
+  let timingSheet = ss.getSheetByName(RFF_TIMING_SHEET);
+  if (!timingSheet) {
+    timingSheet = insertGovernedOutputSheet_(ss, RFF_TIMING_SHEET);
   } else {
-    placeCreatedSheetInConfiguredOrder_(dashboardSheet);
+    placeCreatedSheetInConfiguredOrder_(timingSheet);
   }
 
   showSheetIfNeeded_(dashboardSheet);
-  showSheetIfNeeded_(timingSheet);
   showSheetIfNeeded_(qualitySheet);
+  showSheetIfNeeded_(timingSheet);
 
   if (!hasDashboardQualityTemplateShell_(qualitySheet)) {
     rebuildDashboardQualityReportShellCompact_(qualitySheet);
