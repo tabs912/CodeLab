@@ -1,4 +1,6 @@
-# **0\. Pre-test setup  \-  Done** 
+> Applicability update for v1.8.3: This Wave 1 release testing plan remains applicable, but it has been updated for the v1.8.3 dashboard structure. Format Dashboard now includes Section F - Tab Organization & Index; Column Definitions moved to Section G; Sheet Headers moved to Section H; Dashboard Quality Template/Changelog/Health/Summary/Signoff sections shifted accordingly; and unformatted import/source tabs now use the Source - prefix.
+
+# **0\. Pre-test setup  \-  Done**
 
 ## **0.1 Use a workbook copy**
 
@@ -12,25 +14,25 @@ Pass
 
 Fail
 
-* Testing is performed directly in production before v1.7.8 is validated.
+* Testing is performed directly in production before v1.8.3 is validated.
 
 ---
 
-## **0.2 Confirm the correct script is installed  \-  Updated v1.7.8.1**
+## **0.2 Confirm the correct script is installed  \-  Updated v1.8.3**
 
-## **Open Apps Script and confirm the active code is v1.7.8.**
+## **Open Apps Script and confirm the active code is v1.8.3.**
 
 Pass
 
-* MASTER\_LIST\_MERGE\_ML\_VERSION is 1.7.8. 
+* MASTER\_LIST\_MERGE\_ML\_VERSION is 1.8.3.
 
 Fail
 
-* Apps Script still shows v1.7.6.7 or v1.7.7.
+* Apps Script still shows any pre-v1.8.3 version.
 
 ---
 
-## **0.3 Confirm required menu items appear  \-Done** 
+## **0.3 Confirm required menu items appear  \-Done**
 
 After opening/reloading the sheet, confirm these menus are present:
 
@@ -46,7 +48,7 @@ After opening/reloading the sheet, confirm these menus are present:
 
 * Dashboard Quality Workflow
 
-These callbacks are wired in the menu setup. 
+These callbacks are wired in the menu setup.
 
 Pass
 
@@ -74,7 +76,7 @@ Dashboard Quality Report
 Format Dashboard
 ```
 
-The v1.7.8 default system-surface rows now match this order. 
+The v1.8.3 default system-surface rows now match this order.
 
 The sort profile also ranks:
 
@@ -84,7 +86,7 @@ The sort profile also ranks:
 
 3. Format Dashboard
 
-within the system/template tail block. 
+within the system/template tail block.
 
 ## **Steps**
 
@@ -151,9 +153,9 @@ RFF_BASE_TEMPLATE
 
 Confirm Raw Data is hidden after creation/formatting when Dashboard Output Visibility is HIDDEN.
 
-v1.7.8 enforces Raw Data visibility again after Index refresh and no longer reactivates the Raw Data sheet afterward. 
+v1.8.3 enforces Raw Data visibility again after Index refresh and no longer reactivates the Raw Data sheet afterward.
 
-The script also requires a visible fallback sheet before hiding an active sheet. 
+The script also requires a visible fallback sheet before hiding an active sheet.
 
 ## **Steps**
 
@@ -209,7 +211,7 @@ The script also requires a visible fallback sheet before hiding an active sheet.
 
 Confirm Banners, CP Due, and Unlock CP monthly/import sheets are created in the correct area and do not appear before Demo P.
 
-v1.7.8 ranks:
+v1.8.3 ranks:
 
 * Index first.
 
@@ -221,9 +223,9 @@ v1.7.8 ranks:
 
 * short/import groups after monthly outputs.
 
-* Archive Demo P before the system tail block. 
+* Archive Demo P before the system tail block.
 
-v1.7.8 also broadened Banner matching for generated Banner... names. 
+v1.8.3 also broadened Banner matching for generated Banner... names.
 
 ## **Steps**
 
@@ -255,7 +257,7 @@ After each workflow:
 
 * Unlock CP sheets rank after CP Due.
 
-* Unformatted imports such as B, CD, UC, RD, or Raw Data \- ... stay before Archive \- Demo P and before Framework Timing Report.
+* Unformatted imports such as B, CD, UC, RD, or Source - ... stay before Archive \- Demo P and before Framework Timing Report.
 
 * Hidden import sheets remain hidden if dashboard visibility says HIDDEN.
 
@@ -283,9 +285,9 @@ Confirm Hide Monthly Import Sheets only targets monthly import/output tabs:
 
 It should not target Raw Data.
 
-The v1.7.8 menu callback exists for Hide Monthly Import Sheets. 
+The v1.8.3 menu callback exists for Hide Monthly Import Sheets.
 
-Raw Data is classified under monthly active sheets, not import sheets. 
+Raw Data is classified under monthly active sheets, not import sheets.
 
 ## **Steps**
 
@@ -335,9 +337,9 @@ Confirm Hide Monthly Active Sheets targets:
 
 * Monthly Change
 
-The v1.7.8 menu callback exists for Hide Monthly Active Sheets. 
+The v1.8.3 menu callback exists for Hide Monthly Active Sheets.
 
-Raw Data is included in the active-sheet hide workflow. 
+Raw Data is included in the active-sheet hide workflow.
 
 ## **Steps**
 
@@ -379,9 +381,9 @@ Raw Data is included in the active-sheet hide workflow.
 
 ## **Purpose**
 
-Confirm v1.7.8 still errors when the exact Monthly Change report already exists.
+Confirm v1.8.3 still errors when the exact Monthly Change report already exists.
 
-The duplicate report guard throws before template copy. 
+The duplicate report guard throws before template copy.
 
 ## **Steps**
 
@@ -489,9 +491,9 @@ Confirm Master List created through the individual menu appears before the syste
 
 Confirm monthly import archive no longer fails solely because local protected cleanup refuses deletion.
 
-v1.7.8 records archive success after verified archive copy and returns a local cleanup action. 
+v1.8.3 records archive success after verified archive copy and returns a local cleanup action.
 
-If a local sheet is protected, v1.7.8 hides it instead of treating the archive copy as failed. 
+If a local sheet is protected, v1.8.3 hides it instead of treating the archive copy as failed.
 
 ## **Steps**
 
@@ -549,7 +551,7 @@ Confirm active monthly archive works for:
 
 * Monthly Change
 
-The v1.7.8 menu callback exists for Archive Monthly Active Sheets. 
+The v1.8.3 menu callback exists for Archive Monthly Active Sheets.
 
 ## **Steps**
 
@@ -595,7 +597,7 @@ The v1.7.8 menu callback exists for Archive Monthly Active Sheets.
 
 ## **Purpose**
 
-Confirm Index includes local operational sheets and archive sheets after v1.7.8 workflows.
+Confirm Index includes local operational sheets and archive sheets after v1.8.3 workflows.
 
 ## **Steps**
 
@@ -659,7 +661,7 @@ Confirm Index includes local operational sheets and archive sheets after v1.7.8 
 
 Confirm manual Organize Tabs is the only full-workbook sort and preserves hidden sheets.
 
-The manual menu item is wired to enforceGlobalSheetSortOrder. 
+The manual menu item is wired to enforceGlobalSheetSortOrder.
 
 ## **Steps**
 
@@ -709,21 +711,21 @@ The manual menu item is wired to enforceGlobalSheetSortOrder.
 
 ## **Purpose**
 
-Confirm the full Dashboard Quality Workflow now populates Section H, Section P, and Section Q.
+Confirm the full Dashboard Quality Workflow now populates Section I, Section Q, and Section R.
 
-v1.7.8 full workflow now calls the full template/format section workflow with health/signoff enabled. 
+v1.8.3 full workflow now calls the full template/format section workflow with health/signoff enabled.
 
-v1.7.8 explicitly runs:
+v1.8.3 explicitly runs:
 
-* Section H Framework Health Check
+* Section I Framework Health Check
 
-* Section P Summary
+* Section Q Summary
 
-* Section Q Signoff 
+* Section R Signoff
 
-The Dashboard Quality shell contains SECTION P \- SUMMARY and SECTION Q \- SIGNOFF. 
+The Dashboard Quality shell contains SECTION Q - SUMMARY and SECTION R - SIGNOFF.
 
-The writers now target Section P and Section Q. 
+The writers now target Section Q and Section R.
 
 ## **Steps**
 
@@ -731,11 +733,11 @@ The writers now target Section P and Section Q.
 
 2. Open Dashboard Quality Report.
 
-3. Confirm Section H has current rows.
+3. Confirm Section I has current rows.
 
-4. Confirm Section P Summary is populated.
+4. Confirm Section Q Summary is populated.
 
-5. Confirm Section Q Signoff is populated.
+5. Confirm Section R Signoff is populated.
 
 6. Confirm sections do not remain NOT RUN.
 
@@ -743,25 +745,25 @@ The writers now target Section P and Section Q.
 
 ## **Pass**
 
-* Section H is populated.
-
-* Section P is populated.
+* Section I is populated.
 
 * Section Q is populated.
+
+* Section R is populated.
 
 * Dashboard Quality Workflow completes.
 
 * Timing report records Dashboard Quality Workflow completion.
 
-* No legacy Section M Summary or Section N Signoff mismatch appears.
+* No legacy pre-v1.8.3 Summary/Signoff section mismatch appears.
 
 ## **Fail**
 
-* Section H remains NOT RUN.
-
-* Section P remains NOT RUN.
+* Section I remains NOT RUN.
 
 * Section Q remains NOT RUN.
+
+* Section R remains NOT RUN.
 
 * Summary or Signoff rows appear under the wrong section.
 
@@ -773,7 +775,7 @@ The writers now target Section P and Section Q.
 
 ## **Purpose**
 
-Confirm v1.7.8 tests are logged and no expected controlled error is misread as a failure.
+Confirm v1.8.3 tests are logged and no expected controlled error is misread as a failure.
 
 ## **Steps**
 
@@ -819,7 +821,7 @@ Wave 1 can be considered cleared only when all of the following pass:
 
 ## **Version and setup**
 
-* v1.7.8 is installed.
+* v1.8.3 is installed.
 
 * Menus load.
 
@@ -879,11 +881,11 @@ Wave 1 can be considered cleared only when all of the following pass:
 
 * Full Dashboard Quality Workflow runs.
 
-* Section H populated.
-
-* Section P populated.
+* Section I populated.
 
 * Section Q populated.
+
+* Section R populated.
 
 * No unexpected NOT RUN sections remain after full workflow.
 
@@ -893,7 +895,7 @@ Wave 1 can be considered cleared only when all of the following pass:
 
 Run the tests in this order:
 
-1. Confirm v1.7.8 script version.
+1. Confirm v1.8.3 script version.
 
 2. Reload workbook and confirm menus.
 
@@ -937,10 +939,10 @@ Run the tests in this order:
 
 22. Review Framework Timing Report.
 
-23. Confirm final tab order and hidden state.  
-    
+23. Confirm final tab order and hidden state.
 
-  
+
+
 
 
 | Index  CP Due Individual Unlock CP Individual Demo P Banners Individual Banners Individual CP Due Individual Unlock CP Individual Monthly Change Individual Archive Demo P Disenrolled Exclusion  Banner Monthly Format CP Due  Monthly Format Unlock CP  Monthly Format Dashboard Quality Report Master Creath Monthly Update Raw Data Monthly Format Master List Individual Raw Data Individual Master List Individual Raw Data Individual Framework Timing Report Format Dashboard  | Index Banner Monthly Format CP Due  Monthly Format Unlock CP  Monthly Format Demo P Disenrolled Exclusion Banners Individual CP Due Individual Unlock CP Individual Banner Monthly Format CP Due  Monthly Format Monthly Change Individual Archive Demo P Unlock CP  Monthly Format Monthly Change Monthly Update Dashboard Quality Report Master List Monthly Update Raw Data Monthly Format Raw Data Individual Master List Individual Raw Data Individual Framework Timing Report Format Dashboard  |
