@@ -978,3 +978,166 @@ This appendix integrates current v1.8.9 audit evidence from **Master_List/Audit 
 #### Audit Integration Result
 
 The audit summary integration pass is complete for documentation purposes. Closed/implemented audit evidence has been incorporated as current framework governance. Open findings from the exhaustive v1.8.9 review are intentionally documented as current risk notes rather than marked complete. Future production remediation must update this specification only after the production script implements the change and validation evidence confirms closure.
+
+### Appendix L — Expanded Sheet Inventory
+
+| Sheet / Sheet Family | Category | Creation / Maintenance Owner | Template Dependency | Visibility / Lifecycle | Data Ownership |
+|---|---|---|---|---|---|
+| **Index** | System/index | Index, archive, restore, and setup workflows | None | Rank 1; never hidden; refreshed after sheet-producing/archive workflows when safe. | Active workbook inventory and external archive inventory. |
+| **Format Dashboard** | Configuration dashboard | Dashboard setup/rebuild, layout capture, dashboard validation | None | System surface; shown/hidden by system-sheet workflow; not participant data. | Editable framework configuration. |
+| **Dashboard Quality Report** | Quality dashboard | Dashboard Quality startup/quick/full/template validation workflows | None | System surface; section-scoped writes; shell preserved. | QA evidence, validation status, summary, and signoff. |
+| **Framework Timing Report** | Timing dashboard | Timing wrappers, timing refresh, recommendation writers | None | System surface; timing evidence retained and compacted. | Runtime performance evidence. |
+| **Demo P** | Core operational | Demo P build, Demo P monthly sync, Disenrolled Exclusion workflow | **Template - Demo P** | Rank 2; visible; source for Master List and disenrollment. | Flattened participant/contact processing data and Primary PMR ownership. |
+| **Disenrolled Exclusion** | Core operational | Disenrollment workflow | **Template - Disenrolled Exclusion** | Rank 10; visible; old rows may be hidden by workflow. | Governed disenrollment/exclusion evidence. |
+| **Archive - Demo P** | Archive/retention | Demo P monthly sync and disenrollment retention helpers | None | Rank 350; always hidden; protected from unsafe deletion. | Replaced Demo P rows and replacement audit evidence. |
+| **Master List mm.yy** | Monthly active | Master List workflow and Monthly Update | **Template - Master List** | Dynamic monthly active rank beginning 21; visible operational output. | Primary PMR operational participant rows and synchronized fields. |
+| **Monthly Change mm.yy** | Monthly active | Monthly Change workflow and Monthly Update | **Template - Monthly Change** | Dynamic monthly active rank beginning 22; visible report output. | Current/prior comparison evidence. |
+| **Raw Data mm.yy** | Monthly active/source output | Raw Data formatting workflow | **Template - Raw Data** | Dynamic monthly active rank beginning 23; hidden after creation where configured. | Formatted Raw Data source evidence. |
+| **Banners mm.yy** | Monthly sub-report | Banner formatting workflow | **Template - Banner Report** | Dynamic monthly sub-report rank beginning 24; hidden after creation / monthly import lifecycle. | Banner source output for synchronization. |
+| **CP Due mm.yy** | Monthly sub-report | Care Plan Due formatting workflow | **Template - Care Plan Due** | Dynamic monthly sub-report rank beginning 25; hidden after creation / monthly import lifecycle. | Care Plan Due source output for synchronization. |
+| **Unlock CP mm.yy** | Monthly sub-report | Unlocked Care Plan formatting workflow | **Template - Unlocked Care Plan** | Dynamic monthly sub-report rank beginning 26; hidden after creation / monthly import lifecycle. | Unlocked Care Plan source output for synchronization. |
+| **Raw Data - Banners** | Source data | Banner source import/archive workflow | None | Dynamic source rank beginning 27; moves to archive after creation where configured. | Raw imported Banner evidence. |
+| **Raw Data - Raw Data** | Source data | Raw Data source import/archive workflow | None | Dynamic source rank beginning 28; moves to archive after creation where configured. | Raw imported Raw Data evidence. |
+| **Raw Data - CP Due** | Source data | Care Plan Due source import/archive workflow | None | Dynamic source rank beginning 29; moves to archive after creation where configured. | Raw imported Care Plan Due evidence. |
+| **Raw Data - Unlocked CP** | Source data | Unlocked Care Plan source import/archive workflow | None | Dynamic source rank beginning 30; moves to archive after creation where configured. | Raw imported Unlocked Care Plan evidence. |
+| **B** | Unformatted import | Monthly source formatting workflow | None | Rank 300 source route. | Unformatted Banner import. |
+| **CD** | Unformatted import | Monthly source formatting workflow | None | Rank 301 source route. | Unformatted Care Plan Due import. |
+| **UC** | Unformatted import | Monthly source formatting workflow | None | Rank 302 source route. | Unformatted Unlocked Care Plan import. |
+| **RD** | Unformatted import | Monthly source formatting workflow | None | Rank 303 source route. | Unformatted Raw Data import. |
+
+### Appendix M — Expanded Template Inventory
+
+| Template | Sheet Type | Output Pattern | Default Rows | Default Columns | Visibility | Validation / Refresh Governance |
+|---|---|---|---:|---:|---|---|
+| **Template - Banner Report** | Banners | **Banners mm.yy** | 100 | 9 | Hidden by template lifecycle. | Built from dashboard sections; signature-governed smart refresh; validates headers, filters, dimensions, date/number formats, hidden columns, and row heights. |
+| **Template - Care Plan Due** | CP Due Date | **CP Due mm.yy** | 100 | 5 | Hidden by template lifecycle. | Built from dashboard sections; validates care-plan due columns and pulled spreadsheet date/source formatting. |
+| **Template - Unlocked Care Plan** | Unlock CP | **Unlock CP mm.yy** | 100 | 4 | Hidden by template lifecycle. | Built from dashboard sections; validates unlocked care-plan output structure and sync-source formatting. |
+| **Template - Raw Data** | Raw Data | **Raw Data mm.yy** | 100 | 54 | Hidden by template lifecycle. | Preserves Raw Data source evidence and date/header formatting. |
+| **Template - Demo P** | Demo P | **Demo P** | 100 | 80 | Hidden by template lifecycle. | Governs Demo P formatting, generated processing columns, update tracking, and date formatting. |
+| **Template - Disenrolled Exclusion** | Disenrolled Exclusion | **Disenrolled** | 100 | 66 | Hidden by template lifecycle. | Governs exclusion output structure and retained disenrollment evidence. |
+| **Template - Master List** | Master List | **Master List mm.yy** | 100 | 37 | Hidden by template lifecycle. | Governs Primary PMR operational output formatting. |
+| **Template - Monthly Change** | Monthly Change | **Monthly Change mm.yy** | 100 | 54 | Hidden by template lifecycle. | Governs change report section output and subheader formatting. |
+| **RFF_BASE_TEMPLATE** | Base/system template | N/A | Governed by script defaults | Governed by script defaults | Always hidden. | Base formatting source; protected from unsafe deletion and normal user edits. |
+
+### Appendix N — Expanded Dashboard Section Tables
+
+| Format Dashboard Section | Required Columns | Source / Default Owner | Validation Owner | Notes |
+|---|---|---|---|---|
+| **SECTION A - GLOBAL SETTINGS** | Setting; Value; Options | Script defaults and dashboard rebuild. | Dashboard Quality Section A. | Controls row numbers, freeze settings, row heights, default formats, font, colors, HSL levels, border style, and template version. |
+| **SECTION B - TITLE ROWS** | Sheet Type; Row; Purpose; Value Source; Label; Target Cell; Height; Font Size; Font Weight; Fill Level; Alignment; Wrap; Notes | Script defaults and dashboard rebuild. | Dashboard Quality Section A and template validation. | Governs title/date/spacer/header rows used by templates and outputs. |
+| **SECTION C - SHEET DEFINITIONS** | Sheet Type; Report Title; Template Name; Output Naming Pattern; Base Color; Use Prompt Date; End Date Source; Template Row Count; Template Column Count; Template Row Mode; Minimum Rows; Buffer Rows | Script defaults and dashboard rebuild. | Dashboard Quality Section B. | Governs report/template relationship, output names, colors, sizing, and row-count behavior. |
+| **SECTION D - SHEET BEHAVIORS** | Sheet Type; Uses Title Rows; Uses Filter; Uses Alternating Colors; Uses Subheaders; Hidden Template; Output Visibility | Script defaults and dashboard rebuild. | Dashboard Quality Section C. | Governs behavior flags used by template/output formatting. |
+| **SECTION E - SYSTEM SHEET SURFACES** | System Sheet Name; Display Name; Sort Order; Output Visibility; Title Fill Color; Title Font Color; Use Global Defaults; Notes | Script defaults and dashboard rebuild. | Dashboard/system-surface validation. | Governs Format Dashboard, Dashboard Quality, Framework Timing, Archive - Demo P, base template, and other framework surfaces. |
+| **SECTION F - TAB ORGANIZATION & INDEX** | Sheet Name / Prefix; Group; Rank / Range; Special | Script defaults, v1.8.9 category order summary, and dashboard rebuild. | Dashboard Quality Section F. | Governs sheet categories, ranks, dynamic monthly grouping, Index ordering, and lifecycle visibility. |
+| **SECTION G - COLUMN DEFINITIONS** | Header; Width; Header Font Size; Date Column; Hide Column; Data Wrap; Horizontal Alignment; Vertical Alignment; Number Format | Script defaults and dashboard rebuild. | Dashboard Quality Section D. | Governs column presentation and hidden/date-format behavior. |
+| **SECTION H - SHEET HEADERS** | Sheet Type; Column Order; Header; Source of Data | Script defaults and dashboard rebuild. | Dashboard Quality Section E. | Governs header order and source lineage by sheet type. |
+
+| Dashboard Quality Section | Required Output Columns | Governance Purpose |
+|---|---|---|
+| **SECTION A - GLOBAL INPUTS VERIFICATION** | Setting; Status; Issue; Quality Notes | Verifies global inputs and title rows. |
+| **SECTION B - SHEET DEFINITIONS VERIFICATION** | Sheet; Status; Issue; Quality Notes | Verifies dashboard sheet definitions. |
+| **SECTION C - SHEET BEHAVIOR VERIFICATION** | Behavior; Status; Issue; Quality Notes | Verifies sheet behavior settings. |
+| **SECTION D - COLUMN DEFINITIONS VERIFICATION** | Column; Status; Issue; Quality Notes | Verifies column definition settings. |
+| **SECTION E - SHEET HEADERS VERIFICATION** | Header; Status; Issue; Quality Notes | Verifies sheet header definitions and lineage. |
+| **SECTION F - TAB ORGANIZATION & INDEX VERIFICATION** | Tab Organization; Status; Issue; Quality Notes | Verifies tab organization and Index configuration. |
+| **SECTION G - TEMPLATE STRUCTURE & VALIDATION** | Template; Status; Issue; Quality Notes | Verifies template existence, structure, formatting, and signatures. |
+| **SECTION H - FORMAT DASHBOARD CHANGELOG** | Timestamp; Section Changed; Column Changed; Previous Value; New Value | Tracks dashboard governance changes. |
+| **SECTION I - FRAMEWORK HEALTH CHECK** | Area; Item; Status; Quality Notes | Verifies required framework surfaces. |
+| **SECTION J - PERFORMANCE SUMMARY** | Process; Runtime / Status fields; Quality Notes | Summarizes timing evidence and performance status. |
+| **SECTION K - RAW DATA VALIDATION** | Validation Item; Status; Issue; Quality Notes | Validates Raw Data readiness. |
+| **SECTION L - CARE PLAN SYNC VALIDATION** | Validation Item; Status; Issue; Quality Notes | Validates Care Plan Due and Unlocked Care Plan sync readiness. |
+| **SECTION M - WORKFLOW & SYNCHRONIZATION VERIFICATION** | Sync Check Area; Verification Item; Status; Quality Notes | Verifies workflow and synchronization expectations. |
+| **SECTION N - DEMO P QUALITY VALIDATION** | Validation Item; Status; Issue; Quality Notes | Validates Demo P processing. |
+| **SECTION O - DISENROLLED EXCLUSION VALIDATION** | Validation Item; Status; Issue; Quality Notes | Validates Disenrolled Exclusion output. |
+| **SECTION P - MONTHLY CHANGE VALIDATION** | Validation Item; Status; Issue; Quality Notes | Validates Monthly Change output. |
+| **SECTION Q - SUMMARY** | Area; Status; Quality Notes; Evidence | Consolidates quality status. |
+| **SECTION R - SIGNOFF** | Signoff Item; Status; Issue; Quality Notes | Records release/governance signoff. |
+
+### Appendix O — Expanded Header and Column Dictionary
+
+| Dictionary Area | Governing Section | Required Coverage | Current Governance |
+|---|---|---|---|
+| Sheet header order | **SECTION H - SHEET HEADERS** | Sheet type, column order, header, source of data. | Header names and order are protected; updates require template, mapping, validation, and documentation synchronization. |
+| Column presentation | **SECTION G - COLUMN DEFINITIONS** | Header, width, font size, date flag, hide flag, wrap, horizontal/vertical alignment, number format. | Presentation changes are dashboard-governed only where loaders and validators support them. |
+| Identity headers | **SECTION H - SHEET HEADERS** | PMR identifiers, participant names, DOB, enrollment/disenrollment dates, Primary PMR Row. | Protected because they control matching, grouping, and sync ownership. |
+| Generated Demo P headers | **SECTION H - SHEET HEADERS** | Primary PMR Row, update status/month/source, generated sort/helper fields. | Produced by Demo P processing and protected from ad hoc rename/removal. |
+| Synchronization headers | **SECTION H - SHEET HEADERS** | Banner fields, Care Plan Due fields, Unlocked Care Plan fields, participant-level merged fields. | Synchronize to Master List Primary PMR rows only. |
+| Date headers | **SECTION G - COLUMN DEFINITIONS** and global date header constants | DOB, enrollment/disenrollment dates, care plan dates, phone-valid dates, report dates. | Must receive governed date formatting and serial/date conversion handling. |
+| Hidden helper headers | **SECTION G - COLUMN DEFINITIONS** | Processing/audit helper columns where implemented. | May be hidden in outputs but remain part of protected schema when used by workflows. |
+| Validation headers | Dashboard Quality sections and report validators | Status, issue, quality notes, evidence, signoff fields. | Governed by Dashboard Quality shell and section-specific writers. |
+
+### Appendix P — Expanded Data Mapping Matrix
+
+| Mapping Path | Source Key | Destination Key | Transformation / Merge Rule | Validation / Failure Behavior |
+|---|---|---|---|---|
+| Imported B source to Banner output | Prompt month and source route | Banners monthly sheet | Copy/format from source into governed Banner output. | Invalid source fails; missing optional route can skip/log in bulk formatter. |
+| Imported CD source to Care Plan Due output | Prompt month and source route | CP Due monthly sheet | Copy/format from source into governed Care Plan Due output. | Invalid source fails; missing optional route can skip/log in bulk formatter. |
+| Imported UC source to Unlocked Care Plan output | Prompt month and source route | Unlock CP monthly sheet | Copy/format from source into governed Unlocked Care Plan output. | Invalid source fails; missing optional route can skip/log in bulk formatter. |
+| Imported RD source to Raw Data output | Prompt month and source route | Raw Data monthly sheet | Copy/format from source into governed Raw Data output. | Raw Data validation blocks downstream Demo P if required structure is missing. |
+| Raw Data to Demo P | Participant PMR / normalized participant identity | Demo P PMR rows | Flatten participant/contact rows, assign Primary PMR Row, generate update/source tracking. | Missing PMR/header identity fails before unsafe mutation. |
+| Current/prior Raw Data to Monthly Change | PMR and section-specific comparison keys | Monthly Change report rows | Compare enrollment, disenrollment, demographic, caseload, contact, Banner, and Care Plan categories where implemented. | Missing current/prior dependencies or required headers fail. |
+| Monthly Change to Demo P sync scope | Changed PMR collection | Demo P replacement set | Determines PMRs requiring fresh Raw Data rows during monthly sync. | Monthly Change dependency is required before monthly Demo P sync. |
+| Demo P retained rows to Archive - Demo P | Existing Demo P PMR rows | Archive - Demo P append rows | Archive replacement rows before Demo P body rewrite. | Archive step must complete before replacement body mutation where required. |
+| Demo P to Disenrolled Exclusion | Disenrolled PMR / status/date fields | Disenrolled Exclusion rows | Append qualifying records and remove qualifying Demo P rows. | Validation prevents unsafe removal and formats output after mutation. |
+| Demo P to Master List | Primary PMR Row / PMR identity | Master List Primary PMR rows | Copy governed headers/data for Primary PMR operational output. | Missing/invalid Primary PMR architecture remains an open risk note and must be reviewed before future changes. |
+| Banner to Master List | PMR / Banner matching fields | Master List Primary PMR row | Synchronize Banner summary/indicator fields to participant row. | Required sync headers/maps must exist or warn/fail according to workflow risk. |
+| Care Plan Due to Master List | Participant/care-plan matching fields | Master List Primary PMR row | Synchronize care-plan due fields to participant row. | Dashboard Quality Section L validates sync readiness. |
+| Unlocked Care Plan to Master List | PMR/care-plan matching fields | Master List Primary PMR row | Synchronize unlocked care-plan fields to participant row. | Dashboard Quality Section L validates sync readiness. |
+| Workbook/archive sheets to Index | Sheet name, month, category, archive status | Index active and archive grids | Inventory active sheets and external archive sheets; generate links/actions. | Restore conflict blocks copy when target already exists. |
+
+### Appendix Q — Expanded Function Ownership Map
+
+| Function Group | Count / Scope | Owners | Safe-Change Notes |
+|---|---:|---|---|
+| Public entry points | 64 | Menu, trigger, web, workflow, validation, dashboard, archive, restore, and compatibility surfaces. | Must remain callable unless menus/triggers/routes/wrappers and documentation are migrated together. |
+| Internal helpers | 615 | All implementation subsystems. | Not deletion-safe solely because trailing underscore is present; verify callers and dynamic paths. |
+| Menu functions | 36 | User-facing workbook operations. | Callback strings are protected. |
+| Workflow functions | 18 | Monthly source formatting, Demo P, Monthly Change, Master List, Disenrollment, archive, restore, setup, QA. | Validate dependencies before destructive mutation. |
+| Process functions | 89 | Orchestration, report construction, comparison, archive/index, timing. | High coupling is expected in single-file architecture; review before behavior changes. |
+| Formatters | 156 | Templates, outputs, dashboard, timing, Monthly Change, Demo P, report surfaces. | Preserve template-first and batch-formatting standards. |
+| Validators | 30 | Dashboard, template, source, workflow, sync, quality, health. | Fail-fast behavior must not be weakened. |
+| Dashboard functions | 125 | Format Dashboard, Dashboard Quality, changelog, system surfaces. | Preserve section schemas and section-scoped writes. |
+| Utilities | 300 | Headers, dates, colors, ranges, maps, caches, properties, safe deletion, sorting. | Small utility changes can affect many workflows; run dependency review. |
+| Configuration functions | 52 | Defaults, constants, dashboard sections, document properties, runtime cache. | Configuration changes require documentation and validator updates. |
+| Trigger functions | 3 | `onOpen`, `onEdit`, `doGet`. | Apps Script callable names are protected. |
+
+### Appendix R — Expanded Validation Matrix
+
+| Validation Area | Owning Surface | Inputs | Pass Condition | Failure / Warning Handling |
+|---|---|---|---|---|
+| Dashboard global/title inputs | Dashboard Quality Section A | Format Dashboard Sections A-B | Required settings/rows exist and values are usable. | Missing/invalid settings fail readiness. |
+| Sheet definitions | Dashboard Quality Section B | Format Dashboard Section C | Required sheet types, templates, names, colors, sizing fields exist. | Missing definition fails dependent build/validation. |
+| Sheet behaviors | Dashboard Quality Section C | Format Dashboard Section D | Behavior rows exist and supported boolean/visibility fields are valid. | Invalid behavior fails dashboard readiness. |
+| Column definitions | Dashboard Quality Section D | Format Dashboard Section G | Required columns have supported width/format/wrap/alignment settings. | Missing/duplicate/invalid definitions fail or warn by usage risk. |
+| Sheet headers | Dashboard Quality Section E | Format Dashboard Section H | Header rows exist, are ordered, and contain required lineage. | Missing required identity/sync headers fail. |
+| Tab organization and Index | Dashboard Quality Section F | Format Dashboard Section F and workbook sheets | Categories/ranks/special handling are present and Index rules can be applied. | Invalid organization blocks release readiness. |
+| Template structure | Dashboard Quality Section G | Templates and signatures | Templates exist and match expected structure/formatting/signatures. | Missing/mismatched templates require rebuild or fail validation. |
+| Framework health | Dashboard Quality Section I | Required function and surface registry | Required functions/sheets/timing/dashboard/template/archive surfaces exist. | Missing required surface fails health. |
+| Performance summary | Dashboard Quality Section J | Framework Timing Report | Runtime evidence is current and no critical unresolved timing finding blocks release. | Slow/bottleneck/critical statuses guide remediation priority. |
+| Raw Data validation | Dashboard Quality Section K | Raw Data sheet and headers | Required source structure is present. | Blocks Demo P and monthly processing when required source is invalid. |
+| Care Plan sync validation | Dashboard Quality Section L | Care Plan Due / Unlocked Care Plan outputs and Master List sync fields | Sync keys/fields are available and consistent. | Blocks or warns according to data-integrity risk. |
+| Workflow synchronization | Dashboard Quality Section M | Workflow outputs and sync expectations | Primary PMR, contact, Banner, Care Plan, and workflow expectations pass. | Fails readiness when synchronization expectations are unmet. |
+| Demo P quality | Dashboard Quality Section N | Demo P rows/headers | Demo P structure and generated rows are usable. | Blocks downstream Master List/disenrollment if required fields fail. |
+| Disenrolled Exclusion quality | Dashboard Quality Section O | Disenrolled Exclusion rows/headers | Exclusion records are governed and formatted. | Fails readiness if exclusion output is structurally invalid. |
+| Monthly Change validation | Dashboard Quality Section P | Monthly Change output | Report sections and required outputs are valid. | Fails or warns; ML189-001/005 remain open risk notes. |
+| Summary and signoff | Dashboard Quality Sections Q-R | Stored section statuses | Summary and signoff reflect current evidence. | Release is not ready without acceptable summary/signoff. |
+
+### Appendix S — Expanded Protected Standards Catalog
+
+| Protected Surface | Examples | Why Protected | Change Requirement |
+|---|---|---|---|
+| Production version identity | `MASTER_LIST_MERGE_ML_VERSION`, `RFF_VERSION` | Controls release identity and dashboard/template versioning. | Versioned production update and documentation sync. |
+| Public entry points | `runMonthlyUpdate`, `createMasterList`, `doGet`, `onOpen` | Menus, triggers, web routes, and users may call them directly. | Update all callbacks/routes/wrappers before rename/removal. |
+| Menu callback strings | Master List menu items and submenus | Apps Script menus use string callback binding. | Verify workbook open and all menu actions after change. |
+| Trigger/web surfaces | `onOpen`, `onEdit`, `doGet` | Apps Script runtime invokes by name. | Preserve names unless deployment migration is approved. |
+| Sheet names/prefixes | **Index**, **Demo P**, **Master List**, **Monthly Change**, **Archive - Demo P** | Workflows resolve sheets by protected names/prefixes. | Update constants, dashboard defaults, templates, validators, Index, and archive logic. |
+| Template names | **Template - Master List**, **Template - Demo P**, **RFF_BASE_TEMPLATE** | Template-first output depends on exact names. | Update sheet definitions, validators, template refresh, and docs. |
+| Format Dashboard sections | Sections A-H | Dashboard loaders/validators depend on exact section titles and columns. | Update loaders, defaults, validators, Dashboard Quality, and documentation together. |
+| Dashboard Quality sections | Sections A-R | Quality report shell and section writers depend on exact titles. | Update section registry, headers, writers, style routines, summary/signoff, and docs. |
+| Header names and source lineage | PMR, Primary PMR Row, date, sync, update-tracking headers | Matching, mapping, validation, and synchronization depend on them. | Update dashboard headers, templates, source maps, validators, and tests. |
+| Primary PMR ownership | Primary PMR Row | Core business rule for participant-level synchronization. | Business approval and complete workflow/test update required. |
+| Archive and restore schema | Archive spreadsheet ID, Index archive grid, restore actions | Prevents data loss and restore conflicts. | Validate archive copy, local conflict protection, Index, web restore, and properties. |
+| Runtime caches | Dashboard/header/monthly sheet/template/timing caches | Prevents stale reads and reduces SpreadsheetApp calls. | Add cache invalidation for any mutation affecting cached data. |
+| Safe deletion protections | Protected sheet set and `RFF_` guard | Prevents accidental loss of framework-owned sheets. | Never weaken without explicit governance approval and tests. |
+| Formatting standards | Template-first, dashboard-governed, batch formatting | Maintains consistency and performance. | Update templates/dashboard/defaults/validators together. |
+| Validation fail-fast rules | Required dependency/header/source checks | Prevents corrupt governed output. | Do not downgrade blocking validation to warning without approval. |
