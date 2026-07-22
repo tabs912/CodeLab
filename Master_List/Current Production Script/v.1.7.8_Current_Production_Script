@@ -3507,7 +3507,7 @@ function getDefaultBehaviorRows_() {
 
 function getDefaultSystemSurfaceRows_() {
   return [
-    ["Framework Timing Report", "Framework Timing Report", 500, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Unified timing report surface"],
+    [RFF_DASHBOARD_SHEET, "Format Dashboard", 500, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Dashboard configuration surface"],
     ["Dashboard Quality Report", "Dashboard Quality Report", 501, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Unified quality report surface"],
     [RFF_DASHBOARD_SHEET, "Format Dashboard", 502, "VISIBLE", RFF_SYSTEM_SHEET_TITLE_COLOR, "#000000", true, "Dashboard configuration surface"],
     [DEMO_P_ARCHIVE_SHEET, DEMO_P_ARCHIVE_SHEET, 350, "HIDDEN", "#657FCC", "#000000", true, "Hidden Demo P row archive"],
@@ -11816,9 +11816,10 @@ function getGlobalSheetSortRankByName_(sheetName) {
 
 function getSystemTemplateTailBlockNames_() {
   return [
-    RFF_TIMING_SHEET,
-    RFF_TEST_DASHBOARD_SHEET,
     RFF_DASHBOARD_SHEET,
+    RFF_TEST_DASHBOARD_SHEET,
+    RFF_TIMING_SHEET,
+    RFF_BASE_TEMPLATE_NAME,
     "Template - Banner Report",
     "Template - Care Plan Due",
     "Template - Unlocked Care Plan",
@@ -11826,8 +11827,7 @@ function getSystemTemplateTailBlockNames_() {
     "Template - Demo P",
     "Template - Disenrolled Exclusion",
     "Template - Master List",
-    "Template - Monthly Change",
-    RFF_BASE_TEMPLATE_NAME
+    "Template - Monthly Change"
   ];
 }
 
