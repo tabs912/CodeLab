@@ -1,10 +1,10 @@
-// ============================================================================
+F// ============================================================================
 // CONFIGURATION
 // ============================================================================
 
 const MASTER_LIST_MERGE_ML_VERSION = "1.8.9.3";
 
-const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
+const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";F
 
 const MASTER_LIST_MERGE_BASELINE_VERSION = "1.6.22.3";
 
@@ -2879,20 +2879,19 @@ function onEdit(e) {
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
-  const demoPMenu = ui.createMenu("📁 Demo P")
-    .addItem("🔄 Update Demo P", "updateDemoPMonthlySync")
-    .addItem("🛠️ Build Demo P", "buildDemoPFromScratch");
+  // 1. Quick Start-up Menu
+  const quickStartMenu = ui.createMenu("🚀 Quick Start-up")
+    .addItem("🏗️ System Set up", "quickSystemSetup")
+    .addItem("🖼️ Build Templates + Validate Templates", "quickBuildAllTemplates")
+    .addItem("✅ Dashboard Quality Workflow", "runDashboardQualityFull");
 
+  // 2. Data & Processing Engine Menu
   const dataProcessingMenu = ui.createMenu("📊 Data & Processing Engine")
     .addItem("📚 Format Monthly Sheets", "formatMonthlySheets")
     .addItem("🏁 Create Monthly Start", "runMonthlyStart")
-    .addItem("🔁 Create Monthly Update", "runMonthlyUpdate")
-    .addSubMenu(demoPMenu)
-    .addItem("⛔ Create / Update Disenrolled List", "createDisenrolledList")
-    .addItem("🗓️ Monthly Change Report", "buildMonthlyChangeReport")
-    .addItem("💡 Create Master List", "createMasterList");
+    .addItem("🔁 Create Monthly Update", "runMonthlyUpdate");
 
- 
+  // 3. Sheet & Layout Management Menu
   const monthlyImportSheetsMenu = ui.createMenu("🗄️ Monthly Sub-Reports")
     .addItem("🗂️ Hide Monthly Sub-Reports", "hideMonthlyImportSheets")
     .addItem("🗃️ Archive Monthly Sub-Reports", "archiveMonthlyImportSheets");
@@ -2910,19 +2909,12 @@ function onOpen() {
     .addItem("Show System Sheets", "showSystemSheets_");
 
   const sheetLayoutMenu = ui.createMenu("⚙️ Sheet & Layout Management")
-    .addItem("🧭 Organize Tabs", "enforceGlobalSheetSortOrder")
     .addSubMenu(monthlyImportSheetsMenu)
     .addSubMenu(monthlyActiveSheetsMenu)
     .addSubMenu(templatesMenu)
-    .addSubMenu(systemSheetsMenu)
-    .addItem("🪄 Clear Timing Log", "clearDiagnosticsAndTimingLogs")
-    .addItem("⏱️ Framework Timing on/off", "toggleFrameworkTiming");
+    .addSubMenu(systemSheetsMenu);
 
-  const quickStartMenu = ui.createMenu("🚀 Quick Start-up")
-    .addItem("🏗️ System Set up", "quickSystemSetup")
-    .addItem("🖼️ Build Templates + Validate Templates", "quickBuildAllTemplates")
-    .addItem("✅ Dashboard Quality Workflow", "runDashboardQualityFull");
-
+  // 4. Maintenance/Rebuild Menu
   const qualityMenu = ui.createMenu("👌 Quality")
     .addItem("Dashboard Quality Start up", "runDashboardQualityStartUp")
     .addItem("Dashboard Quality Validate Templates", "runDashboardQualityValidateTemplates")
@@ -2935,10 +2927,28 @@ function onOpen() {
     .addItem("Unlocked CP", "formatUnlockedCarePlanReport")
     .addItem("Raw Data", "formatRawData");
 
+  const demoPMenu = ui.createMenu("📁 Demo P")
+    .addItem("🔄 Update Demo P", "updateDemoPMonthlySync")
+    .addItem("🛠️ Build Demo P", "buildDemoPFromScratch");
+
+  const maintenanceDataProcessingMenu = ui.createMenu("📊 Data Processing")
+    .addSubMenu(demoPMenu)
+    .addItem("⛔ Create / Update Disenrolled List", "createDisenrolledList")
+    .addItem("🗓️ Monthly Change Report", "buildMonthlyChangeReport")
+    .addItem("💡 Create Master List", "createMasterList");
+
   const maintenanceMenu = ui.createMenu("🛠️ Maintenance/Rebuild")
     .addSubMenu(qualityMenu)
-    .addSubMenu(formatSheetsMenu);
+    .addSubMenu(formatSheetsMenu)
+    .addSubMenu(maintenanceDataProcessingMenu);
 
+  // 5. System Menu
+  const systemMenu = ui.createMenu("⚙️ System")
+    .addItem("🪄 Clear Timing Log", "clearDiagnosticsAndTimingLogs")
+    .addItem("⏱️ Framework Timing on/off", "toggleFrameworkTiming")
+    .addItem("🧭 Organize Tabs", "enforceGlobalSheetSortOrder");
+
+  // 6. Start - up Menu
   const startUpMenu = ui.createMenu("🧩 Start - up")
     .addItem("📜 Set up System Sheets", "setupSystemSheets")
     .addItem("🎨 Format Dashboard", "rebuildFormatDashboardDefaults")
@@ -2949,11 +2959,13 @@ function onOpen() {
     .addItem("🌐 Configure Index Restore Web App URL", "configureIndexRestoreWebAppUrl")
     .addItem("🔗 Configure Archive Spreadsheet ID", "configureArchiveSpreadsheetId");
 
+  // Build Top-Level Master List Menu
   ui.createMenu("Master List")
+    .addSubMenu(quickStartMenu)
     .addSubMenu(dataProcessingMenu)
     .addSubMenu(sheetLayoutMenu)
-    .addSubMenu(quickStartMenu)
     .addSubMenu(maintenanceMenu)
+    .addSubMenu(systemMenu)
     .addSubMenu(startUpMenu)
     .addToUi();
 }
