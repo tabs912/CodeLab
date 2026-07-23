@@ -3,7 +3,7 @@
 | Build Field | Value |
 |---|---|
 | Status | Current rebuilt framework specification. |
-| Implementation authority | **Master_List/Current Production Script/v1.8.9_Current_Production**. |
+| Implementation authority | **Master_List/Current Production Script/v1.8.9.2_Current_Production**. |
 | Prior governing baseline reviewed | **Master_List/Specs/v1.9_Master_List_Framework_Specifications_Final_Governing_Edition.pdf**. |
 | Current draft package reviewed | **Master_List/Specs/ML _Framework_v2.0_Drafts**. |
 | Supporting references reviewed | **Master_List/Specs**, **Master_List/Audit Summary**, and **Master_List/v2_Framework_Reference**. |
@@ -17,18 +17,18 @@ This Markdown source follows **Master_List/Specs/Framework_Spec_Formatting_Requi
 
 The Master List Framework is a single-file Google Apps Script production framework for monthly source formatting, Demo P processing, Monthly Change reporting, Disenrolled Exclusion governance, Master List generation, Banner synchronization, Care Plan Due synchronization, Unlocked Care Plan synchronization, dashboard-governed formatting, template governance, Index/archive lifecycle management, timing instrumentation, quality validation, and release-readiness evidence.
 
-This specification rebuilds the prior v1.9 governing framework into a current v1.8.9 implementation-bound specification. Historical framework documents, v2.0 drafts, audit summaries, and v2 reference inventories are supporting sources. The current production script is the source of truth when any supporting document conflicts with implementation.
+This specification rebuilds the prior v1.9 governing framework into a current v1.8.9.2 implementation-bound specification. Historical framework documents, v2.0 drafts, audit summaries, and v2 reference inventories are supporting sources. The current production script is the source of truth when any supporting document conflicts with implementation.
 
 ### Current Production Baseline
 
 | Item | Current Value |
 |---|---|
-| Production script | **Master_List/Current Production Script/v1.8.9_Current_Production** |
-| Framework version constant | `1.8.9` |
-| Production script length | 15,871 lines |
-| Declared functions | 679 |
+| Production script | **Master_List/Current Production Script/v1.8.9.2_Current_Production** |
+| Framework version constant | `1.8.9.2` |
+| Production script length | 15,980 lines |
+| Declared functions | 681 |
 | Public Apps Script-callable functions | 64 |
-| Internal underscore helpers | 615 |
+| Internal underscore helpers | 617 |
 | Dashboard configuration sections | A-H |
 | Dashboard Quality sections | A-R |
 
@@ -51,7 +51,7 @@ The framework exists to:
 
 | Principle | Governance Rule |
 |---|---|
-| Production source of truth | Production v1.8.9 governs behavior over prior specs, drafts, reports, and inventories. |
+| Production source of truth | Production v1.8.9.2 governs behavior over prior specs, drafts, reports, and inventories. |
 | Single-file Apps Script architecture | The framework remains a single production script until an approved versioned migration changes this. |
 | Dashboard-governed configuration | Format Dashboard is the editable configuration surface where loaders and validators support runtime values. |
 | Template-first output | Governed reports are created from templates, populated in batch, then finalized with targeted fixes. |
@@ -141,6 +141,10 @@ Startup and setup workflows create or refresh system sheets, dashboard defaults,
 | `RD` | Raw Data source import | Raw Data monthly output and downstream Demo P source. |
 
 Missing optional imports are skipped and logged when safe; invalid active source sheets and missing required dependencies fail before mutation.
+
+### Create Monthly Start Workflow
+
+`runMonthlyStart` is the v1.8.9.2 initial monthly creation workflow. It prompts for the locked report month, performs fail-closed Master List replacement preflight before Demo P mutation, builds Demo P from Raw Data, creates/updates Disenrolled Exclusion, creates Master List, refreshes Index, records timing, and notifies completion. The approved execution sequence is Date Prompt, Build Demo P, Create Disenrolled, Create Master List.
 
 ### Create Monthly Update Workflow
 
@@ -509,7 +513,7 @@ The framework uses explicit errors for unsafe states and warning logs for recove
 
 ## Performance Framework
 
-Performance governance preserves v1.9 batch-processing standards while documenting v1.8.9 implementation patterns.
+Performance governance preserves v1.9 batch-processing standards while documenting v1.8.9.2 implementation patterns.
 
 ### Performance Standards
 
@@ -559,7 +563,7 @@ Before removing or renaming a function, constant, configuration key, menu entry,
 
 ## Function Organization
 
-The implementation contains 679 functions. Public entry points are Apps Script-callable and protected. Internal helpers are trailing-underscore functions and are protected when referenced by workflows, callbacks, validators, registries, dynamic invocation, or tests.
+The implementation contains 681 functions. Public entry points are Apps Script-callable and protected. Internal helpers are trailing-underscore functions and are protected when referenced by workflows, callbacks, validators, registries, dynamic invocation, or tests.
 
 ### Public Entry Point Inventory
 
@@ -586,7 +590,6 @@ The implementation contains 679 functions. Public entry points are Apps Script-c
 - `archiveActiveRawDataSheet`
 - `runFrameworkSmokeValidation`
 - `hideMonthlyImportSheets`
-- `hideMonthlyActiveSheets`
 - `archiveMonthlyImportSheets`
 - `archiveMonthlyActiveSheets`
 - `formatMonthlyChangeSubheaderRow`
@@ -600,6 +603,7 @@ The implementation contains 679 functions. Public entry points are Apps Script-c
 - `processDemoP`
 - `formatDemoPStructure`
 - `buildMonthlyChangeReport`
+- `runMonthlyStart`
 - `runMonthlyUpdate`
 - `createMasterList`
 - `configureIndexRestoreWebAppUrl`
@@ -784,15 +788,15 @@ flowchart TD
 | Source | Use in Rebuild |
 |---|---|
 | v1.9 governing framework PDF | Prior governance baseline and coverage model. |
-| Current v2.0 drafts | Drafted current-state language and section ideas, updated only where v1.8.9 implements them. |
+| Current v2.0 drafts | Drafted current-state language and section ideas, updated only where v1.8.9.2 implements them. |
 | Historical specs | Supporting context for dashboard quality, timing, system sheets, and governance decisions. |
 | v2 framework reference | Supporting inventories for architecture, cache, templates, wrappers, validation, worksheets, and data flow. |
-| Audit summaries | Current review and validation evidence, including v1.8.9 function inventory and exhaustive review. |
-| v1.8.9 production script | Implementation source of truth. |
+| Audit summaries | Current review and validation evidence, including v1.8.9 function inventory and exhaustive review, plus v1.8.9.2 closure evidence. |
+| v1.8.9.2 production script | Current implementation source of truth. |
 
 ### Appendix H — Additional Data That Would Improve Future Builds
 
-The framework can be maintained from this specification and production source. For a future appendix-only expansion, the most useful additional data would be validated live workbook exports of the current Format Dashboard, Dashboard Quality Report, Framework Timing Report, template tabs, and Index sheet after v1.8.9 deployment. These are not required to document the implemented code architecture, but they would allow exact live-runtime appendix tables to be regenerated without relying only on script defaults.
+The framework can be maintained from this specification and production source. For a future appendix-only expansion, the most useful additional data would be validated live workbook exports of the current Format Dashboard, Dashboard Quality Report, Framework Timing Report, template tabs, and Index sheet after v1.8.9.2 deployment. These are not required to document the implemented code architecture, but they would allow exact live-runtime appendix tables to be regenerated without relying only on script defaults.
 
 ### Appendix I — v1.9 Coverage Pass
 
@@ -801,62 +805,62 @@ This appendix records the coverage pass from **Master_List/Specs/v1.9_Master_Lis
 | Status | Meaning |
 |---|---|
 | Preserved | The v1.9 governance remains valid and is carried forward with no substantive change other than formatting or placement. |
-| Updated | The v1.9 governance remains valid but is updated to match production v1.8.9 behavior, names, sections, counts, or workflow order. |
-| Replaced | The v1.9 concept is superseded by a newer implemented v1.8.9 framework surface or governance model. |
-| Retired | The v1.9 concept is not documented as active because v1.8.9 does not implement it as a current governing surface. |
+| Updated | The v1.9 governance remains valid but is updated to match production v1.8.9.2 behavior, names, sections, counts, or workflow order. |
+| Replaced | The v1.9 concept is superseded by a newer implemented v1.8.9.2 framework surface or governance model. |
+| Retired | The v1.9 concept is not documented as active because v1.8.9.2 does not implement it as a current governing surface. |
 
 | v1.9 Section / Appendix | v2.2 Location | Status | Coverage Notes |
 |---|---|---|---|
-| Purpose and authority preface | Framework Overview; Source Material Status | Updated | Authority is updated from v1.9 / v1.4.23 to production v1.8.9 as implementation source of truth. |
-| 1. Executive Overview | Framework Overview | Updated | Core framework purpose is preserved and expanded for v1.8.9 Dashboard Quality A-R and Format Dashboard A-H. |
+| Purpose and authority preface | Framework Overview; Source Material Status | Updated | Authority is updated from v1.9 / v1.4.23 to production v1.8.9.2 as implementation source of truth. |
+| 1. Executive Overview | Framework Overview | Updated | Core framework purpose is preserved and expanded for v1.8.9.2 Dashboard Quality A-R and Format Dashboard A-H. |
 | 1.1 Framework Purpose | Framework Purpose | Updated | Raw Data, Demo P, Master List, Monthly Change, Disenrollment, template, timing, and validation purposes are carried forward. |
-| 1.2 Current Production Baseline | Current Production Baseline | Updated | Baseline is rebuilt to v1.8.9 with current line/function counts and dashboard section counts. |
+| 1.2 Current Production Baseline | Current Production Baseline | Updated | Baseline is rebuilt to v1.8.9.2 with current line/function counts and dashboard section counts. |
 | 1.3 Primary PMR Row Architecture | Data Architecture; Mapping Architecture; Master List Module | Preserved | Primary PMR row remains the participant-level synchronization owner and is not reassigned downstream. |
-| 1.4 Dashboard Quality Architecture | Dashboard Quality Governance; Quality Assurance Framework; Appendix C | Replaced | v1.9 Dashboard Quality A-J is superseded by production v1.8.9 Dashboard Quality Sections A-R. |
-| 1.5 Protected Production Architecture | Protected Design Principles; Framework Governance | Updated | Protected architecture is preserved and expanded to include Tab Organization & Index, Dashboard Quality A-R, and v1.8.9 public surfaces. |
-| 2. Global Standards | Configuration Framework; Performance Framework; Framework Governance | Updated | Global standards are preserved and updated to v1.8.9 constants, dashboard sections, validation, and performance rules. |
+| 1.4 Dashboard Quality Architecture | Dashboard Quality Governance; Quality Assurance Framework; Appendix C | Replaced | v1.9 Dashboard Quality A-J is superseded by production v1.8.9.2 Dashboard Quality Sections A-R. |
+| 1.5 Protected Production Architecture | Protected Design Principles; Framework Governance | Updated | Protected architecture is preserved and expanded to include Tab Organization & Index, Dashboard Quality A-R, and v1.8.9.2 public surfaces. |
+| 2. Global Standards | Configuration Framework; Performance Framework; Framework Governance | Updated | Global standards are preserved and updated to v1.8.9.2 constants, dashboard sections, validation, and performance rules. |
 | 3. Sheet Layout Standards | Sheet Architecture; Column Architecture; Template Architecture | Updated | Header/data rows, template-first formatting, filters, hidden columns, row heights, and governed presentation rules are retained under current dashboard section ownership. |
 | 4. Color Management Standards | Configuration Framework; Template Architecture; Appendix E | Updated | Color/HSL/font governance is preserved as dashboard-global and template presentation governance. Detailed live color tables require a future dashboard export if exact runtime values are needed. |
-| 5. Naming Standards | Sheet Architecture; Framework Governance; Appendix B | Updated | Naming standards are updated to v1.8.9 monthly sheet families, source routes, templates, system sheets, and archive/index surfaces. |
-| 6. Sheet Organization Standards | Sheet Architecture; Tab Organization and Lifecycle | Replaced | The old organization model is superseded by Format Dashboard Section F - Tab Organization & Index and the v1.8.9 category/rank model. |
+| 5. Naming Standards | Sheet Architecture; Framework Governance; Appendix B | Updated | Naming standards are updated to v1.8.9.2 monthly sheet families, source routes, templates, system sheets, and archive/index surfaces. |
+| 6. Sheet Organization Standards | Sheet Architecture; Tab Organization and Lifecycle | Replaced | The old organization model is superseded by Format Dashboard Section F - Tab Organization & Index and the v1.8.9.2 category/rank model. |
 | 7. Dashboard Configuration Standards | Configuration Framework; Format Dashboard Sections | Replaced | v1.9 dashboard governance is replaced by production Format Dashboard Sections A-H. |
-| 8. Dashboard Configuration Tables | Format Dashboard Sections; Appendix E | Updated | Section-level table coverage is included; exact row-level dashboard defaults should be generated from v1.8.9 script defaults or live dashboard export for appendix expansion. |
-| 9. Data Source Mapping Standards | Data Architecture; Mapping Architecture | Updated | Mapping standards are preserved and updated to normalized PMR/header maps, Primary PMR synchronization, archive/index, and v1.8.9 workflow ownership. |
+| 8. Dashboard Configuration Tables | Format Dashboard Sections; Appendix E | Updated | Section-level table coverage is included; exact row-level dashboard defaults should be generated from v1.8.9.2 script defaults or live dashboard export for appendix expansion. |
+| 9. Data Source Mapping Standards | Data Architecture; Mapping Architecture | Updated | Mapping standards are preserved and updated to normalized PMR/header maps, Primary PMR synchronization, archive/index, and v1.8.9.2 workflow ownership. |
 | 10. Monthly Change Report Rules | Monthly Change Module; Workflow Architecture; Mapping Architecture | Preserved | Monthly Change remains the current/prior comparison workflow and a dependency before Demo P monthly synchronization. |
 | 11. Master List Processing Rules | Master List Module; Data Architecture; Mapping Architecture | Preserved | Master List remains the Primary PMR operational output and synchronization target. |
 | 11.1 Primary PMR Ownership Standard | Data Ownership; Mapping Standards | Preserved | Primary PMR ownership is carried forward as a protected standard. |
 | 11.2 One Pass Processing Standard | Performance Framework | Preserved | One-pass / batch-processing standards are preserved as performance requirements. |
 | 11.3 Synchronization Ownership Standard | Mapping Architecture; Master List Module | Preserved | Participant-level synchronization ownership remains on Primary PMR rows. |
-| 12. Banner Processing Rules | Monthly Source Formatting Module; Mapping Architecture | Updated | Banner route and synchronization rules are carried forward under v1.8.9 source formatting and Master List sync ownership. |
+| 12. Banner Processing Rules | Monthly Source Formatting Module; Mapping Architecture | Updated | Banner route and synchronization rules are carried forward under v1.8.9.2 source formatting and Master List sync ownership. |
 | 13. Care Plan Processing Rules | Monthly Source Formatting Module; Mapping Architecture; Dashboard Quality Governance | Updated | Care Plan Due and Unlocked Care Plan processing are documented as source formatting and Master List Primary PMR synchronization surfaces with Dashboard Quality Section L validation. |
-| 14. Demo P Processing Rules | Demo P Module; Data Architecture | Updated | Demo P initialization, monthly sync, replacement coverage, archive retention, and reactivation sweep behavior are documented for v1.8.9. |
+| 14. Demo P Processing Rules | Demo P Module; Data Architecture | Updated | Demo P initialization, monthly sync, replacement coverage, archive retention, and reactivation sweep behavior are documented for v1.8.9.2. |
 | 15. Disenrollment Processing Rules | Disenrolled Exclusion Module; Data Architecture | Updated | Disenrollment governance is preserved and updated to current exclusion append/remove/format/validation behavior. |
 | 16. Framework Development Standards | Framework Governance; Framework Maintenance | Updated | Safe-change and versioned-maintenance governance is preserved and expanded for current public interfaces, dashboards, templates, and validators. |
 | 16.1 Architecture Rules | Framework Architecture; Protected Design Principles | Preserved | Single-file architecture and protected architecture rules are carried forward. |
 | 16.2 Code Cleanup Requirements | Safe-Change Requirements; Framework Maintenance | Updated | Cleanup remains governed by dependency review and is updated to include current dynamic references, Dashboard Quality, Index/archive, and property usage. |
 | 16.3 Update Rules | Versioning; Maintenance Workflow | Updated | Production updates remain versioned and must synchronize code, dashboard defaults, templates, validators, timing, QA, and documentation. |
 | 16.D Single File Architecture Standard | Protected Design Principles; Architecture Layers | Preserved | Single-file Apps Script architecture remains active. |
-| 16.E Script Rebuild Standard | Framework Maintenance | Updated | Rebuild guidance is retained as maintenance governance; production v1.8.9 remains the executable baseline. |
+| 16.E Script Rebuild Standard | Framework Maintenance | Updated | Rebuild guidance is retained as maintenance governance; production v1.8.9.2 remains the executable baseline. |
 | 16.F Production Update Standard | Versioning; Release Preparation guidance | Updated | Production update expectations are preserved with current repository preparation and text/source-only diff rules. |
 | 17. Helper Audit Standards | Function Organization; Safe-Change Requirements | Updated | Helper audit is represented through function grouping, internal helper protection, and dependency checks before removal or rename. |
 | 18. Framework Health Check Standards | Dashboard Quality Governance; Validation Framework; Appendix F | Updated | Health check governance is updated to Dashboard Quality Section I and current framework health expectations. |
-| 19. Testing Workflow Standards | Quality Assurance Framework; Validation Framework; Appendix F | Updated | Testing standards are updated to Dashboard Quality A-R and v1.8.9 validation layers. |
+| 19. Testing Workflow Standards | Quality Assurance Framework; Validation Framework; Appendix F | Updated | Testing standards are updated to Dashboard Quality A-R and v1.8.9.2 validation layers. |
 | 20. Performance Standards | Performance Framework | Preserved | Batch read/write, cache, Maps/Sets, minimal flushes, and high-complexity timing review are carried forward. |
 | 20.A Template First Formatting Standard | Template Architecture; Performance Framework | Preserved | Template-first output generation remains a protected standard. |
 | 20.B Dashboard Processing Standard | Configuration Framework; Dashboard Architecture | Updated | Dashboard processing is updated to Format Dashboard A-H and section-scoped Dashboard Quality writes. |
 | 21. Versioning Standards | Versioning | Preserved | Versioning remains required for production scripts and documentation updates. |
-| 21.1 Framework Update Governance | Framework Maintenance; Source Material Status | Updated | Update governance is preserved and tied to current source materials and v1.8.9 implementation authority. |
-| 22. Protected Standards | Framework Governance; Protected Standards | Updated | Protected standards are preserved and expanded to include v1.8.9 dashboard sections, Dashboard Quality A-R, tab organization, and restore/archive surfaces. |
-| Appendix A - Column Configuration Tables | Column Architecture; Appendix E | Updated | Column categories and governance are covered; exact row-level column table should be regenerated from v1.8.9 defaults or live dashboard export for appendix expansion. |
-| Appendix B - Sheet Definitions | Sheet Architecture; Appendix B | Updated | Sheet families and lifecycle are covered; full row-level Section C defaults should be regenerated from v1.8.9 defaults or live dashboard export. |
+| 21.1 Framework Update Governance | Framework Maintenance; Source Material Status | Updated | Update governance is preserved and tied to current source materials and v1.8.9.2 implementation authority. |
+| 22. Protected Standards | Framework Governance; Protected Standards | Updated | Protected standards are preserved and expanded to include v1.8.9.2 dashboard sections, Dashboard Quality A-R, tab organization, and restore/archive surfaces. |
+| Appendix A - Column Configuration Tables | Column Architecture; Appendix E | Updated | Column categories and governance are covered; exact row-level column table should be regenerated from v1.8.9.2 defaults or live dashboard export for appendix expansion. |
+| Appendix B - Sheet Definitions | Sheet Architecture; Appendix B | Updated | Sheet families and lifecycle are covered; full row-level Section C defaults should be regenerated from v1.8.9.2 defaults or live dashboard export. |
 | Appendix C - Data Source Mapping Tables | Mapping Architecture | Updated | Mapping paths and standards are covered; exact field-level source/destination table remains an appendix expansion candidate. |
 | Appendix D - Color Standards Table | Configuration Framework; Template Architecture | Updated | Color governance is covered at standards level; exact color table remains an appendix expansion candidate. |
-| Appendix E - Sheet Naming Table | Sheet Architecture; Appendix B | Updated | Current v1.8.9 sheet families, prefixes, templates, and source routes are documented. |
+| Appendix E - Sheet Naming Table | Sheet Architecture; Appendix B | Updated | Current v1.8.9.2 sheet families, prefixes, templates, and source routes are documented. |
 | Appendix F - Framework Test & Dashboard Quality Definitions | Dashboard Quality Governance; Appendix C; Appendix F | Replaced | v1.9 test definitions are superseded by Dashboard Quality Sections A-R and current validation references. |
 | Appendix G - Release Checklist | Quality Assurance Framework; Framework Maintenance | Updated | Release checklist is represented by acceptance criteria and maintenance workflow. |
 | Appendix H - Required Release Package | Framework Maintenance; Source Material Status | Updated | Required release evidence is represented through source material status, validation, timing, QA, and repository preparation rules. |
 | Appendix I - Framework Decision Log | Framework Governance; Source Material Status | Updated | Decision-log content is represented as current governance and source material status; a separate chronological decision log can be expanded later if needed. |
-| Appendix J - Current Production Architecture | Framework Architecture; Current Production Baseline | Replaced | v1.9 current architecture is superseded by v1.8.9 architecture and production baseline. |
+| Appendix J - Current Production Architecture | Framework Architecture; Current Production Baseline | Replaced | v1.9 current architecture is superseded by v1.8.9.2 architecture and production baseline. |
 | Appendix K - Current Open Items | Additional Data That Would Improve Future Builds | Updated | Open items are narrowed to future live workbook export appendices rather than unresolved architecture blockers. |
 | Appendix L - Revision History & Performance Findings | Performance Framework; Framework Maintenance | Updated | Performance findings are represented through timing governance and high-complexity areas; chronological revision history can be expanded later if needed. |
 
@@ -864,25 +868,25 @@ Coverage result: every v1.9 table-of-contents section and appendix is mapped to 
 
 ### Appendix J — v2 Draft Consolidation Pass
 
-This appendix consolidates the largest current v2 draft materials into the v2.2 framework specification. The largest drafts reviewed were **Master_List/Specs/ML _Framework_v2.0_Drafts/Master List Framework Specification v2.0.1.md** and **Master_List/Specs/ML _Framework_v2.0_Drafts/v2.0 CODEX  ML SPEC.md**. Supporting current-state drafts reviewed were **v2.1 ML Spec.md**, **v2.0.5 ML Spec.md**, section-specific drafts, and the v1.8.9 category order summary. Draft language is incorporated only where it remains consistent with production v1.8.9.
+This appendix consolidates the largest current v2 draft materials into the v2.2 framework specification. The largest drafts reviewed were **Master_List/Specs/ML _Framework_v2.0_Drafts/Master List Framework Specification v2.0.1.md** and **Master_List/Specs/ML _Framework_v2.0_Drafts/v2.0 CODEX  ML SPEC.md**. Supporting current-state drafts reviewed were **v2.1 ML Spec.md**, **v2.0.5 ML Spec.md**, section-specific drafts, and the v1.8.9.2 category order summary. Draft language is incorporated only where it remains consistent with production v1.8.9.2.
 
-| v2 Draft Area | v2.2 Location | Consolidation Status | v1.8.9 Treatment |
+| v2 Draft Area | v2.2 Location | Consolidation Status | v1.8.9.2 Treatment |
 |---|---|---|---|
-| Governing authority / source-of-truth language | Framework Overview; Current Production Baseline | Updated | Draft v1.7.6 authority language is replaced with production v1.8.9 authority. |
+| Governing authority / source-of-truth language | Framework Overview; Current Production Baseline | Updated | Draft v1.7.6 authority language is replaced with production v1.8.9.2 authority. |
 | Protected architecture summary | Protected Design Principles; Framework Governance | Incorporated | Single-file, dashboard-governed, template-first, Primary PMR, source preservation, QA, Index/archive, timing, and validation principles are retained. |
-| Production script manifest | Current Production Baseline; Function Organization | Updated | Counts are production-derived for v1.8.9: 15,871 lines, 679 functions, 64 public entry points, and 615 internal helpers. |
+| Production script manifest | Current Production Baseline; Function Organization | Updated | Counts are production-derived for v1.8.9.2: 15,980 lines, 681 functions, 64 public entry points, and 617 internal helpers. |
 | Global standards | Configuration Framework; Performance Framework; Framework Governance | Incorporated | Data safety, public compatibility, dashboard governance, QA governance, archive governance, and performance rules are retained. |
 | Configuration architecture | Configuration Framework | Incorporated | Script constants, Format Dashboard, document properties, and runtime cache ownership are retained and updated to A-H dashboard sections. |
-| Format Dashboard standards | Format Dashboard Sections | Updated | Draft A-G references are superseded by v1.8.9 A-H, including Section F - Tab Organization & Index, Section G - Column Definitions, and Section H - Sheet Headers. |
+| Format Dashboard standards | Format Dashboard Sections | Updated | Draft A-G references are superseded by v1.8.9.2 A-H, including Section F - Tab Organization & Index, Section G - Column Definitions, and Section H - Sheet Headers. |
 | Sheet layout standards | Sheet Architecture; Column Architecture; Template Architecture | Incorporated | Header/data row rules, title rows, filters, hidden columns, row heights, date formats, and template-aware formatting are retained. |
-| Sheet definitions, lifecycle, and ordering | Sheet Architecture; Tab Organization and Lifecycle | Updated | Draft global sort/order language is consolidated with the v1.8.9 full category order summary and Section F tab organization governance. |
-| Public APIs, menus, triggers, and web app surfaces | Workflow Architecture; Function Organization | Incorporated | Public entry point inventory and trigger/web governance are retained and rebuilt from v1.8.9 function extraction. |
+| Sheet definitions, lifecycle, and ordering | Sheet Architecture; Tab Organization and Lifecycle | Updated | Draft global sort/order language is consolidated with the v1.8.9.2 full category order summary and Section F tab organization governance. |
+| Public APIs, menus, triggers, and web app surfaces | Workflow Architecture; Function Organization | Incorporated | Public entry point inventory and trigger/web governance are retained and rebuilt from v1.8.9.2 function extraction. |
 | Production runtime flow | Workflow Architecture; Data Flow; Processing Modules | Incorporated | Startup, monthly formatting, Demo P, Monthly Change, Disenrolled Exclusion, Master List, Index, QA, and timing sequences are retained. |
 | Format Monthly Sheets workflow | Monthly Source Formatting Workflow | Incorporated | `B`, `CD`, `UC`, and `RD` route handling is retained. |
-| Create Monthly Update workflow | Create Monthly Update Workflow | Updated | Workflow order is v1.8.9: Monthly Change, Demo P sync, Disenrolled Exclusion, Master List, Index refresh, completion notification. |
+| Create Monthly Update workflow | Create Monthly Update Workflow | Updated | Workflow order is v1.8.9.2: Monthly Change, Demo P sync, Disenrolled Exclusion, Master List, Index refresh, completion notification. |
 | Standalone workflow rule | Standalone Workflow Rule | Incorporated | Standalone recovery/troubleshooting callbacks remain supported with the same validation and ownership rules. |
 | Data ownership and lineage | Data Architecture | Incorporated | Raw Data, Demo P, Primary PMR Row, Monthly Change, Disenrolled Exclusion, Master List, source reports, and archive ownership are retained. |
-| Mapping, column, and header governance | Column Architecture; Mapping Architecture | Updated | Column governance is Section G and header/source-lineage governance is Section H in v1.8.9. |
+| Mapping, column, and header governance | Column Architecture; Mapping Architecture | Updated | Column governance is Section G and header/source-lineage governance is Section H in v1.8.9.2. |
 | Primary PMR row architecture | Data Architecture; Mapping Architecture | Incorporated | Draft Primary PMR language remains current and protected. |
 | Demo P processing rules | Demo P Module | Incorporated | Raw Data validation, flattening, Primary PMR assignment, monthly sync dependency, replacement coverage, archive retention, and reactivation sweep are retained. |
 | Master List processing rules | Master List Module | Incorporated | Master List remains Primary PMR-only operational output and synchronized destination. |
@@ -891,11 +895,11 @@ This appendix consolidates the largest current v2 draft materials into the v2.2 
 | Care Plan processing rules | Monthly Source Formatting Module; Mapping Architecture; Dashboard Quality | Incorporated | Care Plan Due and Unlocked Care Plan sync ownership and quality validation are retained. |
 | Disenrollment processing rules | Disenrolled Exclusion Module | Incorporated | Disenrolled Exclusion creation/update, Demo P row removal, formatting, and validation are retained. |
 | Template governance | Template Architecture | Incorporated | Template lifecycle, smart refresh, signatures, hidden state, validation, and template-first output are retained. |
-| Dashboard Quality governance | Dashboard Quality Governance; Appendix C | Updated | Draft A-Q references are superseded by production v1.8.9 Dashboard Quality A-R with Signoff in Section R. |
+| Dashboard Quality governance | Dashboard Quality Governance; Appendix C | Updated | Draft A-Q references are superseded by production v1.8.9.2 Dashboard Quality A-R with Signoff in Section R. |
 | Index, external archive, and restore governance | Index, Archive, and Restore Module; Sheet Architecture | Incorporated | Index inventory, archive workbook, restore action, restore URL, and conflict protection are retained. |
 | Cache and performance governance | Cache Governance; Performance Framework | Incorporated | Runtime cache, invalidation, batch operations, Maps/Sets, minimized flushes, and timing evidence are retained. |
 | Quality, validation, error handling, and timing | Validation Framework; QA Framework; Error Handling; Performance | Incorporated | Fail-fast validation, warning behavior, Dashboard Quality, and Framework Timing integration are retained. |
-| Framework health and testing standards | Validation Framework; QA Framework; Appendix F | Updated | Testing standards are aligned to Dashboard Quality A-R and v1.8.9 validation sections. |
+| Framework health and testing standards | Validation Framework; QA Framework; Appendix F | Updated | Testing standards are aligned to Dashboard Quality A-R and v1.8.9.2 validation sections. |
 | Development and AI governance | Framework Governance; Framework Maintenance | Incorporated | Safe-change verification, public compatibility, dependency review, and no-rewrite governance are retained. |
 | Versioning standards | Versioning | Incorporated | Versioned production and synchronized documentation updates are retained. |
 | Formatting specification | Document Formatting Standard | Incorporated | Formatting requirements are carried forward through the explicit document formatting standard. |
@@ -921,14 +925,14 @@ This appendix consolidates the largest current v2 draft materials into the v2.2 
 
 | Draft Content | Reason |
 |---|---|
-| v1.7.6 implementation authority statements | Replaced by v1.8.9 implementation authority. |
-| Format Dashboard Section F as Sheet Headers / Section G as system surfaces from older drafts | Replaced by v1.8.9 Section F Tab Organization & Index, Section G Column Definitions, and Section H Sheet Headers. |
-| Dashboard Quality A-Q as final section set | Replaced by v1.8.9 Dashboard Quality A-R with Section R Signoff. |
-| Historical function totals from v1.7.6 inventories | Replaced by v1.8.9 production extraction. |
+| v1.7.6 implementation authority statements | Replaced by v1.8.9.2 implementation authority. |
+| Format Dashboard Section F as Sheet Headers / Section G as system surfaces from older drafts | Replaced by v1.8.9.2 Section F Tab Organization & Index, Section G Column Definitions, and Section H Sheet Headers. |
+| Dashboard Quality A-Q as final section set | Replaced by v1.8.9.2 Dashboard Quality A-R with Section R Signoff. |
+| Historical function totals from v1.7.6 inventories | Replaced by v1.8.9.2 production extraction. |
 | Standalone historical QA sheets as governing surfaces | Retired unless reintroduced by production implementation. |
 | Draft-only appendix placeholders requiring current dashboard exports | Deferred to future appendix expansion because exact row-level live workbook exports were not supplied. |
 
-Consolidation result: the largest v2 drafts have been compared against the v2.2 specification. Detailed governance language that remains consistent with v1.8.9 has been incorporated into the main sections or mapped above. Draft content that conflicts with v1.8.9 is explicitly replaced, retired, or deferred to appendix expansion.
+Consolidation result: the largest v2 drafts have been compared against the v2.2 specification. Detailed governance language that remains consistent with v1.8.9.2 has been incorporated into the main sections or mapped above. Draft content that conflicts with v1.8.9.2 is explicitly replaced, retired, or deferred to appendix expansion.
 
 ### Appendix K — Audit Summary Integration Pass
 
@@ -936,35 +940,35 @@ This appendix integrates current v1.8.9 audit evidence from **Master_List/Audit 
 
 | Audit Source | Incorporated Evidence | Spec Location |
 |---|---|---|
-| Production extraction pass | v1.8.9 version, line count, function count, public/internal split, dashboard section inventory, Dashboard Quality A-R, constants, sheet definitions, tab organization, workflow order. | Current Production Baseline; Configuration Framework; Sheet Architecture; Dashboard Architecture; Function Organization. |
-| Function inventory review | 679 total functions, 64 public entry points, 615 internal helpers, 0 duplicate declarations, 0 confirmed missing menu callbacks, 0 confirmed undefined top-level dependencies, 107 no-static-caller candidates, 2 high-complexity functions, 1 circular dependency group. | Current Production Baseline; Function Organization; Framework Governance; Maintenance Workflow. |
+| Production extraction pass | v1.8.9 version, line count, function count, public/internal split, dashboard section inventory, Dashboard Quality A-R, constants, sheet definitions, tab organization, workflow order; superseded for baseline counts by v1.8.9.2 production extraction. | Current Production Baseline; Configuration Framework; Sheet Architecture; Dashboard Architecture; Function Organization. |
+| Function inventory review | v1.8.9 inventory reported 679 total functions, 64 public entry points, and 615 internal helpers; v1.8.9.2 updates the active inventory to 681 total functions, 64 public entry points, and 617 internal helpers. | Current Production Baseline; Function Organization; Framework Governance; Maintenance Workflow. |
 | Exhaustive engineering review | Production-usable conditional status, high-risk workflow areas, bottlenecks, maintainability concerns, and open findings ML189-001 through ML189-008. | Quality Assurance Framework; Error Handling Framework; Performance Framework; Framework Maintenance; Risk Notes below. |
 
 #### Closed / Implemented Decisions Incorporated
 
 | Decision / Evidence | Integration |
 |---|---|
-| No duplicate top-level function declarations were found in v1.8.9. | Function Organization treats duplicate declarations as closed for the current baseline. |
+| No duplicate top-level function declarations were found in v1.8.9.2. | Function Organization treats duplicate declarations as closed for the current baseline. |
 | No confirmed missing menu callbacks were found in v1.8.9 static review. | Public entry-point governance preserves current callback surfaces rather than treating them as broken. |
 | No confirmed undefined top-level dependencies were found in v1.8.9 static review. | Validation and maintenance guidance focuses on safe-change review rather than dependency emergency remediation. |
 | Single-file Apps Script architecture remains production-approved. | Protected Design Principles and Framework Architecture preserve single-file architecture. |
 | Dashboard-governed, template-first formatting remains implemented. | Configuration, Template, Dashboard, and Performance sections preserve dashboard/template-first governance. |
-| Format Dashboard Sections A-H are implemented in v1.8.9. | Dashboard section ownership is updated to A-H, including Section F Tab Organization & Index. |
-| Dashboard Quality Sections A-R are implemented in v1.8.9. | Dashboard Quality governance is updated to A-R, including Section R Signoff. |
-| Current tab organization/rank model is implemented in v1.8.9. | Sheet Architecture includes the category/rank lifecycle model. |
+| Format Dashboard Sections A-H are implemented in v1.8.9.2. | Dashboard section ownership is updated to A-H, including Section F Tab Organization & Index. |
+| Dashboard Quality Sections A-R are implemented in v1.8.9.2. | Dashboard Quality governance is updated to A-R, including Section R Signoff. |
+| Current tab organization/rank model is implemented in v1.8.9.2.2. | Sheet Architecture includes the category/rank lifecycle model. |
 
 #### Current Risk Notes Not Marked Complete
 
 | Finding | Status in this Specification | Documentation Treatment |
 |---|---|---|
-| ML189-001 Monthly Change disenrollment detection date rule | Open risk, not completed. | Monthly Change rules document current implemented dependency and require future remediation before declaring broader date-window behavior complete. |
-| ML189-002 Create Monthly Update can mutate Demo P / Disenrolled Exclusion before Master List replacement confirmation | Open risk, not completed. | Workflow Architecture documents current order and Quality Assurance requires release validation for destructive workflow safety. |
-| ML189-003 Master List fallback from Primary PMR Row to DOB/first row | Open risk, not completed. | Primary PMR remains protected; the spec does not declare fallback behavior as approved architecture. |
+| ML189-001 Monthly Change disenrollment detection date rule | CLOSED / PASSED in Wave 1. | v1.8.9.2 closure accepts the strict first-of-month rule and centralized helper as passed review evidence. |
+| ML189-002 Create Monthly Update can mutate Demo P / Disenrolled Exclusion before Master List replacement confirmation | CLOSED / PASSED in Wave 1. | v1.8.9.2 moves replacement confirmation into preflight and bypasses duplicate prompts after preflight confirmation. |
+| ML189-003 Master List fallback from Primary PMR Row to DOB/first row | CLOSED / PASSED in Wave 1. | v1.8.9.2 closure records Primary PMR fail-closed Master List behavior as passed. |
 | ML189-004 Long-running mutating workflows need workflow-level lock/busy guard audit | Open risk, not completed. | Concurrency Controls document the required governance and future audit need. |
-| ML189-005 Disenrollment sort uses source-column index against report rows | Open risk, not completed. | Monthly Change remains a high-review area under Validation and Maintenance. |
+| ML189-005 Disenrollment sort uses source-column index against report rows | CLOSED / PASSED in Wave 1. | v1.8.9.2 closure records Monthly Change Disenrollments report-header sort index as passed. |
 | ML189-006 Monthly Change full-range clear/format performance target | Open cleanup/performance item. | Performance Framework lists Monthly Change as a high-complexity timing-review area. |
 | ML189-007 System sheet menu callbacks use underscore callback names | Open maintainability item. | Function Organization and Safe-Change Requirements preserve callback compatibility until approved cleanup. |
-| ML189-008 Project documentation authority text stale relative to v1.8.9 | Partially addressed by this spec only. | This spec updates authority to v1.8.9, but other project README/spec authority text may still need separate cleanup. |
+| ML189-008 Project documentation authority text stale relative to v1.8.9.2 | Partially addressed by this spec only. | This spec updates authority to v1.8.9.2, but other project README/spec authority text may still need separate cleanup. |
 
 #### Function Inventory Risk Integration
 
@@ -977,7 +981,7 @@ This appendix integrates current v1.8.9 audit evidence from **Master_List/Audit 
 
 #### Audit Integration Result
 
-The audit summary integration pass is complete for documentation purposes. Closed/implemented audit evidence has been incorporated as current framework governance. Open findings from the exhaustive v1.8.9 review are intentionally documented as current risk notes rather than marked complete. Future production remediation must update this specification only after the production script implements the change and validation evidence confirms closure.
+The audit summary integration pass is complete for documentation purposes. Closed/implemented audit evidence has been incorporated as current framework governance. Open findings from the exhaustive v1.8.9 review are documented as current risk notes except where v1.8.9.2 Wave 1 evidence closes them rather than marked complete. Future production remediation must update this specification only after the production script implements the change and validation evidence confirms closure.
 
 ### Appendix L — Expanded Sheet Inventory
 
@@ -1028,7 +1032,7 @@ The audit summary integration pass is complete for documentation purposes. Close
 | **SECTION C - SHEET DEFINITIONS** | Sheet Type; Report Title; Template Name; Output Naming Pattern; Base Color; Use Prompt Date; End Date Source; Template Row Count; Template Column Count; Template Row Mode; Minimum Rows; Buffer Rows | Script defaults and dashboard rebuild. | Dashboard Quality Section B. | Governs report/template relationship, output names, colors, sizing, and row-count behavior. |
 | **SECTION D - SHEET BEHAVIORS** | Sheet Type; Uses Title Rows; Uses Filter; Uses Alternating Colors; Uses Subheaders; Hidden Template; Output Visibility | Script defaults and dashboard rebuild. | Dashboard Quality Section C. | Governs behavior flags used by template/output formatting. |
 | **SECTION E - SYSTEM SHEET SURFACES** | System Sheet Name; Display Name; Sort Order; Output Visibility; Title Fill Color; Title Font Color; Use Global Defaults; Notes | Script defaults and dashboard rebuild. | Dashboard/system-surface validation. | Governs Format Dashboard, Dashboard Quality, Framework Timing, Archive - Demo P, base template, and other framework surfaces. |
-| **SECTION F - TAB ORGANIZATION & INDEX** | Sheet Name / Prefix; Group; Rank / Range; Special | Script defaults, v1.8.9 category order summary, and dashboard rebuild. | Dashboard Quality Section F. | Governs sheet categories, ranks, dynamic monthly grouping, Index ordering, and lifecycle visibility. |
+| **SECTION F - TAB ORGANIZATION & INDEX** | Sheet Name / Prefix; Group; Rank / Range; Special | Script defaults, v1.8.9.2 category order summary, and dashboard rebuild. | Dashboard Quality Section F. | Governs sheet categories, ranks, dynamic monthly grouping, Index ordering, and lifecycle visibility. |
 | **SECTION G - COLUMN DEFINITIONS** | Header; Width; Header Font Size; Date Column; Hide Column; Data Wrap; Horizontal Alignment; Vertical Alignment; Number Format | Script defaults and dashboard rebuild. | Dashboard Quality Section D. | Governs column presentation and hidden/date-format behavior. |
 | **SECTION H - SHEET HEADERS** | Sheet Type; Column Order; Header; Source of Data | Script defaults and dashboard rebuild. | Dashboard Quality Section E. | Governs header order and source lineage by sheet type. |
 
@@ -1090,7 +1094,7 @@ The audit summary integration pass is complete for documentation purposes. Close
 | Function Group | Count / Scope | Owners | Safe-Change Notes |
 |---|---:|---|---|
 | Public entry points | 64 | Menu, trigger, web, workflow, validation, dashboard, archive, restore, and compatibility surfaces. | Must remain callable unless menus/triggers/routes/wrappers and documentation are migrated together. |
-| Internal helpers | 615 | All implementation subsystems. | Not deletion-safe solely because trailing underscore is present; verify callers and dynamic paths. |
+| Internal helpers | 617 | All implementation subsystems. | Not deletion-safe solely because trailing underscore is present; verify callers and dynamic paths. |
 | Menu functions | 36 | User-facing workbook operations. | Callback strings are protected. |
 | Workflow functions | 18 | Monthly source formatting, Demo P, Monthly Change, Master List, Disenrollment, archive, restore, setup, QA. | Validate dependencies before destructive mutation. |
 | Process functions | 89 | Orchestration, report construction, comparison, archive/index, timing. | High coupling is expected in single-file architecture; review before behavior changes. |
@@ -1119,7 +1123,7 @@ The audit summary integration pass is complete for documentation purposes. Close
 | Workflow synchronization | Dashboard Quality Section M | Workflow outputs and sync expectations | Primary PMR, contact, Banner, Care Plan, and workflow expectations pass. | Fails readiness when synchronization expectations are unmet. |
 | Demo P quality | Dashboard Quality Section N | Demo P rows/headers | Demo P structure and generated rows are usable. | Blocks downstream Master List/disenrollment if required fields fail. |
 | Disenrolled Exclusion quality | Dashboard Quality Section O | Disenrolled Exclusion rows/headers | Exclusion records are governed and formatted. | Fails readiness if exclusion output is structurally invalid. |
-| Monthly Change validation | Dashboard Quality Section P | Monthly Change output | Report sections and required outputs are valid. | Fails or warns; ML189-001/005 remain open risk notes. |
+| Monthly Change validation | Dashboard Quality Section P | Monthly Change output | Report sections and required outputs are valid. | Fails or warns; ML189-001 and ML189-005 are closed for Wave 1, while future Monthly Change validation changes still require evidence. |
 | Summary and signoff | Dashboard Quality Sections Q-R | Stored section statuses | Summary and signoff reflect current evidence. | Release is not ready without acceptable summary/signoff. |
 
 ### Appendix S — Expanded Protected Standards Catalog
@@ -1161,3 +1165,38 @@ This appendix records the formatting compliance pass against **Master_List/Specs
 | Code fences | Used only for actual diagrams or code-like examples. | Builder should preserve or convert fenced blocks according to the document build pipeline. |
 
 Compliance result: the framework specification follows the required context-aware classification model. Any generated Google Docs output should be produced from this Markdown source by the documentation builder rather than by manually editing a generated document.
+
+
+### Appendix U — v1.8.9.2 Production Update and Wave 1 Closure
+
+This appendix updates the framework specification after review of **Master_List/Current Production Script/v1.8.9.2_Current_Production**, **Master_List/Audit Summary/WAVE_1_CLOSURE_SUMMARY_v1.8.9.2.md**, **Master_List/Reports/v1.8.9.2 Updates.md**, **Master_List/Reports/v1.8.9.1 - Framework Timing Report.pdf**, and **Master_List/Reports/v1.8.9.1 - Dashboard Quality Report.pdf**. The current production source for future framework work is v1.8.9.2.
+
+| Update Area | v1.8.9.2 Result | Spec Treatment |
+|---|---|---|
+| Production baseline | Version is `1.8.9.2`, with 15,980 lines, 681 declared functions, 64 public entry points, and 617 internal helpers. | Current Production Baseline and Function Organization updated. |
+| Create Monthly Start workflow | New public workflow `runMonthlyStart` implements Date Prompt, Build Demo P, Create Disenrolled, Create Master List. | Workflow Architecture and Public Entry Point Inventory updated. |
+| Master List replacement preflight | Existing Master List replacement confirmation occurs before Demo P mutation in Monthly Start and is represented in v1.8.9.2 closure evidence for Monthly Update protection. | Error Handling, Workflow Architecture, and risk notes treat Wave 1 replacement-preflight risk as closed for documented scope. |
+| Dashboard Quality health registry | `runMonthlyStart` is included in required menu/function health expectations. | Function Organization and Validation Matrix preserve it as a public callable surface. |
+| Menu structure | Data & Processing Engine includes Format Monthly Sheets, Create Monthly Start, and Create Monthly Update; maintenance menus retain targeted rebuild workflows. | Workflow Architecture treats menu callback strings as protected. |
+| Strict first-of-month disenrollment rule | Closure summary marks strict first-of-month rule and centralized Monthly Change disenrollment helper CLOSED / PASSED. | ML189-001 risk note updated to closed for Wave 1. |
+| Monthly Change Disenrollments sort index | Closure summary marks report-header sort index CLOSED / PASSED. | ML189-005 risk note updated to closed for Wave 1. |
+| Primary PMR fail-closed Master List behavior | Closure summary marks Primary PMR fail-closed behavior CLOSED / PASSED. | ML189-003 risk note updated to closed for Wave 1. |
+| Timing and quality evidence | v1.8.9.1 Framework Timing and Dashboard Quality PDF reports were supplied as closure evidence. | Reports are treated as binary evidence inputs only; they are not implementation artifacts and are not committed. |
+| Next remediation wave | Closure summary identifies Wave 3 - Trigger, concurrency, and public API safety as next wave. | ML189-004 remains an open governance risk pending Wave 3 closure. |
+
+#### Wave 1 Closure Status
+
+Wave 1 is CLOSED / PASSED for the documented scope: strict first-of-month disenrollment rule, centralized Monthly Change disenrollment helper, Monthly Change Disenrollments report-header sort index, Create Monthly Update preflight Master List replacement confirmation, approved Create Monthly Update sequence, duplicate prompt bypass after preflight confirmation, Primary PMR fail-closed Master List behavior, Dashboard Quality review, Framework Timing review, and rollback evidence.
+
+#### Remaining Open Review Items After Wave 1
+
+| Item | Status | Required Future Handling |
+|---|---|---|
+| ML189-004 workflow-level lock/busy guard audit | Open / next-wave candidate. | Complete Wave 3 trigger, concurrency, and public API safety review before declaring closed. |
+| ML189-006 Monthly Change full-range clear/format performance target | Open cleanup/performance candidate. | Use timing evidence before changing range bounds. |
+| ML189-007 system-sheet underscore menu callbacks | Open maintainability candidate. | Preserve compatibility or migrate callbacks through approved public wrapper change. |
+| ML189-008 stale authority text outside this spec | Partially addressed. | Update remaining project README/spec authority text in a separate documentation cleanup if still stale. |
+
+#### Current Production Governance Statement
+
+As of v1.8.9.2, the framework specification treats Wave 1 as closed for documentation purposes and uses **Master_List/Current Production Script/v1.8.9.2_Current_Production** as the implementation source of truth. Future code changes must create a new versioned production source and must not overwrite v1.8.9.2.
