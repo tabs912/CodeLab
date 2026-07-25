@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ============================================================================
 
-const MASTER_LIST_MERGE_ML_VERSION = "1.8.9.3";
+const MASTER_LIST_MERGE_ML_VERSION = "1.8.9.6";
 
 const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
@@ -20,7 +20,8 @@ function getRuntimeCache_() {
       dimensions: {},
       dashboardConfig: null,
       dashboardConfigKey: "",
-      tabOrganization: null
+      tabOrganization: null,
+      docProps: null
     };
   }
   return ML_RUNTIME_CACHE_STORE_;
@@ -28,6 +29,14 @@ function getRuntimeCache_() {
 
 function clearAllRuntimeCaches_() {
   ML_RUNTIME_CACHE_STORE_ = null;
+}
+
+function getDocumentPropertiesCached_() {
+  const cache = getRuntimeCache_();
+  if (!cache.docProps) {
+    cache.docProps = PropertiesService.getDocumentProperties();
+  }
+  return cache.docProps;
 }
 
 let RFF_DEFER_TEMPLATE_HIDE_DURING_BATCH_ = false;
@@ -222,6 +231,9 @@ const SYSTEM_SHEETS_TO_HIDE = Object.freeze([
 
 
 const DATE_DISPLAY_FORMAT = "mm/dd/yyyy";
+
+const RFF_RE_MONTH_YEAR = /^(\d{1,2})[\.\/-](\d{2}|\d{4})$/;
+const RFF_RE_DATE_MDY = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/;
 
 const DATE_SHEET_FORMAT = "MM.yy";
 
@@ -724,10 +736,24 @@ function createTemplateFromScriptDefaultsForActiveBuild_(ss, sheetDef) {
   template.getRange("A2").setValue("Date");
   template.getRange("C2").setValue("to");
   template.getRange(HEADER_ROW, 1, 1, headers.length).setValues([headers]);
+
+  const fallbackDashboard = {
+    globals: RFF_DEFAULTS,
+    titleRows: {},
+    sheetDefinitions: [sheetDef],
+    sheetHeaders: {},
+    columnDefinitions: {},
+    behaviors: {}
+  };
+  const theme = getThemeColorsFromBase_(sheetDef.baseColor || RFF_DEFAULTS.baseColor, RFF_DEFAULTS);
+  applyAlternatingColorRules_(template, template.getRange(DATA_START_ROW, 1, Math.max(rowCount - DATA_START_ROW + 1, 1), width), theme);
+  applyTemplateColumnWidths_(template, template, width);
+
   try {
     template.setFrozenRows(HEADER_ROW);
     template.setFrozenColumns(0);
     template.setTabColor(sheetDef.baseColor || null);
+    applyTemplateFreezeAndTabColor_(template, fallbackDashboard, sheetDef, width, null);
   } catch (err) {
     logBestEffortWarning_("Active-build template environment setup skipped for " + sheetDef.templateName + ": " + err.message);
   }
@@ -739,14 +765,15 @@ function createTemplateFromScriptDefaultsForActiveBuild_(ss, sheetDef) {
 
 function getTemplateDrivenActiveSheetContext_(ss, sheetType) {
   ss = ss || SpreadsheetApp.getActive();
-  const sheetDef = getDefaultSheetDefinitionByType_(sheetType);
+  const dashboard = loadDashboardConfig_();
+  const sheetDef = getSheetDefinitionByTypeOrNull_(dashboard, sheetType) || getDefaultSheetDefinitionByType_(sheetType);
   let template = ss.getSheetByName(sheetDef.templateName);
   if (!template) template = createTemplateFromScriptDefaultsForActiveBuild_(ss, sheetDef);
   const headers = getHeaders_(template, HEADER_ROW);
   if (!headers.some(function(header) { return String(header || "").trim(); })) {
     throw new Error("Template not usable: " + sheetDef.templateName + " is missing header values on row " + HEADER_ROW + ".");
   }
-  return { sheetDef: sheetDef, template: template, headers: headers };
+  return { dashboard: dashboard, sheetDef: sheetDef, template: template, headers: headers };
 }
 function getActiveWorkflowBlockedSheetNames_() {
   return new Set([
@@ -938,10 +965,12 @@ function quickSystemSetup() {
   runFrameworkSmokeValidation();
 
   showQuickStartToast_("Quick System Setup [Step 5/5]: Building centralized Index dashboard navigation matrix...");
-  createIndexSheet();
+  // FORCE FULL REBUILD: Rebuilds shell, formats, active workspace, and archive workspace
+  createIndexSheet({ forceShellRebuild: true });
 
   showQuickStartToast_("Quick System Setup complete. All system architectures are correctly aligned.");
 }
+
 
 function quickBuildAllTemplates() {
   showQuickStartToast_("Quick Build All Templates: creating/refreshing templates in place...");
@@ -966,50 +995,43 @@ function coerceToValidDate_(value) {
     return isReasonableReportDate_(value) ? value : null;
   }
 
-
   if (value === null || value === undefined || value === "") return null;
-
 
   if (typeof value === "number") {
     if (value < RFF_MIN_SERIAL_DATE) return null;
     return spreadsheetSerialDateToLocalDate_(value);
   }
 
-
   const text = String(value).trim();
   if (!text) return null;
 
-
-  const monthYearMatch = text.match(/^(\d{1,2})[\.\/-](\d{2}|\d{4})$/);
+  const monthYearMatch = text.match(RFF_RE_MONTH_YEAR);
   if (monthYearMatch) {
     const month = Number(monthYearMatch[1]) - 1;
     let year = Number(monthYearMatch[2]);
     if (year < 100) year += 2000;
-
 
     const d = createLocalDateOnly_(year, month, 1);
     if (d.getFullYear() !== year || d.getMonth() !== month) return null;
     return isReasonableReportDate_(d) ? d : null;
   }
 
-
-  const match = text.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);
+  const match = text.match(RFF_RE_DATE_MDY);
   if (match) {
     const month = Number(match[1]) - 1;
     const day = Number(match[2]);
     let year = Number(match[3]);
     if (year < 100) year += 2000;
 
-
     const d = new Date(year, month, day);
     if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) return null;
     return isReasonableReportDate_(d) ? d : null;
   }
 
-
   const d = new Date(text);
   return !isNaN(d.getTime()) && isReasonableReportDate_(d) ? d : null;
 }
+
 
 function spreadsheetSerialDateToLocalDate_(serialValue) {
   if (serialValue === null || serialValue === undefined || serialValue === "") return null;
@@ -1602,26 +1624,22 @@ function normalizeCompareValue_(value) {
     return String(year) + "-" + month + "-" + day;
   }
 
-
   if (value === null || value === undefined) return "";
-
 
   const text = String(value).trim();
   if (text === "") return "";
 
-
-  const parsed = coerceToValidDate_(text);
-  if (parsed && /\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/.test(text)) {
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, "0");
-    const day = String(parsed.getDate()).padStart(2, "0");
-    return String(year) + "-" + month + "-" + day;
+  if (/\d/.test(text) && /[/.\-]/.test(text)) {
+    const parsed = coerceToValidDate_(text);
+    if (parsed && /\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}/.test(text)) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, "0");
+      const day = String(parsed.getDate()).padStart(2, "0");
+      return String(year) + "-" + month + "-" + day;
+    }
   }
 
-
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+  return text.toLowerCase().replace(/\s+/g, " ");
 }
 
 function valuesAreEqual_(a, b) {
@@ -1674,8 +1692,7 @@ function clearSheetRuntimeCachesForSheet_(sheet) {
 function getHeaderCacheKey_(sheet, headerRow) {
   if (!sheet) return "";
   const row = headerRow || HEADER_ROW;
-  const lastCol = Math.max(sheet.getLastColumn(), 1);
-  return sheet.getSheetId() + ":" + row + ":" + lastCol;
+  return sheet.getSheetId() + ":" + row;
 }
 
 function clearMonthlySheetLookupCache_() {
@@ -2468,10 +2485,15 @@ function replaceFrameworkTimingSectionRows_(sheet, sectionId, rows, options) {
 function getFrameworkTimingBenchmarkForProcess_(processName, mode) {
   const text = String(processName || "").toLowerCase();
   const refreshMode = String(mode || "").toUpperCase();
-  if (text.indexOf("dashboard quality quick") !== -1) return 20;
+
+  if (text.indexOf("dashboard quality start up") !== -1) return 20;
   if (text.indexOf("dashboard quality workflow") !== -1) return 30;
   if (text.indexOf("dashboard quality validate") !== -1) return 30;
+  if (text.indexOf("full quality check") !== -1) return 45;
+  if (text.indexOf("format dashboard updates") !== -1) return 10;
+  if (text.indexOf("framework smoke validation") !== -1) return 15;
   if (text.indexOf("verify framework") !== -1) return 15;
+
   if (text.indexOf("template") !== -1) {
     if (refreshMode === "FIRST_BUILD") return 240;
     if (refreshMode === "FULL_REBUILD") return 180;
@@ -2482,6 +2504,7 @@ function getFrameworkTimingBenchmarkForProcess_(processName, mode) {
   if (text.indexOf("demo p") !== -1) return 60;
   return "";
 }
+
 
 function getFrameworkTimingThresholdForSeverity_(severity) {
   const value = String(severity || "").trim().toUpperCase();
@@ -2701,10 +2724,21 @@ function writeFrameworkPerformanceRecommendationsSheet_() {
 
 function getPerformanceRecommendationForTimingStep_(process, step, seconds, severity) {
   const text = String(step || "").toLowerCase();
+  const processName = String(process || "").toLowerCase();
 
   if (text.indexOf("process exceeded benchmark") !== -1) {
-    return "Separate first-build/full-rebuild timing from metadata-only refresh, apply the governed benchmark for that mode, and optimize the largest full-build steps before treating this as a steady-state failure.";
+    if (processName.indexOf("template") !== -1) {
+      return "Separate first-build/full-rebuild timing from metadata-only refresh, apply the governed benchmark for that mode, and optimize the largest full-build steps before treating this as a steady-state failure.";
+    }
+    if (processName.indexOf("dashboard quality") !== -1) {
+      return "Convert iterative section writes to a staged memory buffer to reduce Apps Script range repaints.";
+    }
+    if (processName.indexOf("monthly") !== -1 || processName.indexOf("demo p") !== -1 || processName.indexOf("master list") !== -1) {
+      return "Optimize 2D-array memory processing. Apply fast-path bypasses to heavy normalizers like date coercion.";
+    }
+    return "Review workflow for API loops or missing fast-path execution exits.";
   }
+
   if (text.indexOf("dashboard loaded for sections f-g") !== -1) {
     return "Dashboard config reads are capped to governed dashboard columns and Section F is batch-written; rerun Validate Templates and compare this step against the v1.5.38 baseline.";
   }
@@ -2855,14 +2889,15 @@ const ML_MENU_CALLBACKS = Object.freeze({
  */
 function handleFormatDashboardValueHighlighting_(e) {
   if (!e || !e.range) return;
-  const editedRange = e.range;
-  const sheet = editedRange.getSheet();
+
+  // WAVE 4 OPTIMIZATION: Check sheet name string from e.range directly before range calculations
+  const sheet = e.range.getSheet();
   if (sheet.getName() !== RFF_DASHBOARD_SHEET) return;
 
-  const startRow = editedRange.getRow();
-  const endRow = editedRange.getLastRow();
-  const startCol = Math.max(editedRange.getColumn(), 1);
-  const endCol = Math.min(editedRange.getLastColumn(), 14);
+  const startRow = e.range.getRow();
+  const endRow = e.range.getLastRow();
+  const startCol = Math.max(e.range.getColumn(), 1);
+  const endCol = Math.min(e.range.getLastColumn(), 14);
   if (startRow > endRow || startCol > endCol) return;
 
   const targetRange = sheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
@@ -2874,6 +2909,7 @@ function handleFormatDashboardValueHighlighting_(e) {
   });
   targetRange.setBackgrounds(backgrounds);
 }
+
 
 function onEdit(e) {
   handleFormatDashboardValueHighlighting_(e);
@@ -3442,20 +3478,7 @@ function clearDashboardConfigCache_() {
 }
 
 function getDashboardConfigCacheKey_() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(RFF_DASHBOARD_SHEET);
-    if (!sheet) return "";
-    return [
-      ss.getId(),
-      sheet.getSheetId(),
-      sheet.getLastRow(),
-      sheet.getLastColumn(),
-      sheet.getRange(1, 1).getDisplayValue()
-    ].join("||");
-  } catch (err) {
-    return "";
-  }
+  return "STATIC_EXECUTION_CACHE";
 }
 
 function getRequiredFrameworkSheetTypes_() {
@@ -3986,6 +4009,21 @@ function getDefaultHeaderSets_() {
 // TEMPLATE FUNCTIONS AND VALIDATION FORMATTERS
 // ============================================================================
 
+
+function ensureRequiredMasterListTemplate_(dashboard, timing) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getSheetByName(MASTER_LIST_TEMPLATE_SHEET)) return ss.getSheetByName(MASTER_LIST_TEMPLATE_SHEET);
+
+  const sheetDef = getSheetDefinitionByTypeOrNull_(dashboard, SHEET_TYPE.MASTER_LIST) || getDefaultSheetDefinitionByType_(SHEET_TYPE.MASTER_LIST);
+  if (!getSheetDefinitionByTypeOrNull_(dashboard, SHEET_TYPE.MASTER_LIST)) {
+    dashboard.sheetDefinitions = (dashboard.sheetDefinitions || []).concat([sheetDef]);
+  }
+
+  const template = createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing);
+  markFrameworkStep_(timing, "Required Master List template verified: " + sheetDef.templateName);
+  return template;
+}
+
 function createOrRefreshAllReportTemplates() {
   return runFrameworkTimed_("Create / Refresh All Templates", function(timing) {
     const dashboard = loadDashboardConfig_(true);
@@ -4024,6 +4062,7 @@ function createOrRefreshAllReportTemplates() {
         return result.templateName + (result.issue ? " (" + result.issue + ")" : "");
       }).join(", "));
     }
+    ensureRequiredMasterListTemplate_(dashboard, timing);
     setReportTemplateVisibility_(dashboard, true, timing);
     forceBaseTemplateHidden_();
     markFrameworkStep_(timing, "Templates hidden once after template creation");
@@ -5360,27 +5399,22 @@ function applyDataRows_(sheet, dashboard, sheetDef, headers, rowCount, colCount,
 }
 
 function applyAlternatingColorRules_(sheet, range, theme) {
+  if (!sheet || !range) return;
   try {
-    const rules = sheet.getConditionalFormatRules() || [];
+    const rows = Math.max(range.getNumRows(), 1);
+    const cols = Math.max(range.getNumColumns(), 1);
+    const startRow = range.getRow();
+    const oddColor = (theme && theme.level3) || "#FFFFFF";
+    const evenColor = (theme && theme.level4) || "#F7F7F7";
+    const backgrounds = [];
 
+    for (let r = 0; r < rows; r++) {
+      const sheetRow = startRow + r;
+      const rowColor = sheetRow % 2 === 0 ? evenColor : oddColor;
+      backgrounds.push(new Array(cols).fill(rowColor));
+    }
 
-    const oddRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied("=ISODD(ROW())")
-      .setBackground(theme.level3)
-      .setRanges([range])
-      .build();
-
-
-    const evenRule = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied("=ISEVEN(ROW())")
-      .setBackground(theme.level4)
-      .setRanges([range])
-      .build();
-
-
-    rules.push(oddRule);
-    rules.push(evenRule);
-    sheet.setConditionalFormatRules(rules);
+    range.setBackgrounds(backgrounds);
   } catch (err) {
     logBestEffortWarning_("Alternating color rules skipped for " + sheet.getName() + ": " + err.message);
   }
@@ -5786,12 +5820,30 @@ function formatMonthlySheets() {
 
   return runFrameworkTimed_("Format Monthly Sheets " + parsed.monthLabel, function(timing) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // Open Archive connection once for the batch
+    let archiveSs = null;
+    if (RFF_ENABLE_AUTO_ARCHIVE_RAW_DATA) {
+      try {
+        const archiveId = typeof getDocumentPropertiesCached_ === "function" ?
+          (getDocumentPropertiesCached_().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || RFF_ARCHIVE_SPREADSHEET_ID) :
+          (PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || RFF_ARCHIVE_SPREADSHEET_ID);
+        archiveSs = SpreadsheetApp.openById(archiveId);
+        markFrameworkStep_(timing, "Archive connection opened once for batch processing");
+      } catch (err) {
+        logBestEffortWarning_("Could not pre-open archive connection: " + err.message);
+      }
+    }
+
+    const sharedOptions = { skipIndexRefresh: true, archiveSs: archiveSs };
+
     const routes = [
-      { code: "B", label: "Banners", fn: function(sheet) { return formatMonthlyBannerSheet_(sheet, parsed, timing); } },
-      { code: "CD", label: "Care Plan Due", fn: function(sheet) { return formatMonthlyDashboardSheetFromSource_(sheet, RFF_SHEET_TYPES.CARE_PLAN_DUE, parsed.monthParts, "C3", "E3", timing); } },
-      { code: "UC", label: "Unlocked CP", fn: function(sheet) { return formatMonthlyDashboardSheetFromSource_(sheet, RFF_SHEET_TYPES.UNLOCKED, parsed.monthParts, "E2", "G2", timing); } },
-      { code: "RD", label: "Raw Data", fn: function(sheet) { return formatMonthlyRawDataSheetFromSource_(sheet, parsed.monthParts, timing); } }
+      { code: "B", label: "Banners", fn: function(sheet) { return formatMonthlyBannerSheet_(sheet, parsed, timing, sharedOptions); } },
+      { code: "CD", label: "Care Plan Due", fn: function(sheet) { return formatMonthlyDashboardSheetFromSource_(sheet, RFF_SHEET_TYPES.CARE_PLAN_DUE, parsed.monthParts, "C3", "E3", timing, sharedOptions); } },
+      { code: "UC", label: "Unlocked CP", fn: function(sheet) { return formatMonthlyDashboardSheetFromSource_(sheet, RFF_SHEET_TYPES.UNLOCKED, parsed.monthParts, "E2", "G2", timing, sharedOptions); } },
+      { code: "RD", label: "Raw Data", fn: function(sheet) { return formatMonthlyRawDataSheetFromSource_(sheet, parsed.monthParts, timing, sharedOptions); } }
     ];
+
     const completed = [];
     const skipped = [];
 
@@ -5821,6 +5873,14 @@ function formatMonthlySheets() {
       markFrameworkStep_(timing, "Formatted monthly import tab: " + route.code + " from " + sourceSheetName);
     });
 
+    try {
+      // WAVE 4 OPTIMIZATION: Pass pre-opened archive handle to prevent re-opening connection
+      createIndexSheet(archiveSs);
+      markFrameworkStep_(timing, "Index explicitly refreshed once using shared connection");
+    } catch (err) {
+      logBestEffortWarning_("Format Monthly Sheets final index refresh skipped: " + err.message);
+    }
+
     notify_(
       "Format Monthly Sheets complete for " + parsed.monthLabel + ".\n" +
       "Completed: " + (completed.length ? completed.join(", ") : "None") + "\n" +
@@ -5829,6 +5889,9 @@ function formatMonthlySheets() {
     return { completed: completed, skipped: skipped };
   });
 }
+
+
+
 
 function findMonthlyImportSheetForRoute_(ss, route, monthParts) {
   const candidates = getMonthlyImportSheetCandidatesForRoute_(ss, route);
@@ -5927,7 +5990,7 @@ function buildPromptedMonthContext_(monthParts) {
   };
 }
 
-function formatMonthlyBannerSheet_(rawSheet, parsedMonth, timing) {
+function formatMonthlyBannerSheet_(rawSheet, parsedMonth, timing, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const reportDate = parsedMonth.reportDate;
   const rawName = "Source - Banners " + parsedMonth.monthLabel;
@@ -5943,12 +6006,15 @@ function formatMonthlyBannerSheet_(rawSheet, parsedMonth, timing) {
   showSheetIfNeeded_(outputSheet, timing, "Banner output sheet shown: " + outputName);
   writeBannerReportDates_(outputSheet, reportDate);
   copyRawBannerDataToOutput_(rawSheet, outputSheet);
-  archiveRawSourceAndDeleteLocal_(ss, rawSheet, rawName, outputSheet, timing);
+
+  archiveRawSourceAndDeleteLocal_(ss, rawSheet, rawName, outputSheet, timing, options);
+
   applyOutputVisibilityPolicy_(outputSheet, null, SHEET_TYPE.BANNER, timing);
   return outputSheet;
 }
 
-function formatMonthlyDashboardSheetFromSource_(sourceSheet, sheetType, monthParts, startDateCellA1, endDateCellA1, timing) {
+
+function formatMonthlyDashboardSheetFromSource_(sourceSheet, sheetType, monthParts, startDateCellA1, endDateCellA1, timing, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const context = getTemplateDrivenActiveSheetContext_(ss, sheetType);
   const sheetDef = context.sheetDef;
@@ -5976,17 +6042,23 @@ function formatMonthlyDashboardSheetFromSource_(sourceSheet, sheetType, monthPar
   }
   lockFinalOutputRowHeights_(outputSheet, sheetType);
   markFrameworkStep_(timing, "Locked monthly dashboard row heights: " + outputName);
-  archiveRawSourceAndDeleteLocal_(ss, sourceSheet, rawName, outputSheet, timing);
+
+  archiveRawSourceAndDeleteLocal_(ss, sourceSheet, rawName, outputSheet, timing, options);
+
   applyOutputVisibilityPolicy_(outputSheet, null, sheetDef.sheetType, timing);
   clearSheetRuntimeCachesForSheet_(outputSheet);
   return outputSheet;
 }
 
-function formatMonthlyRawDataSheetFromSource_(sourceSheet, monthParts, timing) {
-  const outputSheet = formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markFrameworkStep_);
+
+
+
+function formatMonthlyRawDataSheetFromSource_(sourceSheet, monthParts, timing, options) {
+  const outputSheet = formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markFrameworkStep_, options);
   markFrameworkStep_(timing, "Formatted monthly Raw Data in place without deleting imported columns: " + outputSheet.getName());
   return outputSheet;
 }
+
 
 function resolveMonthlyFormatterSourceSheet_(ss, activeSheet, monthParts, keywords, validator, workflowName, preferredOutputName) {
   const monthLabel = Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
@@ -6030,11 +6102,9 @@ function formatBannerReport() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const rawSheetOriginal = ss.getActiveSheet();
 
-
     if (!rawSheetOriginal) {
       throw new Error("No active sheet found. Open/select the raw Banner import sheet before running Format Banner Report.");
     }
-
 
     const monthParts = promptForLockedYearReportMonth_("Format Banner Report");
     if (!monthParts) return null;
@@ -6054,18 +6124,14 @@ function formatBannerReport() {
       outputName
     );
 
-
     if (rawSheet.getName() === templateName) {
       throw new Error("The selected source sheet is the Banner template. Select the raw Banner import sheet before running the formatter.");
     }
 
-
     markFrameworkStep_(timing, "Raw source selected for read without local rename: " + rawSheet.getName());
-
 
     const templateSheet = context.template;
     markFrameworkStep_(timing, "Existing template verified or created from script defaults: " + templateName);
-
 
     deleteSheetIfExists_(ss, outputName, rawSheet.getName(), templateName);
     const outputSheet = templateSheet.copyTo(ss);
@@ -6074,20 +6140,16 @@ function formatBannerReport() {
     showSheetIfNeeded_(outputSheet, timing, "Banner output sheet shown: " + outputName);
     markFrameworkStep_(timing, "Template duplicated as output sheet in configured creation order: " + outputName);
 
-
     writeBannerReportDates_(outputSheet, reportDate);
     markFrameworkStep_(timing, "Report title dates written");
-
 
     copyRawBannerDataToOutput_(rawSheet, outputSheet);
     markFrameworkStep_(timing, "Raw data bulk-copied to duplicated template");
 
-
     markFrameworkStep_(timing, "Production output validation skipped");
 
-
-    archiveRawSourceAndDeleteLocal_(ss, rawSheet, rawName, outputSheet, timing);
-
+    // WAVE 4 FIX: Pass explicit options object for standalone run
+    archiveRawSourceAndDeleteLocal_(ss, rawSheet, rawName, outputSheet, timing, {});
 
     applyOutputVisibilityPolicy_(outputSheet, null, SHEET_TYPE.BANNER, timing);
     refreshIndexAfterSheetWorkflow_("Format Banner Report");
@@ -6095,6 +6157,7 @@ function formatBannerReport() {
     return outputSheet;
   });
 }
+
 
 function validateActiveBannerFormatterOutput() {
   return runFrameworkTimed_("Validate Active Banner Output", function(timing) {
@@ -6118,15 +6181,16 @@ function archiveActiveRawDataSheet() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getActiveSheet();
 
-
     assertActiveRawDataSourceSheet_(sheet, "Archive Active Raw Data Sheet");
 
-
-    archiveRawDataSheet_(sheet, sheet.getName(), timing, "Active archive detail");
+    // WAVE 4 FIX: Call renamed helper function
+    archiveRawSourceSheet_(sheet, sheet.getName(), timing, "Active archive detail");
     markFrameworkStep_(timing, "Active sheet archived: " + sheet.getName());
     return sheet;
   });
 }
+
+
 
 function parseReportMonthInput_(value) {
   const text = String(value || "").trim().toLowerCase();
@@ -6339,13 +6403,14 @@ function forceStandardTitleCellAlignment_(sheet) {
   }
 }
 
-function refreshIndexAfterSheetWorkflow_(workflowName) {
+function refreshIndexAfterSheetWorkflow_(workflowName, preOpenedArchiveSs) {
   try {
-    createIndexSheet();
+    createIndexSheet(preOpenedArchiveSs);
   } catch (err) {
     logBestEffortWarning_((workflowName || "Workflow") + " index refresh skipped: " + err.message);
   }
 }
+
 
 function autoHidePreviousMonthSheetsAfterWorkflow_(monthParts) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -7032,10 +7097,11 @@ function validateBannerFormatterOutput_(sheet) {
   return true;
 }
 
-function archiveRawSourceAndDeleteLocal_(ss, rawSheet, archiveName, outputSheet, timing) {
+function archiveRawSourceAndDeleteLocal_(ss, rawSheet, archiveName, outputSheet, timing, options) {
   if (RFF_ENABLE_AUTO_ARCHIVE_RAW_DATA === true) {
     try {
-      archiveRawDataSheet_(rawSheet, archiveName, timing, "Raw archive detail");
+      const preOpenedSs = options && options.archiveSs ? options.archiveSs : null;
+      archiveRawSourceSheet_(rawSheet, archiveName, timing, "Raw archive detail", preOpenedSs);
       if (timing) markFrameworkStep_(timing, "Raw data copied to archive: " + archiveName);
     } catch (err) {
       const message = "Raw source was not deleted because archive copy failed for " + archiveName + ": " + err.message;
@@ -7053,16 +7119,25 @@ function archiveRawSourceAndDeleteLocal_(ss, rawSheet, archiveName, outputSheet,
   }
 }
 
-function archiveRawDataSheet_(sourceSheet, archiveName, timing, timingLabel) {
+
+function archiveRawSourceSheet_(sourceSheet, archiveName, timing, timingLabel, preOpenedArchiveSs) {
   const safeName = archiveName || sourceSheet.getName();
   const prefix = String(timingLabel || "Raw archive detail");
   const markArchiveStep = function(label, details) {
     if (timing) markFrameworkStep_(timing, prefix + " - " + label + ": " + safeName, details || "");
   };
 
-  const archiveId = getArchiveSpreadsheetId_();
-  const archiveSs = SpreadsheetApp.openById(archiveId);
-  markArchiveStep("archive workbook opened", "Archive Spreadsheet ID: " + archiveId);
+  // WAVE 4 OPTIMIZATION: Use pre-opened connection if provided
+  let archiveSs = preOpenedArchiveSs;
+  if (!archiveSs) {
+    const archiveId = typeof getDocumentPropertiesCached_ === "function" ?
+      (getDocumentPropertiesCached_().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || RFF_ARCHIVE_SPREADSHEET_ID) :
+      getArchiveSpreadsheetId_();
+    archiveSs = SpreadsheetApp.openById(archiveId);
+    markArchiveStep("archive workbook opened natively", "Archive Spreadsheet ID: " + archiveId);
+  } else {
+    markArchiveStep("reused pre-opened archive workbook connection");
+  }
 
   deleteArchiveSheetIfExists_(archiveSs, safeName);
   markArchiveStep("existing archive sheet deleted if present");
@@ -7078,6 +7153,7 @@ function archiveRawDataSheet_(sourceSheet, archiveName, timing, timingLabel) {
 
   return archived;
 }
+
 
 function hideMonthlyImportSheets() {
   const monthParts = promptForLockedYearReportMonth_("Hide Sub-Reports (Month & Prior)");
@@ -7157,13 +7233,16 @@ function archiveMonthlyActiveSheets() {
 
 function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const archiveId = getArchiveSpreadsheetId_();
+  const archiveId = typeof getDocumentPropertiesCached_ === "function" ?
+    (getDocumentPropertiesCached_().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || RFF_ARCHIVE_SPREADSHEET_ID) :
+    getArchiveSpreadsheetId_();
+
+  // OPTIMIZATION: Keep connection open for the entire batch loop
   const archiveSs = SpreadsheetApp.openById(archiveId);
   const result = { archived: [], skipped: [], failed: [] };
-  markFrameworkStep_(timing, "Archive workbook opened", "Archive Spreadsheet ID: " + archiveId);
+  markFrameworkStep_(timing, "Archive workbook connection established for batch", "Archive Spreadsheet ID: " + archiveId);
 
   specs.forEach(function(spec) {
-    // Target the prompted month AND all prior historical months in the workbook
     const sheets = findArchiveMonthlyCandidateSheetsUpToDate_(ss, spec.keywords, parsedMonth.reportDate);
     if (!sheets.length) {
       const message = "No local sheet found for " + spec.label + " " + parsedMonth.monthLabel + " or prior";
@@ -7195,6 +7274,7 @@ function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
   );
   return result;
 }
+
 
 function findArchiveMonthlyCandidateSheetsUpToDate_(ss, keywords, cutoffDate) {
   const keywordList = (keywords || []).map(function(keyword) {
@@ -7524,9 +7604,8 @@ function formatRawData() {
   });
 }
 
-function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn) {
+function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn, options) {
   assertActiveRawDataSourceSheet_(sourceSheet, "Format Raw Data");
-
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboard = loadDashboardConfig_();
@@ -7534,16 +7613,13 @@ function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn)
   const outputName = buildRawDataSheetName_(monthParts);
   const sourceName = sourceSheet.getName();
 
-
   if (sourceName === sheetDef.templateName) {
     throw new Error("The active sheet is not a Raw Data import sheet. Select the imported Raw Data source sheet before formatting.");
   }
 
-
   const step = typeof markStepFn === "function" ? markStepFn : markRuntimeStep_;
   const context = buildRawDataInPlaceFormattingContext_(sourceSheet, dashboard, sheetDef, monthParts);
   step(timing, "Read Raw Data source in place without editing imported values | Rows: " + context.rawData.values.length);
-
 
   deleteSheetIfExists_(ss, outputName, sourceName, sheetDef.templateName);
   if (sourceSheet.getName() !== outputName) {
@@ -7552,20 +7628,16 @@ function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn)
     step(timing, "Rename Raw Data import sheet in place and place in configured creation order: " + sourceName + " -> " + outputName);
   }
 
-
   const inPlaceResult = writeRawDataInPlaceTitleRowsAndAddedColumns_(sourceSheet, context, monthParts, timing, step);
   step(timing, "Wave 4 Raw Data in-place title/header/column work complete | Added columns: " + inPlaceResult.addedColumns.join(", "));
-
 
   step(timing, "Wave 4 Raw Data approved-sync columns start");
   const approvedColumnsWritten = processRawDataApprovedSyncColumns_(sourceSheet, monthParts, timing, step);
   step(timing, "Wave 4 Raw Data approved-sync columns complete | Changed column groups: " + approvedColumnsWritten);
 
-
   step(timing, "Wave 4 Raw Data banner-column sync start");
   const bannerRowsUpdated = syncRawDataBannerColumns_(sourceSheet, monthParts, timing, step);
   step(timing, "Wave 4 Raw Data banner-column sync complete | Rows updated: " + bannerRowsUpdated);
-
 
   step(timing, "Wave 4 Raw Data row-height lock start");
   lockFinalOutputRowHeights_(sourceSheet, "Raw Data");
@@ -7574,11 +7646,18 @@ function formatRawDataInPlaceSheet_(sourceSheet, monthParts, timing, markStepFn)
   applyOutputVisibilityPolicy_(sourceSheet, dashboard, sheetDef.sheetType, timing);
   step(timing, "Wave 4 Raw Data visibility policy complete");
   clearSheetRuntimeCachesForSheet_(sourceSheet);
-  refreshIndexAfterSheetWorkflow_("Format Raw Data");
-  applyOutputVisibilityPolicy_(sourceSheet, dashboard, sheetDef.sheetType, timing);
-  step(timing, "Raw Data final visibility policy enforced after Index refresh");
+
+  if (options && options.skipIndexRefresh) {
+    step(timing, "Raw Data Index refresh deferred");
+  } else {
+    refreshIndexAfterSheetWorkflow_("Format Raw Data");
+    applyOutputVisibilityPolicy_(sourceSheet, dashboard, sheetDef.sheetType, timing);
+    step(timing, "Raw Data final visibility policy enforced after Index refresh");
+  }
+
   return sourceSheet;
 }
+
 
 function buildRawDataInPlaceFormattingContext_(sourceSheet, dashboard, sheetDef, monthParts) {
   const headers = getHeadersForSheetType_(dashboard, sheetDef.sheetType);
@@ -7798,6 +7877,7 @@ function createOutputSheetFromDashboardTemplate_(sheetType, outputName, outputRo
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const normalizedSheetType = normalizeDashboardSheetTypeKey_(sheetType);
   const context = getTemplateDrivenActiveSheetContext_(ss, normalizedSheetType);
+  const dashboard = context.dashboard || loadDashboardConfig_();
   const sheetDef = context.sheetDef;
   const headers = context.headers;
   const template = context.template;
@@ -7857,6 +7937,10 @@ function createOutputSheetFromDashboardTemplate_(sheetType, outputName, outputRo
     if (firstDay) sheet.getRange("B2").setValue(firstDay);
     if (endDate) sheet.getRange("D2").setValue(endDate);
     if (headers.length) sheet.getRange(HEADER_ROW, 1, 1, width).setValues([headers]);
+    if (rows.length && getBehaviorForSheetType_(dashboard, normalizedSheetType).usesAlternatingColors) {
+      applyAlternatingColorRules_(sheet, sheet.getRange(DATA_START_ROW, 1, rows.length, width), getThemeColorsFromBase_(sheetDef.baseColor, dashboard.globals || RFF_DEFAULTS));
+      markCanvasStep("output alternating colors applied");
+    }
     markCanvasStep("title/date/header values stamped");
   } catch (err) {
     throw new Error("Output style paint failed for " + outputName + ": " + err.message);
@@ -7976,15 +8060,8 @@ function ensureOutputSheetHasFormattedRows_(sheet, requiredRows, width) {
 
   if (RFF_OUTPUT_EXTEND_TEMPLATE_FORMATTING) {
     try {
-      const batchChunk = 1000;
-      let processed = 0;
-
-      while (processed < rowsToAdd) {
-        const chunk = Math.min(batchChunk, rowsToAdd - processed);
-        sheet.getRange(DATA_START_ROW, 1, 1, width)
-          .copyTo(sheet.getRange(currentRows + 1 + processed, 1, chunk, width), { formatOnly: true });
-        processed += chunk;
-      }
+      sheet.getRange(DATA_START_ROW, 1, 1, width)
+        .copyTo(sheet.getRange(currentRows + 1, 1, rowsToAdd, width), { formatOnly: true });
     } catch (err) {
       logBestEffortWarning_("Output template formatting extension skipped for " + sheet.getName() + ": " + err.message);
     }
@@ -8146,22 +8223,18 @@ function formatCarePlanDueOrUnlockedFromDashboard_(sheetType, promptTitle, start
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sourceSheetOriginal = ss.getActiveSheet();
 
-
     if (!sourceSheetOriginal) {
       throw new Error("No active sheet found. Select the raw " + sheetType + " import sheet before running " + promptTitle + ".");
     }
 
-
     const monthParts = promptForLockedYearReportMonth_(promptTitle);
     if (!monthParts) return null;
-
 
     const context = getTemplateDrivenActiveSheetContext_(ss, sheetType);
     const sheetDef = context.sheetDef;
     const headers = context.headers;
     const outputName = buildDashboardOutputSheetName_(sheetDef, monthParts);
     const rawName = buildRawArchiveNameForSheetType_(sheetType, monthParts);
-
 
     const sourceSheet = resolveMonthlyFormatterSourceSheet_(
       ss,
@@ -8180,35 +8253,28 @@ function formatCarePlanDueOrUnlockedFromDashboard_(sheetType, promptTitle, start
       outputName
     );
 
-
     const originalStartDate =
       coerceToValidDate_(sourceSheet.getRange(startDateCellA1).getValue()) ||
       coerceToValidDate_(sourceSheet.getRange(startDateCellA1).getDisplayValue()) ||
       monthParts.firstDay;
-
 
     const originalEndDate =
       coerceToValidDate_(sourceSheet.getRange(endDateCellA1).getValue()) ||
       coerceToValidDate_(sourceSheet.getRange(endDateCellA1).getDisplayValue()) ||
       monthParts.lastDay;
 
-
     const titleInfoText = collectMovedTitleInfoCells_(sourceSheet, sheetType);
     markFrameworkStep_(timing, "Read source title/date cells into dashboard title info without clearing archive source");
-
 
     prepareCarePlanSourceSheetForDashboardFormat_(sourceSheet, sheetType, headers);
     markFrameworkStep_(timing, "Prepare raw source structure");
 
-
     const rawSheet = sourceSheet;
     markFrameworkStep_(timing, "Raw source selected for read without local rename: " + rawSheet.getName());
-
 
     const rawData = getDataValues_(rawSheet, HEADER_ROW, DATA_START_ROW);
     const outputRows = mapRowsToHeaders_(rawData.values, rawData.headers, headers);
     markFrameworkStep_(timing, "Raw data mapped to dashboard headers");
-
 
     deleteSheetIfExists_(ss, outputName, rawSheet.getName(), sheetDef.templateName);
     const outputSheet = createOutputSheetFromDashboardTemplate_(
@@ -8222,7 +8288,6 @@ function formatCarePlanDueOrUnlockedFromDashboard_(sheetType, promptTitle, start
     );
     markFrameworkStep_(timing, "Template duplicated and raw data pasted: " + outputSheet.getName());
 
-
     try {
       outputSheet.getRange("A1").setValue(sheetDef.reportTitle || sheetType);
       if (titleInfoText) outputSheet.getRange("C1").setValue(titleInfoText);
@@ -8230,26 +8295,22 @@ function formatCarePlanDueOrUnlockedFromDashboard_(sheetType, promptTitle, start
       throw new Error("Fatal: Could not write title info: " + err.message);
     }
 
-
     lockFinalOutputRowHeights_(outputSheet, sheetType);
     markFrameworkStep_(timing, "Lock final row heights");
 
-
     archiveRawSourceAndDeleteLocal_(ss, rawSheet, rawName, outputSheet, timing);
 
-
     applyOutputVisibilityPolicy_(outputSheet, null, sheetDef.sheetType, timing);
-
 
     clearSheetRuntimeCachesForSheet_(outputSheet);
     refreshIndexAfterSheetWorkflow_(promptTitle);
     markFrameworkStep_(timing, "Clear runtime caches");
 
-
     notify_(sheetDef.reportTitle + " formatted using template-copy pattern.\nSheet created: " + outputSheet.getName());
     return outputSheet;
   });
 }
+
 
 function buildRawArchiveNameForSheetType_(sheetType, monthParts) {
   const suffix = Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
@@ -8520,12 +8581,10 @@ function syncBannerSourceIntoData_(data, monthParts, pmrFilter) {
 function syncUnlockedCarePlanSourceIntoData_(data, monthParts, pmrFilter) {
   const sourceSheet = getCurrentUnlockedCarePlanSheet_(monthParts);
 
-
   if (!sourceSheet) {
     notify_("Unlocked Care Plan Report was not found. Unlocked sync skipped.");
     return;
   }
-
 
   const sourceMap = buildSourceMapBySingleKeyForPart5_(
     sourceSheet,
@@ -8534,7 +8593,6 @@ function syncUnlockedCarePlanSourceIntoData_(data, monthParts, pmrFilter) {
     "PMR #"
   );
 
-
   syncRowsFromSourceMapData_(
     data,
     sourceMap,
@@ -8542,8 +8600,6 @@ function syncUnlockedCarePlanSourceIntoData_(data, monthParts, pmrFilter) {
       masterKeyHeaders: ["Participant PMR#"],
       sourceKeyHeaders: ["PMR #"],
       fields: [
-        ["Participant Name", "Participant Name"],
-        ["PMR #", "PMR #"],
         ["IDT Meeting Date", "IDT Meeting Date"],
         ["Care Plan Start Date", "Care Plan Start Date"]
       ]
@@ -8589,36 +8645,29 @@ function syncCarePlanDueSourceIntoData_(data, monthParts, pmrFilter) {
 function syncRowsFromSourceMapData_(data, sourceMap, config, pmrFilter) {
   if (!data || !data.values || !data.values.length) return;
 
-
   const headerMap = data.headerMap;
   const fields = normalizeSyncFieldPairs_(config.fields);
+  const targetKeyHeaders = config.sourceKeyHeaders || config.masterKeyHeaders;
 
-
-  data.values.forEach(row => {
+  data.values.forEach(function(row) {
     if (!shouldProcessRowByPMR_(row, headerMap, pmrFilter)) return;
 
-
     const key = config.masterKeyHeaders
-      .map(header => normalizeKeyPart_(row[headerMap[header]]))
+      .map(function(header, i) { return normalizeSyncKey_(row[headerMap[header]], targetKeyHeaders[i]); })
       .join("|||");
-
 
     if (key.replace(/\|/g, "") === "") return;
     if (!sourceMap.has(key)) return;
 
-
     const source = sourceMap.get(key);
 
-
-    fields.forEach(pair => {
+    fields.forEach(function(pair) {
       const destHeader = pair[0];
       const sourceHeader = pair[1];
       const destIdx = headerMap[destHeader];
 
-
       if (destIdx === undefined) return;
       if (!Object.prototype.hasOwnProperty.call(source, sourceHeader)) return;
-
 
       row[destIdx] = source[sourceHeader];
     });
@@ -8626,40 +8675,55 @@ function syncRowsFromSourceMapData_(data, sourceMap, config, pmrFilter) {
 }
 
 
+
+function normalizeSyncKey_(value, header) {
+  if (value === null || value === undefined) return "";
+  const text = String(value).trim().toLowerCase();
+  const headerName = String(header || "");
+
+  if (headerName.indexOf("PMR") !== -1) {
+    return text.replace(/\s+/g, "").replace(/\.0$/, "");
+  }
+
+  if (headerName === "Participant Name" || headerName === "Name") {
+    if (text.indexOf(",") !== -1) {
+      const parts = text.split(",");
+      const last = parts[0].trim().replace(/\s+/g, "");
+      const first = (parts[1] || "").trim().split(/\s+/)[0].replace(/[^a-z0-9]/g, "");
+      return last + first;
+    }
+    return text.replace(/\s+/g, "");
+  }
+
+  return text.replace(/\s+/g, " ");
+}
+
 function buildSourceMapBySingleKeyForPart5_(sheet, headerRow, dataStartRow, keyHeader) {
   headerRow = headerRow || HEADER_ROW;
   dataStartRow = dataStartRow || DATA_START_ROW;
 
-
   const data = getDataValues_(sheet, headerRow, dataStartRow);
   const map = new Map();
 
-
   if (!data.values.length) return map;
-
 
   const headers = data.headers;
   const headerMap = data.headerMap;
   const keyIdx = headerMap[keyHeader];
 
-
   if (keyIdx === undefined) return map;
 
-
-  data.values.forEach(row => {
-    const key = normalizeKeyPart_(row[keyIdx]);
+  data.values.forEach(function(row) {
+    const key = normalizeSyncKey_(row[keyIdx], keyHeader);
     if (!key) return;
 
-
     const record = {};
-    headers.forEach((header, idx) => {
+    headers.forEach(function(header, idx) {
       if (header) record[header] = row[idx];
     });
 
-
     map.set(key, record);
   });
-
 
   return map;
 }
@@ -8668,39 +8732,30 @@ function buildSourceMapByCompositeKeyForPart5_(sheet, headerRow, dataStartRow, k
   headerRow = headerRow || HEADER_ROW;
   dataStartRow = dataStartRow || DATA_START_ROW;
 
-
   const data = getDataValues_(sheet, headerRow, dataStartRow);
   const map = new Map();
 
-
   if (!data.values.length) return map;
-
 
   const headers = data.headers;
   const headerMap = data.headerMap;
 
+  if (keyHeaders.some(function(header) { return headerMap[header] === undefined; })) return map;
 
-  if (keyHeaders.some(header => headerMap[header] === undefined)) return map;
-
-
-  data.values.forEach(row => {
+  data.values.forEach(function(row) {
     const key = keyHeaders
-      .map(header => normalizeKeyPart_(row[headerMap[header]]))
+      .map(function(header) { return normalizeSyncKey_(row[headerMap[header]], header); })
       .join("|||");
-
 
     if (key.replace(/\|/g, "") === "") return;
 
-
     const record = {};
-    headers.forEach((header, idx) => {
+    headers.forEach(function(header, idx) {
       if (header) record[header] = row[idx];
     });
 
-
     map.set(key, record);
   });
-
 
   return map;
 }
@@ -8740,15 +8795,12 @@ function normalizeSyncFieldPairs_(fields) {
 
 
 function syncMasterListFromUnlockedCarePlan_(masterSheet, monthParts, pmrFilter) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sourceSheet = getCurrentUnlockedCarePlanSheet_(monthParts);
-
 
   if (!sourceSheet) {
     notify_("Unlocked Care Plan Report was not found. Unlocked sync skipped.");
     return;
   }
-
 
   const sourceMap = buildSourceMapBySingleKeyForPart5_(
     sourceSheet,
@@ -8757,7 +8809,6 @@ function syncMasterListFromUnlockedCarePlan_(masterSheet, monthParts, pmrFilter)
     "PMR #"
   );
 
-
   syncRowsFromSourceMap_(
     masterSheet,
     sourceMap,
@@ -8765,8 +8816,6 @@ function syncMasterListFromUnlockedCarePlan_(masterSheet, monthParts, pmrFilter)
       masterKeyHeaders: ["Participant PMR#"],
       sourceKeyHeaders: ["PMR #"],
       fields: [
-        ["Participant Name", "Participant Name"],
-        ["PMR #", "PMR #"],
         ["IDT Meeting Date", "IDT Meeting Date"],
         ["Care Plan Start Date", "Care Plan Start Date"]
       ]
@@ -8812,50 +8861,36 @@ function syncMasterListFromCarePlanDue_(masterSheet, monthParts, pmrFilter) {
 function syncRowsFromSourceMap_(masterSheet, sourceMap, config, pmrFilter) {
   const data = getDataValues_(masterSheet, HEADER_ROW, DATA_START_ROW);
 
-
   if (!data.values.length) return;
 
-
-  const headers = data.headers;
   const headerMap = data.headerMap;
   const values = data.values;
-
-
   const fields = normalizeSyncFieldPairs_(config.fields);
+  const targetKeyHeaders = config.sourceKeyHeaders || config.masterKeyHeaders;
 
-
-  values.forEach(row => {
+  values.forEach(function(row) {
     if (!shouldProcessRowByPMR_(row, headerMap, pmrFilter)) return;
 
-
     const key = config.masterKeyHeaders
-      .map(header => normalizeKeyPart_(row[headerMap[header]]))
+      .map(function(header, i) { return normalizeSyncKey_(row[headerMap[header]], targetKeyHeaders[i]); })
       .join("|||");
-
 
     if (key.replace(/\|/g, "") === "") return;
     if (!sourceMap.has(key)) return;
 
-
     const source = sourceMap.get(key);
 
-
-    fields.forEach(pair => {
+    fields.forEach(function(pair) {
       const destHeader = pair[0];
       const sourceHeader = pair[1];
-
-
       const destIdx = headerMap[destHeader];
+
       if (destIdx === undefined) return;
-
-
       if (!Object.prototype.hasOwnProperty.call(source, sourceHeader)) return;
-
 
       row[destIdx] = source[sourceHeader];
     });
   });
-
 
   if (data.range) data.range.setValues(values);
 }
@@ -9369,18 +9404,36 @@ function removeActiveDemoPPMRsFromDisenrolledExclusion_(demoSheet) {
 
   if (!activePMRs.size) return 0;
 
-  const rowsToDelete = [];
-  exclusionData.values.forEach(function(row, offset) {
+  // WAVE 4 OPTIMIZATION: Filter in memory and execute a single batch write
+  const retainedRows = [];
+  let deletedCount = 0;
+
+  exclusionData.values.forEach(function(row) {
     const pmr = normalizePMR_(row[exclusionPmrIdx]);
-    if (pmr && activePMRs.has(pmr)) rowsToDelete.push(DATA_START_ROW + offset);
+    if (pmr && activePMRs.has(pmr)) {
+      deletedCount++;
+    } else {
+      retainedRows.push(row);
+    }
   });
 
-  const deleted = deleteRowNumberBatches_(exclusionSheet, rowsToDelete);
-  if (deleted > 0) {
+  if (deletedCount > 0) {
+    const width = Math.max(exclusionSheet.getLastColumn(), 1);
+    const oldRows = exclusionData.values.length;
+
+    // 1. Clear the canvas body instantly
+    exclusionSheet.getRange(DATA_START_ROW, 1, oldRows, width).clearContent();
+
+    // 2. Repaint only the retained rows
+    if (retainedRows.length > 0) {
+      const normalizedRows = normalizeRowsToWidth_(retainedRows, width);
+      exclusionSheet.getRange(DATA_START_ROW, 1, normalizedRows.length, width).setValues(normalizedRows);
+    }
+
     clearSheetRuntimeCachesForSheet_(exclusionSheet);
-    logBestEffortWarning_("Re-Enrollment Engine: Removed " + deleted + " active Demo P PMR rows from Disenrolled Exclusion.");
+    logBestEffortWarning_("Re-Enrollment Engine: Surgically purged " + deletedCount + " re-enrolled PMR records from historical Exclusion sheet via in-memory rewrite.");
   }
-  return deleted;
+  return deletedCount;
 }
 
 
@@ -9855,18 +9908,22 @@ function createActiveDemoPFromRawData_(rawSheet, targetName, monthParts, timing)
   const width = Math.max(headers.length, 1);
   const requiredRows = workingData.values.length ? DATA_START_ROW + workingData.values.length - 1 : DATA_START_ROW;
 
+  // WAVE 4 OPTIMIZATION: Prepare grid canvas first
   resizeSheetGrid_(demoSheet, requiredRows, width);
   applyTemplateColumnWidths_(demoSheet, template, width);
 
+  // Single naked 2D-array flush to canvas
   if (workingData.values.length) {
-    demoSheet.getRange(DATA_START_ROW, 1, workingData.values.length, width).setValues(workingData.values.map(function(row) {
+    const rawValuesMatrix = workingData.values.map(function(row) {
       const out = (row || []).slice(0, width);
       while (out.length < width) out.push("");
       return out;
-    }));
+    });
+    demoSheet.getRange(DATA_START_ROW, 1, workingData.values.length, width).setValues(rawValuesMatrix);
   }
   if (timing) markFrameworkStep_(timing, "Demo P unified values flushed to spreadsheet canvas");
 
+  // Paint template formatting and stamp dates AFTER raw data values exist
   try {
     template.getRange(1, 1, DATA_START_ROW - 2, width).copyTo(demoSheet.getRange(1, 1, DATA_START_ROW - 2, width));
     template.getRange(HEADER_ROW, 1, 1, width).copyTo(demoSheet.getRange(HEADER_ROW, 1, 1, width));
@@ -9876,12 +9933,12 @@ function createActiveDemoPFromRawData_(rawSheet, targetName, monthParts, timing)
         .copyTo(demoSheet.getRange(DATA_START_ROW, 1, workingData.values.length, width), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
     }
     demoSheet.getRange("A1").setValue(sheetDef.reportTitle || "Demo P");
-
     updateDemoPReportDates_(demoSheet, monthParts);
   } catch (err) {
     throw new Error("Demo P style mapping failed: " + err.message);
   }
 
+  // Set frozen views and tab color last
   try {
     demoSheet.setFrozenRows(template.getFrozenRows());
     demoSheet.setFrozenColumns(Math.min(template.getFrozenColumns(), width));
@@ -9902,6 +9959,8 @@ function createActiveDemoPFromRawData_(rawSheet, targetName, monthParts, timing)
     flatCount: flatCount
   };
 }
+
+
 
 function populateDemoPUpdateColumns_(data, monthParts, sourceSheetName, status) {
   if (!data || !data.headerMap || !data.values) return;
@@ -10127,7 +10186,6 @@ const BANNER_SYNC_FIELDS = [
 ];
 
 const UNLOCKED_SYNC_FIELDS = [
-  "Participant Name",
   "IDT Meeting Date",
   "Care Plan Start Date"
 ];
@@ -10157,14 +10215,12 @@ function buildMonthlyChangeReport() {
   });
 }
 
-function buildMonthlyChangeReportForMonth_(monthParts, timing) {
+function buildMonthlyChangeReportForMonth_(monthParts, timing, options) {
   if (!monthParts) return null;
-
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const currentDemo = getCurrentRawDataSheet_(monthParts);
   const previousDemo = getPreviousRawDataSheet_(monthParts);
-
 
   if (!currentDemo) {
     notify_(
@@ -10175,7 +10231,6 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
     );
     return null;
   }
-
 
   if (!previousDemo) {
     notify_(
@@ -10189,12 +10244,10 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
     return null;
   }
 
-
-
-
   markRuntimeStep_(timing, "Monthly Change detail - source sheets located | Current: " + currentDemo.getName() + "; Previous: " + previousDemo.getName());
   const sectionData = compareRawDemoPForSectionReport_(previousDemo, currentDemo, monthParts);
   markRuntimeStep_(timing, "Monthly Change datasets compiled in-memory", "Current rows: " + sectionData.currentData.values.length + "; Previous rows: " + sectionData.previousData.values.length + "; Current PMRs: " + sectionData.currentData.rowsByPMR.size + "; Previous PMRs: " + sectionData.previousData.rowsByPMR.size);
+
   const totalPMRs =
     sectionData.enrollmentPMRs.size +
     sectionData.disenrollmentPMRs.size +
@@ -10203,7 +10256,6 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
     sectionData.contactPMRs.size +
     sectionData.bannerPMRs.size +
     sectionData.otherPMRs.size;
-
 
   if (totalPMRs === 0) {
     notify_(
@@ -10220,18 +10272,17 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
     return null;
   }
 
-
   const reportName = buildMonthlySheetName_(MONTHLY_CHANGE_REPORT_PREFIX, monthParts.firstDay, monthParts.lastDay);
   let reportSheet = ss.getSheetByName(reportName);
   if (reportSheet) {
     throw new Error("Monthly Change report already exists: " + reportName + ". Delete or rename the existing report before rerunning this workflow.");
   }
 
-
   const dashboard = loadDashboardConfig_();
   const sheetDef = getSheetDefinitionByType_(dashboard, SHEET_TYPE.MONTHLY_CHANGE);
   const template = ss.getSheetByName(sheetDef.templateName);
   if (!template) throw new Error("Template not found: " + sheetDef.templateName + ". Run Create / Refresh All Templates first.");
+
   reportSheet = template.copyTo(ss);
   markRuntimeStep_(timing, "Monthly Change detail - template copied: " + sheetDef.templateName);
   setRequiredSheetName_(reportSheet, reportName);
@@ -10241,34 +10292,40 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing) {
 
   buildMonthlyChangeReportSectionLayout_(reportSheet, currentDemo, sectionData.currentData.headers, monthParts);
   markRuntimeStep_(timing, "Monthly Change section layout prepared");
+
   populateMonthlyChangeReportSections_(reportSheet, sectionData, monthParts);
   markRuntimeStep_(timing, "Monthly Change section rows populated");
+
   formatMonthlyChangeReportSectionSheet_(reportSheet, sectionData.currentData.headers);
   markRuntimeStep_(timing, "Monthly Change report drawn and subheaders formatted");
-
   setRequiredSheetName_(reportSheet, reportName);
-  createIndexSheet();
-  markRuntimeStep_(timing, "Monthly Change index refreshed");
 
+  // --- WAVE 4 OPTIMIZATION: CONDITIONAL INDEX REFRESH & NOTIFICATIONS ---
+  if (options && options.skipIndexRefresh) {
+    markRuntimeStep_(timing, "Monthly Change index refresh deferred until final organization");
+  } else {
+    createIndexSheet();
+    markRuntimeStep_(timing, "Monthly Change index refreshed");
+  }
 
-
-
-notify_(
-    "Monthly Change Report created.\n\n" +
-    `Current source: ${currentDemo.getName()}\n` +
-    `Previous source: ${previousDemo.getName()}\n\n` +
-    `Enrollments: ${sectionData.enrollmentPMRs.size}\n` +
-    `Disenrollments: ${sectionData.disenrollmentPMRs.size}\n` +
-    `Demographic Changes: ${sectionData.demographicPMRs.size}\n` +
-    `Caseload Changes: ${sectionData.caseloadPMRs.size}\n` +
-    `Contact Changes: ${sectionData.contactPMRs.size}\n` +
-    `Banner Summary Changes: ${sectionData.bannerPMRs.size}\n` +
-    `Other Changes: ${sectionData.otherPMRs.size}`
-  );
-
+  if (!(options && options.skipNotification)) {
+    notify_(
+      "Monthly Change Report created.\n\n" +
+      `Current source: ${currentDemo.getName()}\n` +
+      `Previous source: ${previousDemo.getName()}\n\n` +
+      `Enrollments: ${sectionData.enrollmentPMRs.size}\n` +
+      `Disenrollments: ${sectionData.disenrollmentPMRs.size}\n` +
+      `Demographic Changes: ${sectionData.demographicPMRs.size}\n` +
+      `Caseload Changes: ${sectionData.caseloadPMRs.size}\n` +
+      `Contact Changes: ${sectionData.contactPMRs.size}\n` +
+      `Banner Summary Changes: ${sectionData.bannerPMRs.size}\n` +
+      `Other Changes: ${sectionData.otherPMRs.size}`
+    );
+  }
 
   return reportSheet;
 }
+
 
 
 function isMonthlyChangeDisenrollmentEffectiveDate_(effectiveDate, monthParts) {
@@ -11077,7 +11134,12 @@ function runMonthlyUpdate() {
     const preflight = preflightMonthlyUpdateForMonth_(monthParts, timing);
     const messages = [];
 
-    const reportSheet = buildMonthlyChangeReportForMonth_(monthParts, timing);
+    // --- WAVE 4 OPTIMIZATION: PASS SKIP FLAGS TO SUPPRESS REDUNDANT INDEX LOAD ---
+    const reportSheet = buildMonthlyChangeReportForMonth_(monthParts, timing, {
+      skipIndexRefresh: true,
+      skipNotification: true
+    });
+
     markFrameworkStep_(timing, "Create Monthly Update - Monthly Change Report complete: " + (reportSheet ? reportSheet.getName() : "No report created"));
     messages.push("Monthly Change Report: " + (reportSheet ? reportSheet.getName() : "No report created"));
 
@@ -11085,7 +11147,13 @@ function runMonthlyUpdate() {
     markFrameworkStep_(timing, "Create Monthly Update - Demo P update complete: " + (demoSheet ? demoSheet.getName() : "No Demo P update"));
     messages.push("Update Demo P: " + (demoSheet ? demoSheet.getName() : "No update"));
 
-    const disenrolledResult = createDisenrolledListForMonth_(monthParts, timing);
+    // Force strict deferred index/notifications on Disenrolled for consistency
+    const disenrolledResult = createDisenrolledListForMonth_(monthParts, timing, {
+      timingPrefix: "Create Monthly Update - Create/Update Disenrolled - ",
+      refreshIndex: false,
+      notify: false,
+      workflowName: "Create Monthly Update"
+    });
     markFrameworkStep_(timing, "Create Monthly Update - Disenrolled List complete | Rows copied: " + disenrolledResult.rowsCopied + "; rows removed: " + disenrolledResult.rowsRemoved);
     messages.push("Create/Update Disenrolled: " + disenrolledResult.rowsCopied + " copied, " + disenrolledResult.rowsRemoved + " removed");
 
@@ -11105,17 +11173,36 @@ function runMonthlyUpdate() {
   });
 }
 
+
 function updateDemoPMonthlySyncForMonth_(monthParts, timing, options) {
   if (!monthParts) return null;
   options = options || {};
   const timingPrefix = options.timingPrefix === undefined ? "Create Monthly Update - Update Demo P - " : String(options.timingPrefix || "");
-  const step = function(label) { if (timing) markFrameworkStep_(timing, timingPrefix + label); };
+  const step = function(label, details) { if (timing) markFrameworkStep_(timing, timingPrefix + label, details || ""); };
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const mcrName = buildMonthlySheetName_(MONTHLY_CHANGE_REPORT_PREFIX, monthParts.firstDay, monthParts.lastDay);
-  if (!ss.getSheetByName(mcrName)) {
-    const errorMsg = "Update Demo P Aborted: The Monthly Change Report '" + mcrName + "' was not found.\n\nPlease execute 'Build Monthly Change Report' first before syncing changes to Demo P.";
-    SpreadsheetApp.getUi().alert("Missing Dependency", errorMsg, SpreadsheetApp.getUi().ButtonSet.OK);
-    throw new Error(errorMsg);
+
+  // PREFLIGHT GUARD: Soft check before starting execution
+  let mcrSheet = ss.getSheetByName(mcrName);
+  if (!mcrSheet) {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert(
+      "Monthly Change Report Required",
+      "The Monthly Change Report '" + mcrName + "' was not found.\n\nWould you like to build the Monthly Change Report now?",
+      ui.ButtonSet.YES_NO
+    );
+    if (response === ui.Button.YES) {
+      mcrSheet = buildMonthlyChangeReportForMonth_(monthParts, timing, { skipIndexRefresh: true, skipNotification: true });
+      if (!mcrSheet) {
+        notify_("Update Demo P cancelled: Monthly Change Report could not be created.");
+        step("Preflight cancelled - Monthly Change Report creation failed");
+        return null; // Graceful return prevents CRITICAL timing flag
+      }
+    } else {
+      notify_("Update Demo P cancelled: Missing required Monthly Change Report '" + mcrName + "'.");
+      step("Preflight cancelled by user - Missing Monthly Change Report: " + mcrName);
+      return null; // Graceful return prevents CRITICAL timing flag
+    }
   }
 
   const demoSheet = getCurrentDemoPSheet_(monthParts);
@@ -11173,6 +11260,9 @@ function updateDemoPMonthlySyncForMonth_(monthParts, timing, options) {
   return demoSheet;
 }
 
+
+
+
 function createDisenrolledListForMonth_(monthParts, timing, options) {
   options = options || {};
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -11191,7 +11281,8 @@ function createDisenrolledListForMonth_(monthParts, timing, options) {
   const oldRowsHidden = hideOldDisenrolledRows_(exclusionSheet);
   step("old rows hidden", "Rows: " + oldRowsHidden);
 
-  if (options.refreshIndex) {
+  // WAVE 4 OPTIMIZATION: Only refresh index if explicitly requested for standalone executions
+  if (options.refreshIndex === true) {
     refreshIndexAfterSheetWorkflow_(options.workflowName || "Create Disenrolled List");
     step("Index refreshed after Create Disenrolled List");
   } else {
@@ -11204,6 +11295,7 @@ function createDisenrolledListForMonth_(monthParts, timing, options) {
   }
   return result;
 }
+
 
 
 
@@ -11273,30 +11365,52 @@ function createMasterListForMonth_(monthParts, parentTiming, preflight) {
     } else {
       markStep("Create naked canvas - Master List output sheet");
     }
+
     buildMasterListHeadersBeforeDataCopy_(demoSheet, masterSheet);
     markStep("Build Master List headers");
-    copiedRowCount = copyPrimaryDemoPRowsToMasterListByHeader_(demoSheet, masterSheet, monthParts);
-    markStep("Copy Primary PMR rows from processed Demo P to Master List");
-    trimOutputSheetToDataSize_(masterSheet, copiedRowCount || 0, SHEET_TYPE.MASTER_LIST);
-    markStep("Right-size Master List output rows");
-    const masterData = getDataValues_(masterSheet, HEADER_ROW, DATA_START_ROW);
-    syncUnlockedCarePlanSourceIntoData_(masterData, monthParts, null);
+
+    // WAVE 4 OPTIMIZATION: Compile data and sync Care Plans in memory BEFORE writing
+    const masterHeaders = getHeaders_(masterSheet, HEADER_ROW);
+    const masterHeaderMap = getHeaderMap_(masterSheet, HEADER_ROW);
+    const mappedRows = buildPrimaryDemoPRowsInMemory_(demoSheet, masterHeaders, masterHeaderMap);
+    copiedRowCount = mappedRows.length;
+    markStep("Mapped Primary PMR rows in memory | Rows: " + copiedRowCount);
+
+    if (copiedRowCount === 0) {
+      throw new Error("Cannot create Master List: No Primary PMR rows found. Primary PMR Row assignment is handled during Raw Data formatting.");
+    }
+
+    const inMemoryData = {
+      headers: masterHeaders,
+      headerMap: masterHeaderMap,
+      values: mappedRows,
+      range: null
+    };
+
+    syncUnlockedCarePlanSourceIntoData_(inMemoryData, monthParts, null);
     markStep("Sync Unlocked CP to Master List primary rows (in-memory)");
-    syncCarePlanDueSourceIntoData_(masterData, monthParts, null);
+
+    syncCarePlanDueSourceIntoData_(inMemoryData, monthParts, null);
     markStep("Sync Care Plan Due to Master List primary rows (in-memory)");
-    if (masterData.range) masterData.range.setValues(masterData.values);
-    markStep("Batch write Care Plan sync data to Master List");
+
+    // Single unified batch write to sheet
+    trimOutputSheetToDataSize_(masterSheet, copiedRowCount, SHEET_TYPE.MASTER_LIST);
+    masterSheet.getRange(DATA_START_ROW, 1, copiedRowCount, masterHeaders.length).setValues(inMemoryData.values);
+    markStep("Single-pass write complete | Primary synced rows flushed: " + copiedRowCount);
+
     if (existingMasterSheet) {
-      masterSheet = promoteStagedMasterListSheet_(ss, masterSheet, existingMasterSheet, masterName, copiedRowCount || 0, timing, markStep);
+      masterSheet = promoteStagedMasterListSheet_(ss, masterSheet, existingMasterSheet, masterName, copiedRowCount, timing, markStep);
     } else {
-      setUniqueSheetName_(masterSheet, masterName);
+      setRequiredSheetName_(masterSheet, masterName);
       placeCreatedSheetInConfiguredOrder_(masterSheet);
       markStep("Set final Master List sheet name and place in configured creation order");
     }
+
     lockFinalOutputRowHeights_(masterSheet, "Master List");
     markStep("Lock Master List final row heights");
     hideReportTemplates(null, timing);
     markStep("Hide report templates before Master List completion");
+
     if (!parentTiming) {
       writeRuntimeTimingReport_(timing);
       notify_(
@@ -11325,6 +11439,53 @@ function createMasterListForMonth_(monthParts, parentTiming, preflight) {
     throw err;
   }
 }
+
+// Helper function to extract rows into memory without writing to sheet first
+function buildPrimaryDemoPRowsInMemory_(demoSheet, masterHeaders, masterHeaderMap) {
+  const demoData = getDataValues_(demoSheet, HEADER_ROW, DATA_START_ROW);
+  const demoHeaders = demoData.headers;
+  const demoHeaderMap = demoData.headerMap;
+  const pmrIdx = getPMRIndex_(demoHeaderMap);
+  if (pmrIdx === -1) throw new Error("Demo P is missing Participant PMR# / PMR # column.");
+
+  const primaryIdx = demoHeaderMap["Primary PMR Row"];
+  const aliases = {
+    "Participant PMR#": ["PMR #", "PMR#", "Participant PMR"],
+    "PMR #": ["Participant PMR#", "PMR#", "Participant PMR"],
+    "PMR#": ["Participant PMR#", "PMR #", "Participant PMR"],
+    "Participant PMR": ["Participant PMR#", "PMR #", "PMR#"]
+  };
+
+  function getMasterTargetIndex_(header) {
+    if (masterHeaderMap[header] !== undefined) return masterHeaderMap[header];
+    const candidates = aliases[header] || [];
+    for (let i = 0; i < candidates.length; i++) {
+      if (masterHeaderMap[candidates[i]] !== undefined) return masterHeaderMap[candidates[i]];
+    }
+    return undefined;
+  }
+
+  const output = [];
+  demoData.values.forEach(row => {
+    const pmr = normalizePMR_(row[pmrIdx]);
+    if (!pmr) return;
+    const includeRow = primaryIdx !== undefined && isPrimaryPMRRowValue_(row[primaryIdx]);
+    if (!includeRow) return;
+
+    const out = new Array(masterHeaders.length).fill("");
+    demoHeaders.forEach((header, sourceIdx) => {
+      if (!header) return;
+      const targetIdx = getMasterTargetIndex_(header);
+      if (targetIdx !== undefined) {
+        out[targetIdx] = row[sourceIdx];
+      }
+    });
+    output.push(out);
+  });
+
+  return output;
+}
+
 
 function copyPrimaryDemoPRowsToMasterListByHeader_(demoSheet, masterSheet, monthParts) {
   const demoData = getDataValues_(demoSheet, HEADER_ROW, DATA_START_ROW);
@@ -11402,7 +11563,17 @@ function createMasterListSheetFromTemplate_(ss, targetName, monthParts, timing, 
   }
 
   const templateName = MASTER_LIST_TEMPLATE_SHEET;
-  const template = ss.getSheetByName(templateName);
+  let template = ss.getSheetByName(templateName);
+  if (!template) {
+    try {
+      template = createOrRefreshMasterListTemplate_(ss);
+      markCanvasStep("missing Master List template rebuilt", templateName);
+    } catch (err) {
+      const fallbackDef = getDefaultSheetDefinitionByType_(SHEET_TYPE.MASTER_LIST);
+      template = createTemplateFromScriptDefaultsForActiveBuild_(ss, fallbackDef);
+      markCanvasStep("missing Master List template rebuilt from defaults", err.message);
+    }
+  }
   markCanvasStep("template lookup complete", templateName);
   if (!template) {
     throw new Error("Template not found: " + templateName + ". Run Create / Refresh Master List Template first.");
@@ -11553,24 +11724,100 @@ function buildIndexRestoreHyperlinkFormula_(targetSheetName, actionType) {
   return '=HYPERLINK("' + compositeLinkUrl + '", "🔄 Click to Restore")';
 }
 
-function createIndexSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+// ============================================================================
+// INDEX SHEET FUNCTIONS
+// ============================================================================
+
+/**
+ * Checks if the Index sheet already has a valid header/title shell structure.
+ */
+function hasIndexSheetShell_(sheet) {
+  if (!sheet || sheet.getLastRow() < INDEX_HEADER_ROW_COUNT) return false;
+  try {
+    const titleLeft = String(sheet.getRange("A1").getValue() || "").trim();
+    const titleRight = String(sheet.getRange("F1").getValue() || "").trim();
+    return titleLeft === "Active Operational Sheets Workspace" && titleRight === "External Drive Cold-Storage Archives";
+  } catch (err) {
+    return false;
+  }
+}
+
+/**
+ * Stage 1: Builds the static Index header, merges, frozen rows, and column widths ONCE.
+ */
+function buildIndexSheetShell_(sheet) {
   const dashboard = loadDashboardConfig_();
   const globals = dashboard.globals || {};
   const theme = getThemeColorsFromBase_("#668BCC", globals);
-  const indexMonthParts = getMonthDateParts_(new Date());
+  const archiveId = getArchiveSpreadsheetId_();
 
-  let sheet = ss.getSheetByName(INDEX_SHEET);
-  if (!sheet) {
-    sheet = ss.insertSheet(INDEX_SHEET, 0);
-  } else {
-    try {
-      sheet.getDataRange().clearContent().clearFormat().breakApart();
-    } catch (err) {
-      logBestEffortWarning_("Index governed-range reset skipped: " + err.message);
+  sheet.clear(); // One-time structural reset
+
+  const headerMatrix = [
+    ["Active Operational Sheets Workspace", "", "", "", "", "External Drive Cold-Storage Archives", "", "", "", ""],
+    ["Generated", new Date(), "", "", "", "Archive File ID", archiveId, "", "", ""],
+    ["", "", "", "", "", "", "", "", "", ""],
+    ["Section / Month", "Sheet Tab Name", "Workspace Link", "Visibility", "", "Archive Month", "Archive Sheet Name", "Link to Sheet", "Status", "Restore Action"]
+  ];
+
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
+
+  for (let r = 0; r < 4; r++) {
+    const bgRow = new Array(10).fill("#FFFFFF");
+    const fwRow = new Array(10).fill("normal");
+    const fcRow = new Array(10).fill("#000000");
+    bgRow[4] = "#EDEDED";
+
+    if (r === 0) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level3; fwRow[c] = "bold"; fcRow[c] = "#FFFFFF"; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#79b5d2"; fwRow[c] = "bold"; fcRow[c] = "#FFFFFF"; }
+    } else if (r === 1) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level4; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#f2f7f9"; }
+    } else if (r === 3) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level2; fwRow[c] = "bold"; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#9fcadf"; fwRow[c] = "bold"; }
     }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
   }
 
+  sheet.getRange(1, 1, 4, 10)
+       .setValues(headerMatrix)
+       .setBackgrounds(backgrounds)
+       .setFontWeights(fontWeights)
+       .setFontColors(fontColors);
+
+  sheet.getRange(1, 1, 1, 4).merge().setFontSize(12);
+  sheet.getRange(1, 6, 1, 5).merge().setFontSize(12);
+
+  try {
+    if (typeof sheet.setColumnWidths === "function") {
+      sheet.setColumnWidths(1, 4, 160);
+      sheet.setColumnWidths(6, 5, 160);
+    } else {
+      [1, 2, 3, 4, 6, 7, 8, 9, 10].forEach(function(col) { sheet.setColumnWidth(col, 160); });
+    }
+  } catch (err) {
+    logBestEffortWarning_("Index column resizing skipped: " + err.message);
+  }
+  sheet.setColumnWidth(INDEX_BUFFER_COLUMN, 30);
+  sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
+  applyGlobalDefaultRowHeightsToSheet_(sheet, "Index Dashboard");
+  placeCreatedSheetInConfiguredOrder_(sheet);
+
+  return sheet;
+}
+
+/**
+ * Fast In-Place Update: Local Operational Workspace (Columns A-D).
+ * Buckets active tabs under a single Header per category in specified hierarchy.
+ */
+function updateIndexLocalWorkspace_(sheet, theme) {
+  const ss = sheet.getParent();
   const localRows = [];
   const seenLocal = new Set([INDEX_SHEET]);
 
@@ -11586,32 +11833,103 @@ function createIndexSheet() {
     ];
   }
 
-  function addIndexSection_(title, sheetNames) {
-    localRows.push([title, "", "", ""]);
-    (sheetNames || []).forEach(function(sheetName) {
-      const row = localSheetRow_(sheetName);
-      if (row) localRows.push(row);
-    });
-  }
+  // 1. Strict Group Hierarchy
+  const groupOrder = [
+    "Core Operational",
+    "Monthly Active",
+    "Monthly Sub-Reports",
+    "System & Configuration",
+    "Template"
+  ];
 
-  let currentGroup = "";
+  // 2. Bucket workbook sheets under their respective groups
+  const sheetsByGroup = {};
+  groupOrder.forEach(g => { sheetsByGroup[g] = []; });
+
   ss.getSheets().forEach(function(workbookSheet) {
     const sheetName = workbookSheet.getName();
     if (seenLocal.has(sheetName)) return;
     const profile = getSheetSortProfileByName_(sheetName);
     const group = String(profile.group || "Other").trim() || "Other";
-    if (group !== currentGroup) {
-      localRows.push([group, "", "", ""]);
-      currentGroup = group;
+    if (!sheetsByGroup[group]) {
+      sheetsByGroup[group] = [];
     }
-    const row = localSheetRow_(sheetName);
-    if (row) localRows.push(row);
+    sheetsByGroup[group].push(sheetName);
   });
 
+  // Include overflow groups (e.g. "Other" or "Unformatted") if present
+  const allGroups = groupOrder.concat(
+    Object.keys(sheetsByGroup).filter(g => groupOrder.indexOf(g) === -1)
+  );
+
+  // 3. Assemble matrix with a SINGLE header per group
+  allGroups.forEach(function(group) {
+    const sheetNames = sheetsByGroup[group] || [];
+    if (sheetNames.length === 0) return;
+
+    localRows.push([group, "", "", ""]); // Single group section header
+
+    sheetNames.forEach(function(sheetName) {
+      const row = localSheetRow_(sheetName);
+      if (row) localRows.push(row);
+    });
+  });
+
+  // 4. Build formatting arrays (Cols A-D)
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
+
+  for (let i = 0; i < localRows.length; i++) {
+    const bgRow = new Array(4).fill("#FFFFFF");
+    const fwRow = new Array(4).fill("normal");
+    const fcRow = new Array(4).fill("#000000");
+
+    const isSectionHeader = localRows[i][0] !== "" && localRows[i][1] === "";
+    for (let c = 0; c < 4; c++) {
+      if (isSectionHeader) {
+        bgRow[c] = theme.level3;
+        fwRow[c] = "bold";
+      } else {
+        bgRow[c] = i % 2 === 0 ? theme.level4 : "#FFFFFF";
+      }
+    }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
+  }
+
+  const startRow = INDEX_DATA_START_ROW; // Row 5
+  const oldLastRow = Math.max(sheet.getLastRow(), startRow);
+  const clearRows = Math.max(oldLastRow - startRow + 1, localRows.length, 1);
+
+  // Clear and repaint left side data area (Cols A-D)
+  sheet.getRange(startRow, 1, clearRows, 4)
+       .clearContent()
+       .setBackground("#FFFFFF")
+       .setFontWeight("normal")
+       .setFontColor("#000000");
+
+  if (localRows.length > 0) {
+    sheet.getRange(startRow, 1, localRows.length, 4)
+         .setValues(localRows)
+         .setBackgrounds(backgrounds)
+         .setFontWeights(fontWeights)
+         .setFontColors(fontColors);
+  }
+
+  return localRows.length;
+}
+
+/**
+ * In-Place Update: Cold-Storage Archive Workspace (Columns F-J).
+ * Maintains monthly grouping. Runs during archive/restore operations.
+ */
+function updateIndexArchiveWorkspace_(sheet, theme, preOpenedArchiveSs) {
   const archiveRows = [];
   const archiveId = getArchiveSpreadsheetId_();
   try {
-    const archiveSs = SpreadsheetApp.openById(archiveId);
+    const archiveSs = preOpenedArchiveSs || SpreadsheetApp.openById(archiveId);
     archiveSs.getSheets().forEach(function(ash) {
       const ashName = ash.getName();
       const ashDate = extractFirstDateFromSheetName_(ashName);
@@ -11629,77 +11947,120 @@ function createIndexSheet() {
     archiveRows.push(["", "Archive Spreadsheet Unreachable", "", "Verify permissions/ID", ""]);
   }
 
-  const totalRows = Math.max(localRows.length, archiveRows.length);
-  const finalIndexMatrix = [
-    ["Active Operational Sheets Workspace", "", "", "", "", "External Drive Cold-Storage Archives", "", "", "", ""],
-    ["Generated", new Date(), "", "", "", "Archive File ID", archiveId, "", "", ""],
-    ["", "", "", "", "", "", "", "", "", ""],
-    ["Section / Month", "Sheet Tab Name", "Workspace Link", "Visibility", "", "Archive Month", "Archive Sheet Name", "Link to Sheet", "Status", "Restore Action"]
-  ];
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
 
-  if (finalIndexMatrix.length !== INDEX_HEADER_ROW_COUNT || INDEX_DATA_START_ROW !== INDEX_HEADER_ROW_COUNT + 1) {
-    throw new Error("Index Sheet header matrix must remain exactly 4 rows so records start on row 5.");
+  for (let i = 0; i < archiveRows.length; i++) {
+    const bgRow = new Array(5).fill("#FFFFFF");
+    const fwRow = new Array(5).fill("normal");
+    const fcRow = new Array(5).fill("#000000");
+
+    for (let c = 0; c < 5; c++) {
+      bgRow[c] = i % 2 === 0 ? "#f2f7f9" : "#FFFFFF";
+    }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
   }
 
-  for (let i = 0; i < totalRows; i++) {
-    const localPart = localRows[i] || ["", "", "", ""];
-    const archivePart = archiveRows[i] || ["", "", "", ""];
-    finalIndexMatrix.push([
-      localPart[0], localPart[1], localPart[2], localPart[3],
-      "",
-      archivePart[0], archivePart[1], archivePart[2], archivePart[3], archivePart[4] || ""
-    ]);
+  const startRow = INDEX_DATA_START_ROW; // Row 5
+  const oldLastRow = Math.max(sheet.getLastRow(), startRow);
+  const clearRows = Math.max(oldLastRow - startRow + 1, archiveRows.length, 1);
+
+  // Clear right side data area (Cols F-J)
+  sheet.getRange(startRow, 6, clearRows, 5)
+       .clearContent()
+       .setBackground("#FFFFFF")
+       .setFontWeight("normal")
+       .setFontColor("#000000");
+
+  if (archiveRows.length > 0) {
+    sheet.getRange(startRow, 6, archiveRows.length, 5)
+         .setValues(archiveRows)
+         .setBackgrounds(backgrounds)
+         .setFontWeights(fontWeights)
+         .setFontColors(fontColors);
   }
 
-  resizeSheetGrid_(sheet, INDEX_FIXED_ROW_COUNT, 10);
-  sheet.getRange(1, 1, finalIndexMatrix.length, 10).setValues(finalIndexMatrix);
+  return archiveRows.length;
+}
 
-  sheet.getRange(1, 1, 1, 4).merge().setFontSize(12).setFontWeight("bold").setBackground(theme.level3).setFontColor("#FFFFFF");
-  sheet.getRange(1, 6, 1, 5).merge().setFontSize(12).setFontWeight("bold").setBackground("#79b5d2").setFontColor("#FFFFFF");
-  sheet.getRange(4, 1, 1, 4).setFontWeight("bold").setBackground(theme.level2);
-  sheet.getRange(4, 6, 1, 5).setFontWeight("bold").setBackground("#9fcadf");
-  sheet.getRange(2, 1, 1, 4).setBackground(theme.level4);
-  sheet.getRange(2, 6, 1, 5).setBackground("#f2f7f9");
-  sheet.getRange(3, 1, 1, 10).setBackground("#FFFFFF");
+/**
+ * Main Index Generator & In-Place Data Update Router.
+ * Options:
+ *  - activeOnly: true        -> Refreshes Columns A-D only (Fast path)
+ *  - archiveOnly: true       -> Refreshes Columns F-J only
+ *  - forceShellRebuild: true -> Forces full shell/header teardown and rebuild
+ *  - archiveSs: sheetObject  -> Reuses open connection
+ */
+function createIndexSheet(options) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(INDEX_SHEET);
 
-  const dataRowCount = Math.max(finalIndexMatrix.length - 4, 0);
-  if (dataRowCount > 0) {
-    const leftBackgrounds = [];
-    const rightBackgrounds = [];
-    for (let r = 0; r < dataRowCount; r++) {
-      leftBackgrounds.push(new Array(4).fill(r % 2 === 0 ? theme.level4 : "#FFFFFF"));
-      rightBackgrounds.push(new Array(5).fill(r % 2 === 0 ? "#f2f7f9" : "#FFFFFF"));
-    }
-    sheet.getRange(5, 1, dataRowCount, 4).setBackgrounds(leftBackgrounds);
-    sheet.getRange(5, 6, dataRowCount, 5).setBackgrounds(rightBackgrounds);
-    const sectionRows = [];
-    for (let r = 5; r <= finalIndexMatrix.length; r++) {
-      const label = String(finalIndexMatrix[r - 1][0] || "");
-      const sheetNameCell = String(finalIndexMatrix[r - 1][1] || "");
-      if (label && !sheetNameCell) {
-        sectionRows.push(rowColToA1_(r, 1) + ":" + rowColToA1_(r, 4));
-      }
-    }
-    if (sectionRows.length) {
-      sheet.getRangeList(sectionRows)
-        .setFontWeight("bold")
-        .setBackground(theme.level3);
-    }
+  let preOpenedArchiveSs = null;
+  let activeOnly = false;
+  let archiveOnly = false;
+  let forceShellRebuild = false;
+
+  if (options && typeof options.getSheets === "function") {
+    // Backward compatibility: preOpenedArchiveSs passed directly
+    preOpenedArchiveSs = options;
+  } else if (options && typeof options === "object") {
+    preOpenedArchiveSs = options.archiveSs || options.preOpenedArchiveSs || null;
+    activeOnly = !!options.activeOnly;
+    archiveOnly = !!options.archiveOnly;
+    forceShellRebuild = !!options.forceShellRebuild;
   }
 
-  sheet.getRange(1, INDEX_BUFFER_COLUMN, finalIndexMatrix.length, 1).setBackground("#EDEDED");
-  sheet.setColumnWidth(INDEX_BUFFER_COLUMN, 30);
-  [1, 2, 3, 4, 6, 7, 8, 9, 10].forEach(function(col) { sheet.setColumnWidth(col, 160); });
+  // Ensure structural shell exists, or force rebuild if requested
+  if (!sheet || forceShellRebuild || !hasIndexSheetShell_(sheet)) {
+    sheet = buildIndexSheetShell_(sheet || ss.insertSheet(INDEX_SHEET, 0));
+  }
 
-  sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
-  applyGlobalDefaultRowHeightsToSheet_(sheet, "Index Dashboard");
-  placeCreatedSheetInConfiguredOrder_(sheet);
+  const dashboard = loadDashboardConfig_();
+  const globals = dashboard.globals || {};
+  const theme = getThemeColorsFromBase_("#668BCC", globals);
+
+  let localCount = 0;
+  let archiveCount = 0;
+
+  // Update Active Workspace side (Cols A-D) unless archiveOnly
+  if (!archiveOnly) {
+    localCount = updateIndexLocalWorkspace_(sheet, theme);
+  }
+
+  // Update Archive Workspace side (Cols F-J) unless activeOnly
+  if (!activeOnly) {
+    archiveCount = updateIndexArchiveWorkspace_(sheet, theme, preOpenedArchiveSs);
+  }
+
+  // Stamp updated timestamp in B2
+  sheet.getRange("B2").setValue(new Date());
+
+  // Trim excess grid rows at bottom
+  const maxNeededDataRows = Math.max(localCount, archiveCount);
+  forceSheetRowCount_(sheet, Math.max(INDEX_FIXED_ROW_COUNT, INDEX_DATA_START_ROW + maxNeededDataRows));
 
   PropertiesService.getDocumentProperties().setProperty("RFF_INDEX_SHEET_SIGNATURE", ss.getSheets().map(function(sh) {
     return sh.getSheetId() + ":" + sh.getName();
   }).join("|"));
+
   return sheet;
 }
+
+/**
+ * Helper to refresh the Index cleanly at the end of workflows.
+ */
+function refreshIndexAfterSheetWorkflow_(workflowName, options) {
+  try {
+    const opts = options || { activeOnly: true };
+    createIndexSheet(opts);
+  } catch (err) {
+    logBestEffortWarning_((workflowName || "Workflow") + " index refresh skipped: " + err.message);
+  }
+}
+
 
 /**
  * Restores a historic sheet tab from the external Cold-Storage Archive
@@ -12243,14 +12604,14 @@ function hideRowNumberBatches_(sheet, rowNumbers) {
 }
 
 function clearAllRowGroupsIfPossible_(sheet) {
+  if (!sheet) return;
   const maxRows = sheet.getMaxRows();
   if (maxRows < DATA_START_ROW) return;
-  for (let i = 0; i < 8; i++) {
-    try {
-      sheet.shiftRowGroupDepth(DATA_START_ROW, maxRows - DATA_START_ROW + 1, -1);
-    } catch (err) {
-      break;
-    }
+  try {
+    // Attempt single API call to shift back maximum group depth (8 levels) at once
+    sheet.shiftRowGroupDepth(DATA_START_ROW, maxRows - DATA_START_ROW + 1, -8);
+  } catch (err) {
+    // Silently ignore if sheet has no row groups
   }
 }
 
@@ -12931,6 +13292,7 @@ function moveDisenrolledPMRsFromDemoPToExclusion_(demoSheet, monthParts, timing)
   clearSheetRuntimeCachesForSheet_(demoSheet);
   clearSheetRuntimeCachesForSheet_(exclusionSheet);
   step("runtime caches cleared after disenrollment move");
+  SpreadsheetApp.flush();
   return result;
 }
 
@@ -13031,9 +13393,11 @@ function appendDisenrolledDeltasToExclusionSheet_(exclusionSheet, sourceHeaders,
 
   exclusionSheet.insertRowsBefore(insertStartRow, appendPayload.length);
   step("rows inserted at top of Disenrolled Exclusion | Rows: " + appendPayload.length);
+
+  // OPTIMIZATION: Direct single 2D array write replaces iterative column-run calls
   const targetRange = exclusionSheet.getRange(insertStartRow, 1, appendPayload.length, width);
-  const writeResult = writeDisenrolledAppendPayloadValues_(exclusionSheet, insertStartRow, appendPayload, width);
-  step("append payload values written | Rows: " + appendPayload.length + "; Columns written: " + writeResult.columnsWritten + "; Column runs: " + writeResult.runsWritten + "; Blank columns skipped: " + writeResult.blankColumnsSkipped);
+  targetRange.setValues(appendPayload);
+  step("append payload values written | Rows: " + appendPayload.length + "; Width: " + width);
 
   try {
     const formatSourceRow = insertStartRow + appendPayload.length;
@@ -13051,6 +13415,7 @@ function appendDisenrolledDeltasToExclusionSheet_(exclusionSheet, sourceHeaders,
   clearSheetRuntimeCachesForSheet_(exclusionSheet);
   return appendPayload.length;
 }
+
 
 function writeDisenrolledAppendPayloadValues_(sheet, startRow, payload, width) {
   const rowCount = payload ? payload.length : 0;
@@ -13449,15 +13814,17 @@ function updateFormatDashboardChangelog_(dashboardSheet, timing) {
 
   let changed = false;
   const now = new Date();
+  const dashboardIndex = buildDashboardSectionIndex_(dashboardSheet);
+
   sectionsToTrack.forEach(function(sectionTitle) {
     try {
-      const currentRows = readDashboardSectionRows_(dashboardSheet, sectionTitle);
+      const currentRows = readDashboardSectionRows_(dashboardIndex, sectionTitle);
       const propKey = RFF_QA_SECTION_PROP_PREFIX + "TRACKER_DATA_" + computeStableHash_(sectionTitle);
       const rawPrevious = props.getProperty(propKey);
       props.setProperty(propKey, JSON.stringify(currentRows));
       if (!rawPrevious) return;
       const previousRows = JSON.parse(rawPrevious);
-      const sectionHeader = getFormatDashboardSectionHeaderForChangelog_(dashboardSheet, sectionTitle);
+      const sectionHeader = getFormatDashboardSectionHeaderForChangelog_(dashboardIndex, sectionTitle);
 
       for (let r = 0; r < currentRows.length; r++) {
         const currRow = currentRows[r] || [];
@@ -13602,11 +13969,7 @@ function runDashboardQualityTemplateValidationSection_(timing, qualitySheet, das
   const validationRows = getDashboardQualitySectionRows_(RFF_VALIDATION_SHEET);
 
   if (!dashboardQualityRowsEqualValues_(previousValidationRows, validationRows)) {
-    replaceDashboardQualitySectionsRows_(qualitySheet, [{
-      title: getDashboardQualitySectionTitleForKey_(RFF_VALIDATION_SHEET),
-      rows: buildTimestampedDashboardQualitySectionRows_(RFF_VALIDATION_SHEET, validationRows)
-    }]);
-    markFrameworkStep_(timing, "Dashboard Quality Section G written");
+    markFrameworkStep_(timing, "Dashboard Quality Section G staged");
   } else {
     markFrameworkStep_(timing, "Dashboard Quality Section G sheet write skipped - unchanged");
   }
@@ -13621,13 +13984,9 @@ function runDashboardQualityChangelogSection_(timing, qualitySheet, dashboardShe
   const changelogRows = getDashboardQualitySectionRows_(RFF_DASHBOARD_CHANGELOG_KEY);
 
   if (!dashboardQualityRowsEqualValues_(previousChangelogRows, changelogRows) || changelogUpdated) {
-    replaceDashboardQualitySectionsRows_(qualitySheet, [{
-      title: getDashboardQualitySectionTitleForKey_(RFF_DASHBOARD_CHANGELOG_KEY),
-      rows: buildTimestampedDashboardQualitySectionRows_(RFF_DASHBOARD_CHANGELOG_KEY, changelogRows)
-    }]);
-    markFrameworkStep_(timing, "Dashboard Quality Section H written");
+    markFrameworkStep_(timing, "Dashboard Quality Section H staged");
   } else {
-    markFrameworkStep_(timing, "Dashboard Quality Section H sheet write skipped - unchanged");
+    markFrameworkStep_(timing, "Dashboard Quality Section H cell-differential changelog unchanged");
   }
 
   highlightFormatDashboardChangesFromChangelog_(dashboardSheet, timing);
@@ -15149,26 +15508,28 @@ function buildCombinedFrameworkTestDashboard() {
 }
 
 function updateDashboardQualitySignoffSection_() {
-  const sheet = ensureDashboardQualityReportSheet_();
   const signoffRows = [];
   appendCombinedDashboardSignOffRows_(signoffRows);
   while (signoffRows.length && signoffRows[0].length === 1 && String(signoffRows[0][0] || "") === "") {
     signoffRows.shift();
   }
-  replaceDashboardQualitySectionRows_(sheet, "SECTION R - SIGNOFF", buildTimestampedDashboardQualitySectionRows_("Signoff", signoffRows.slice(1)));
-  styleDashboardQualityUpdatedSections_(sheet, ["SECTION R - SIGNOFF"]);
+
+  saveDashboardQualitySectionRows_("Signoff", signoffRows.slice(1), { deferSheetWrite: true });
   PropertiesService.getDocumentProperties().setProperty(RFF_QA_SECTION_PROP_PREFIX + "Signoff" + "_LAST_RUN", String(new Date().getTime()));
+
+  return signoffRows.slice(1);
 }
 
 function updateDashboardQualitySummarySection_() {
-  const sheet = ensureDashboardQualityReportSheet_();
   const summaryRows = [["Metric", "Value", "Status", "Quality Notes"]];
   buildFrameworkSummaryRows_().forEach(function(row) {
     summaryRows.push(row);
   });
-  replaceDashboardQualitySectionRows_(sheet, "SECTION Q - SUMMARY", buildTimestampedDashboardQualitySectionRows_("Summary", summaryRows));
-  styleDashboardQualityUpdatedSections_(sheet, ["SECTION Q - SUMMARY"]);
+
+  saveDashboardQualitySectionRows_("Summary", summaryRows, { deferSheetWrite: true });
   PropertiesService.getDocumentProperties().setProperty(RFF_QA_SECTION_PROP_PREFIX + "Summary" + "_LAST_RUN", String(new Date().getTime()));
+
+  return summaryRows;
 }
 
 function getDashboardQualitySectionBoundsMap_(sheet) {
@@ -15706,6 +16067,8 @@ function getRequiredMenuFunctionNames_() {
     "setupSystemSheets"
   ];
 }
+
+
 
 function getRequiredDashboardFunctionNames_() {
   return [
