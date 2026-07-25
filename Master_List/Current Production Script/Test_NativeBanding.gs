@@ -140,6 +140,8 @@ const HEADER_ROW = 4;
 
 const DATA_START_ROW = 5;
 
+const TEST_RAW_DATA_PREFIX = "TEST Raw Data";
+
 const RFF_MIN_SERIAL_DATE = 30000;
 
 const RFF_EXCEL_EPOCH_YEAR = 1899;
@@ -2798,8 +2800,14 @@ function appendRuntimeTimingToFrameworkTimingReport_(timing) {
   if (!timing || !timing.steps || timing.steps.length === 0) return;
 
   try {
-    const sheet = ensureFrameworkTimingReport_();
-    const existing = getFrameworkTimingDetailRows_(sheet);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(getFrameworkTimingReportSheetName_());
+    let titleRow = sheet ? findFrameworkTimingSectionRow_(sheet, "SECTION D - DETAILED TIMING LOG") : 0;
+    if (!sheet || !titleRow) {
+      sheet = ensureFrameworkTimingReport_();
+      titleRow = findFrameworkTimingSectionRow_(sheet, "SECTION D - DETAILED TIMING LOG");
+    }
+    if (!titleRow) throw new Error("TEST timing Section D was not found.");
 
     const rows = timing.steps.map(function(step) {
       return [
@@ -2813,15 +2821,37 @@ function appendRuntimeTimingToFrameworkTimingReport_(timing) {
       ];
     });
 
-    const combined = existing.concat(rows).slice(-getFrameworkTimingRetentionLimit_());
-    replaceFrameworkTimingSectionRows_(sheet, "D", combined, { skipStyle: true, skipShellCheck: true });
-    if (rows.length) {
-      const section = findFrameworkTimingSection_(sheet, "D");
-      const finalMilestoneRow = section.titleRow + 2 + combined.length;
-      sheet.getRange(finalMilestoneRow, 1, 1, Math.max(sheet.getLastColumn(), 7))
-        .setFontWeight("bold")
-        .setBackground("#EFEFEF");
+    const dataStartRow = titleRow + 3;
+    const lastSheetRow = Math.max(sheet.getLastRow(), dataStartRow);
+    const existingValues = sheet.getRange(dataStartRow, 1, lastSheetRow - dataStartRow + 1, 7).getValues();
+    let lastDataOffset = -1;
+    existingValues.forEach(function(row, offset) {
+      const hasData = row.some(function(value) {
+        const text = String(value === null || value === undefined ? "" : value).trim();
+        return text !== "" && text !== "Enter Data here";
+      });
+      if (hasData) lastDataOffset = offset;
+    });
+
+    const appendRow = lastDataOffset >= 0 ? dataStartRow + lastDataOffset + 1 : dataStartRow;
+    const requiredLastRow = appendRow + rows.length - 1;
+    if (appendRow <= sheet.getMaxRows()) {
+      sheet.insertRowsBefore(appendRow, rows.length);
+    } else {
+      sheet.insertRowsAfter(sheet.getMaxRows(), rows.length);
     }
+    const appendedRange = sheet.getRange(appendRow, 1, rows.length, 7);
+    appendedRange
+      .setValues(rows)
+      .setFontWeight("normal")
+      .setBackground("#FFFFFF");
+    sheet.getRange(appendRow, 1, rows.length, 1).setNumberFormat("m/d/yyyy h:mm:ss");
+    sheet.getRange(appendRow, 4, rows.length, 2).setNumberFormat("0.00");
+
+    const finalMilestoneRow = requiredLastRow;
+    sheet.getRange(finalMilestoneRow, 1, 1, 7)
+      .setFontWeight("bold")
+      .setBackground("#dcc6ec");
   } catch (err) {
     logBestEffortWarning_("[WARNING] Framework Timing Report append skipped | " + err.message);
   }
@@ -8246,26 +8276,26 @@ function buildRawArchiveNameForSheetType_(sheetType, monthParts) {
 
 
   if (sheetType === SHEET_TYPE.CARE_PLAN_DUE || sheetType === RFF_SHEET_TYPES.CARE_PLAN_DUE) {
-    return "Source - CP Due " + suffix;
+    return "TEST Source - CP Due " + suffix;
   }
 
 
   if (sheetType === SHEET_TYPE.UNLOCKED || sheetType === RFF_SHEET_TYPES.UNLOCKED) {
-    return "Source - Unlocked CP " + suffix;
+    return "TEST Source - Unlocked CP " + suffix;
   }
 
 
   if (sheetType === SHEET_TYPE.DEMO_P || sheetType === RFF_SHEET_TYPES.DEMO_P) {
-    return "Raw Data " + suffix;
+    return TEST_RAW_DATA_PREFIX + " " + suffix;
   }
 
 
   if (sheetType === SHEET_TYPE.DISENROLLED_EXCLUSION || sheetType === RFF_SHEET_TYPES.DISENROLLED_EXCLUSION) {
-    return "Source - Disenrolled " + suffix;
+    return "TEST Source - Disenrolled " + suffix;
   }
 
 
-  return "Source - " + String(sheetType || "Report") + " " + suffix;
+  return "TEST Source - " + String(sheetType || "Report") + " " + suffix;
 }
 
 function collectMovedTitleInfoCells_(sheet, sheetType) {
@@ -9644,7 +9674,7 @@ function formatDemoPStructure() {
 }
 
 function buildRawDataSheetName_(monthParts) {
-  return "TEST Raw Data " + Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
+  return TEST_RAW_DATA_PREFIX + " " + Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
 }
 
 function getOrCreateDemoPProcessingSheet_(monthParts, timing) {
@@ -11162,8 +11192,7 @@ function createDisenrolledListForMonth_(monthParts, timing, options) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const timingPrefix = options.timingPrefix === undefined ? "Create Monthly Update - Create/Update Disenrolled - " : String(options.timingPrefix || "");
   const step = function(label, details) { if (timing) markFrameworkStep_(timing, timingPrefix + label, details || ""); };
-  let demoSheet = ss.getSheetByName(SHEET_TYPE.DEMO_P);
-  if (!demoSheet) demoSheet = getCurrentDemoPSheet_(monthParts);
+  const demoSheet = getCurrentDemoPSheet_(monthParts);
   if (!demoSheet) throw new Error("Demo P sheet was not found. Please execute Build Demo P before compiling the Disenrolled Exclusion List.");
   step("Locate Demo P: " + demoSheet.getName());
 
@@ -13434,12 +13463,17 @@ const RAW_DEMO_P_DISENROLLMENT_FIELDS = [
 
 function getCurrentRawDataSheet_(monthParts) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return getMonthlySheetByPrefixAndDate_(ss, "Raw Data", monthParts.firstDay, monthParts.lastDay);
+  return getTestRawDataSheetForMonth_(ss, monthParts.firstDay);
 }
 
 function getPreviousRawDataSheet_(monthParts) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return getMonthlySheetByPrefixAndDate_(ss, "Raw Data", monthParts.previousMonthFirstDay, monthParts.previousMonthLastDay);
+  return getTestRawDataSheetForMonth_(ss, monthParts.previousMonthFirstDay);
+}
+
+function getTestRawDataSheetForMonth_(ss, monthDate) {
+  if (!ss || !monthDate) return null;
+  return ss.getSheetByName(buildStandardMonthlySheetName_(TEST_RAW_DATA_PREFIX, monthDate));
 }
 
 function getCurrentDemoPSheet_(monthParts) {
@@ -14415,7 +14449,7 @@ function runDashboardQualityCarePlanSyncDiagnostics_(timing) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let masterList = ss.getActiveSheet();
   if (!masterList || String(masterList.getName()).indexOf(MASTER_LIST_PREFIX) !== 0) {
-    masterList = getLatestSheetByPrefix_(MASTER_LIST_PREFIX) || ss.getSheetByName(SHEET_TYPE.MASTER_LIST);
+    masterList = getLatestSheetByPrefix_(MASTER_LIST_PREFIX);
   }
 
   if (!masterList) {
@@ -14442,7 +14476,7 @@ function runDashboardQualityCarePlanSyncDiagnostics_(timing) {
 
 function runDashboardQualityDemoPValidation_(timing) {
   const rows = [["Check Item", "Status", "Issue", "Quality Notes"]];
-  const demoSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_TYPE.DEMO_P) || getLatestSheetByPrefix_(SHEET_TYPE.DEMO_P);
+  const demoSheet = getLatestSheetByPrefix_(DEMO_P_PREFIX);
   rows.push(["Demo P sheet present", demoSheet ? "PASS" : "FAIL", demoSheet ? "None" : "Missing Demo P", demoSheet ? demoSheet.getName() + " has " + countSheetRowsBelowHeader_(demoSheet) + " data rows." : "Build Demo P from Raw Data."]);
   if (demoSheet) {
     const headers = getHeaders_(demoSheet, HEADER_ROW);
