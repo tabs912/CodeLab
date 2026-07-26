@@ -43,20 +43,20 @@ Extract EVERY menu and trigger registration from the script.
 
 For every top-level menu, submenu, separator, and menu command document:
 
-* Top-Level Menu Name  
-* Submenu Name  
-* Displayed Menu Item  
-* Menu Path  
-* Registration Function  
-* Registration Line  
-* Assigned Callback  
-* Callback Line  
-* Public/Internal  
-* Production Section  
-* Duplicate Menu Path (Yes/No)  
-* Duplicate Callback Registration (Yes/No)  
-* Callback Exists (Yes/No)  
-* Callback Is Reachable (Yes/No)  
+* Top-Level Menu Name
+* Submenu Name
+* Displayed Menu Item
+* Menu Path
+* Registration Function
+* Registration Line
+* Assigned Callback
+* Callback Line
+* Public/Internal
+* Production Section
+* Duplicate Menu Path (Yes/No)
+* Duplicate Callback Registration (Yes/No)
+* Callback Exists (Yes/No)
+* Callback Is Reachable (Yes/No)
 * Notes
 
 Preserve the exact order in which menu items are added to the user interface.
@@ -65,23 +65,23 @@ Preserve the exact order in which menu items are added to the user interface.
 
 For every trigger document:
 
-* Trigger Name  
-* Trigger Type  
-* Simple / Installable / Time-Driven / Event-Driven  
-* Registration Method  
-* Registration Function  
-* Registration Line  
-* Entry-Point Function  
-* Entry-Point Line  
-* Event Object Used  
-* Schedule or Event Condition  
-* Public/Internal  
-* Production Section  
-* Dependencies  
-* Timing  
-* Duplicate Trigger Risk  
-* Trigger Exists in Code  
-* Trigger Is Installable or Automatically Active  
+* Trigger Name
+* Trigger Type
+* Simple / Installable / Time-Driven / Event-Driven
+* Registration Method
+* Registration Function
+* Registration Line
+* Entry-Point Function
+* Entry-Point Line
+* Event Object Used
+* Schedule or Event Condition
+* Public/Internal
+* Production Section
+* Dependencies
+* Timing
+* Duplicate Trigger Risk
+* Trigger Exists in Code
+* Trigger Is Installable or Automatically Active
 * Notes
 
 Include onOpen, onEdit, onChange, onFormSubmit, time-driven builders, installable trigger creation functions, and any other runtime trigger mechanism implemented by the script.
@@ -120,18 +120,18 @@ All Deeper Descendants
 
 For every call edge include:
 
-* Parent Function  
-* Child Function  
-* Call Depth  
-* Source Line of Call  
-* Direct / Conditional / Loop / Callback  
-* Arguments Passed  
-* Return Value Used  
-* Public/Internal  
-* Recursive (Yes/No)  
-* Cross-Section Call (Yes/No)  
-* Branch Condition  
-* Execution Order  
+* Parent Function
+* Child Function
+* Call Depth
+* Source Line of Call
+* Direct / Conditional / Loop / Callback
+* Arguments Passed
+* Return Value Used
+* Public/Internal
+* Recursive (Yes/No)
+* Cross-Section Call (Yes/No)
+* Branch Condition
+* Execution Order
 * Reachability Status
 
 Expand the graph until the path terminates. Do not limit the graph to parent, child, and grandchild when deeper calls exist.
@@ -142,44 +142,44 @@ Identify circular dependencies, recursion, shared downstream functions, dead-end
 
 For EVERY function reachable from a menu item or trigger document:
 
-* Function Name  
-* Production Section  
-* Public / Internal  
-* Purpose  
-* Called By  
-* Calls  
-* Dependencies  
-* Inputs  
-* Outputs / Return Value  
-* Reads Worksheets  
-* Writes Worksheets  
-* Deletes Worksheets  
-* Creates Worksheets  
-* Archives Worksheets  
-* Formats Worksheets  
-* Synchronizes Data  
-* Reads Dashboard  
-* Writes Dashboard  
-* Reads Format Dashboard  
-* Uses Templates  
-* Uses Configuration  
-* Uses Cache  
-* Uses Validation  
-* Uses Timing  
-* User Notification  
-* Error Handling  
-* Side Effects  
-* Runtime Classification  
-* Source Start Line  
+* Function Name
+* Production Section
+* Public / Internal
+* Purpose
+* Called By
+* Calls
+* Dependencies
+* Inputs
+* Outputs / Return Value
+* Reads Worksheets
+* Writes Worksheets
+* Deletes Worksheets
+* Creates Worksheets
+* Archives Worksheets
+* Formats Worksheets
+* Synchronizes Data
+* Reads Dashboard
+* Writes Dashboard
+* Reads Format Dashboard
+* Uses Templates
+* Uses Configuration
+* Uses Cache
+* Uses Validation
+* Uses Timing
+* User Notification
+* Error Handling
+* Side Effects
+* Runtime Classification
+* Source Start Line
 * Source End Line
 
 Generate:
 
-* Parent → Child Call Graph  
-* Menu/Trigger → Function Dependency Matrix  
-* Section Dependency Matrix  
-* Circular Dependency Report  
-* Shared Dependency Report  
+* Parent → Child Call Graph
+* Menu/Trigger → Function Dependency Matrix
+* Section Dependency Matrix
+* Circular Dependency Report
+* Shared Dependency Report
 * Missing Dependency Report
 
 # **SECTION 4 — NUMBERED EXECUTION TRACE FOR EACH MENU ITEM AND TRIGGER**
@@ -190,41 +190,41 @@ Each trace must begin at registration and continue through the final user-visibl
 
 For every execution step document:
 
-* Step Number  
-* Call Depth  
-* Menu or Trigger  
-* Current Function  
-* Production Section  
-* Function Role  
-* Called By  
-* Calls Next  
-* Source Line  
-* Arguments Received  
-* Arguments Passed  
-* Purpose of This Step  
-* Data Read  
-* Data Produced  
-* Worksheets Read  
-* Worksheets Written  
-* Worksheets Created  
-* Worksheets Deleted  
-* Worksheets Archived  
-* Formatting Applied  
-* Synchronization Performed  
-* Dashboard Settings Used  
-* Format Dashboard Settings Used  
-* Templates Used  
-* Configuration Constants Used  
-* Cache Read/Write/Invalidation  
-* Validation Performed  
-* Timing Started/Stopped  
-* Logging Performed  
-* User Prompt or Notification  
-* Conditional Branch  
-* Early Return Condition  
-* Error/Recovery Behavior  
-* Side Effects  
-* Return or Exit Result  
+* Step Number
+* Call Depth
+* Menu or Trigger
+* Current Function
+* Production Section
+* Function Role
+* Called By
+* Calls Next
+* Source Line
+* Arguments Received
+* Arguments Passed
+* Purpose of This Step
+* Data Read
+* Data Produced
+* Worksheets Read
+* Worksheets Written
+* Worksheets Created
+* Worksheets Deleted
+* Worksheets Archived
+* Formatting Applied
+* Synchronization Performed
+* Dashboard Settings Used
+* Format Dashboard Settings Used
+* Templates Used
+* Configuration Constants Used
+* Cache Read/Write/Invalidation
+* Validation Performed
+* Timing Started/Stopped
+* Logging Performed
+* User Prompt or Notification
+* Conditional Branch
+* Early Return Condition
+* Error/Recovery Behavior
+* Side Effects
+* Return or Exit Result
 * Next Step Number
 
 Represent branches explicitly. When one function can follow multiple paths, number the paths using a clear branch convention such as 5A, 5B, and 5C.
@@ -237,25 +237,25 @@ Represent shared downstream functions in every applicable menu or trigger trace,
 
 For EVERY function reached from a menu item or trigger document:
 
-* Reads Worksheets  
-* Writes Worksheets  
-* Creates Worksheets  
-* Deletes Worksheets  
-* Archives Worksheets  
-* Formats Worksheets  
-* Synchronizes Data  
-* Reads Dashboard  
-* Writes Dashboard  
-* Reads Format Dashboard  
-* Uses Templates  
-* Uses Configuration  
-* Uses Cache  
-* Invalidates Cache  
-* Uses Validation  
-* Uses Timing  
-* Displays User Interface  
-* Sends Notification  
-* Changes Properties or Runtime State  
+* Reads Worksheets
+* Writes Worksheets
+* Creates Worksheets
+* Deletes Worksheets
+* Archives Worksheets
+* Formats Worksheets
+* Synchronizes Data
+* Reads Dashboard
+* Writes Dashboard
+* Reads Format Dashboard
+* Uses Templates
+* Uses Configuration
+* Uses Cache
+* Invalidates Cache
+* Uses Validation
+* Uses Timing
+* Displays User Interface
+* Sends Notification
+* Changes Properties or Runtime State
 * Other Side Effects
 
 Return grouped markdown tables and also provide a Menu/Trigger → Worksheet Impact Matrix.
@@ -266,28 +266,28 @@ Differentiate read-only access from data mutation, formatting-only changes, stru
 
 For every menu item and trigger, identify every alternate path that can change execution.
 
-* User cancellation  
-* Missing worksheet  
-* Missing template  
-* Missing dashboard setting  
-* Missing Format Dashboard setting  
-* Invalid header  
-* Invalid column mapping  
-* Empty dataset  
-* Validation failure  
-* Permission failure  
-* Lock failure  
-* Cache miss  
-* Cache invalidation  
-* Time-limit or quota risk  
-* Early return  
-* Thrown error  
-* Caught error  
-* Retry  
-* Recovery  
-* Fail-safe behavior  
-* Blocking user notification  
-* Nonblocking warning  
+* User cancellation
+* Missing worksheet
+* Missing template
+* Missing dashboard setting
+* Missing Format Dashboard setting
+* Invalid header
+* Invalid column mapping
+* Empty dataset
+* Validation failure
+* Permission failure
+* Lock failure
+* Cache miss
+* Cache invalidation
+* Time-limit or quota risk
+* Early return
+* Thrown error
+* Caught error
+* Retry
+* Recovery
+* Fail-safe behavior
+* Blocking user notification
+* Nonblocking warning
 * Partial-completion behavior
 
 For each branch document the condition, function where it occurs, functions skipped, recovery behavior, final state, and whether the user is clearly notified.
@@ -298,30 +298,30 @@ Verify the upgraded script for menu, trigger, callback, and downstream execution
 
 At minimum test and report:
 
-* Every registered callback exists.  
-* Every trigger entry point exists.  
-* Every callback and trigger resolves to the intended implementation.  
-* Every wrapper calls the intended underlying function.  
-* No renamed function remains referenced by a menu, trigger, wrapper, or child function.  
-* No deleted function remains referenced.  
-* No function call has an incorrect argument count or incompatible parameters.  
-* No required return value is ignored or misused.  
-* No execution path terminates unexpectedly.  
-* No internal-only function is incorrectly exposed as a public menu or trigger entry point.  
-* No duplicate menu item or conflicting menu path exists.  
-* No duplicate or obsolete trigger registration exists.  
-* No orphaned wrapper exists.  
-* No unreachable menu callback exists.  
-* No orphaned trigger handler exists.  
-* No circular dependency creates unintended recursion.  
-* All worksheet names remain valid.  
-* All Dashboard references remain valid.  
-* All Format Dashboard references remain valid.  
-* All template references remain valid.  
-* All validation functions still run in the intended order.  
-* All timing start/stop pairs remain balanced.  
-* All locks are acquired and released correctly.  
-* All cache invalidation paths remain correct.  
+* Every registered callback exists.
+* Every trigger entry point exists.
+* Every callback and trigger resolves to the intended implementation.
+* Every wrapper calls the intended underlying function.
+* No renamed function remains referenced by a menu, trigger, wrapper, or child function.
+* No deleted function remains referenced.
+* No function call has an incorrect argument count or incompatible parameters.
+* No required return value is ignored or misused.
+* No execution path terminates unexpectedly.
+* No internal-only function is incorrectly exposed as a public menu or trigger entry point.
+* No duplicate menu item or conflicting menu path exists.
+* No duplicate or obsolete trigger registration exists.
+* No orphaned wrapper exists.
+* No unreachable menu callback exists.
+* No orphaned trigger handler exists.
+* No circular dependency creates unintended recursion.
+* All worksheet names remain valid.
+* All Dashboard references remain valid.
+* All Format Dashboard references remain valid.
+* All template references remain valid.
+* All validation functions still run in the intended order.
+* All timing start/stop pairs remain balanced.
+* All locks are acquired and released correctly.
+* All cache invalidation paths remain correct.
 * All user notifications correspond to actual completion or failure states.
 
 Classify every finding as PASS, WARNING, FAIL, NOT APPLICABLE, or NOT VERIFIED.
@@ -332,28 +332,28 @@ Complete this section only when the last approved pre-upgrade script is provided
 
 Compare the pre-upgrade and upgraded scripts and document:
 
-* Added menus  
-* Removed menus  
-* Renamed menus  
-* Reordered menus  
-* Changed callbacks  
-* Added triggers  
-* Removed triggers  
-* Changed trigger types or schedules  
-* Renamed trigger handlers  
-* Added wrappers  
-* Removed wrappers  
-* Changed wrapper targets  
-* Changed call order  
-* Added child functions  
-* Removed child functions  
-* Changed branch conditions  
-* Changed worksheet effects  
-* Changed validation order  
-* Changed timing instrumentation  
-* Changed error handling  
-* Changed user notifications  
-* Changed dependencies  
+* Added menus
+* Removed menus
+* Renamed menus
+* Reordered menus
+* Changed callbacks
+* Added triggers
+* Removed triggers
+* Changed trigger types or schedules
+* Renamed trigger handlers
+* Added wrappers
+* Removed wrappers
+* Changed wrapper targets
+* Changed call order
+* Added child functions
+* Removed child functions
+* Changed branch conditions
+* Changed worksheet effects
+* Changed validation order
+* Changed timing instrumentation
+* Changed error handling
+* Changed user notifications
+* Changed dependencies
 * New orphan or dead-code risk
 
 For every change identify the affected menu items and triggers and state whether the execution path remains functionally complete.
@@ -362,20 +362,20 @@ For every change identify the affected menu items and triggers and state whether
 
 Return the following deliverables in this order:
 
-1. Executive Status Table — counts of menus, menu items, triggers, callbacks, wrappers, reachable functions, call edges, branches, and findings. Do not substitute this table for the required detailed review.  
-2. Complete Menu Registration Catalog.  
-3. Complete Trigger Registration Catalog.  
-4. One Complete Hierarchical Function Call Graph for Each Menu Item.  
-5. One Complete Hierarchical Function Call Graph for Each Trigger.  
-6. One Numbered Execution Trace for Each Menu Item.  
-7. One Numbered Execution Trace for Each Trigger.  
-8. Reachable Function Dependency Catalog.  
-9. Consolidated Read/Write and Side-Effect Matrix.  
-10. Menu/Trigger → Worksheet Impact Matrix.  
-11. Branch, Validation, Failure, and Recovery Catalog.  
-12. Post-Upgrade Integrity Verification Report.  
-13. Upgrade Delta Report, when a baseline script is provided.  
-14. Defect and Risk Register.  
+1. Executive Status Table — counts of menus, menu items, triggers, callbacks, wrappers, reachable functions, call edges, branches, and findings. Do not substitute this table for the required detailed review.
+2. Complete Menu Registration Catalog.
+3. Complete Trigger Registration Catalog.
+4. One Complete Hierarchical Function Call Graph for Each Menu Item.
+5. One Complete Hierarchical Function Call Graph for Each Trigger.
+6. One Numbered Execution Trace for Each Menu Item.
+7. One Numbered Execution Trace for Each Trigger.
+8. Reachable Function Dependency Catalog.
+9. Consolidated Read/Write and Side-Effect Matrix.
+10. Menu/Trigger → Worksheet Impact Matrix.
+11. Branch, Validation, Failure, and Recovery Catalog.
+12. Post-Upgrade Integrity Verification Report.
+13. Upgrade Delta Report, when a baseline script is provided.
+14. Defect and Risk Register.
 15. Completeness Reconciliation and Certification.
 
 # **SECTION 10 — REQUIRED TABLE STRUCTURES**
@@ -404,43 +404,43 @@ Return the following deliverables in this order:
 
 Before finalizing, reconcile all catalogs and certify completeness.
 
-* Every menu item in the registration catalog has exactly one execution trace.  
-* Every trigger in the trigger catalog has exactly one execution trace.  
-* Every callback and trigger handler appears in the function dependency catalog.  
-* Every reachable function appears in at least one call graph and in the read/write matrix.  
-* Every call edge in the call graph is represented in the applicable numbered trace.  
-* Every worksheet effect in an execution trace appears in the read/write matrix.  
-* Every validation and timing function reached by an entry point appears in the applicable trace.  
-* Every branch and failure path is linked to the function where it occurs.  
-* Every unresolved call or dynamic callback is listed in the defect and risk register.  
+* Every menu item in the registration catalog has exactly one execution trace.
+* Every trigger in the trigger catalog has exactly one execution trace.
+* Every callback and trigger handler appears in the function dependency catalog.
+* Every reachable function appears in at least one call graph and in the read/write matrix.
+* Every call edge in the call graph is represented in the applicable numbered trace.
+* Every worksheet effect in an execution trace appears in the read/write matrix.
+* Every validation and timing function reached by an entry point appears in the applicable trace.
+* Every branch and failure path is linked to the function where it occurs.
+* Every unresolved call or dynamic callback is listed in the defect and risk register.
 * Counts reconcile across menus, triggers, callbacks, wrappers, functions, and call edges.
 
 Conclude with a Completeness Certification containing:
 
-* Total top-level menus  
-* Total submenus  
-* Total menu commands  
-* Total triggers  
-* Total unique callbacks  
-* Total wrappers  
-* Total reachable functions  
-* Total call edges  
-* Total execution traces  
-* Total branch paths  
-* Total PASS findings  
-* Total WARNING findings  
-* Total FAIL findings  
-* Total NOT VERIFIED findings  
-* Unresolved discrepancies  
+* Total top-level menus
+* Total submenus
+* Total menu commands
+* Total triggers
+* Total unique callbacks
+* Total wrappers
+* Total reachable functions
+* Total call edges
+* Total execution traces
+* Total branch paths
+* Total PASS findings
+* Total WARNING findings
+* Total FAIL findings
+* Total NOT VERIFIED findings
+* Unresolved discrepancies
 * Certification status
 
 # **SECTION 12 — OUTPUT RULES**
 
-* Return publication-quality markdown as a standalone standard script-review report.  
-* Do not reference or require any separate framework specification.  
-* Do not omit a menu item, trigger, callback, wrapper, or reachable function because it appears repetitive.  
-* Do not collapse distinct execution paths into a generic workflow.  
-* Do not claim that a path is verified unless the source code supports every call in that path.  
-* Use exact source evidence and line references when available.  
-* Clearly separate current-script facts from comparison-baseline findings.  
+* Return publication-quality markdown as a standalone standard script-review report.
+* Do not reference or require any separate framework specification.
+* Do not omit a menu item, trigger, callback, wrapper, or reachable function because it appears repetitive.
+* Do not collapse distinct execution paths into a generic workflow.
+* Do not claim that a path is verified unless the source code supports every call in that path.
+* Use exact source evidence and line references when available.
+* Clearly separate current-script facts from comparison-baseline findings.
 * Be exhaustive.
