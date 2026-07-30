@@ -5,7 +5,7 @@
 // Framework Timing Report, Dashboard Quality Report, themes, menus, and
 // diagnostics. Function declarations remain callable throughout Apps Script.
 //
-// Inventory: 46 constants, 2 mutable state values, and 274 functions.
+// Inventory: 57 constants, 2 mutable state values, and 314 functions.
 
 // --- QUARANTINED CONSTANTS ---------------------------------------------------
 
@@ -176,6 +176,45 @@ const RFF_SYSTEM_SHEET_BORDER_COLOR = "#cccccc";
 const RFF_DASHBOARD_QUALITY_MIN_SECTION_ROWS = 5;
 
 const RFF_QA_SECTION_PROP_PREFIX = "MLF_QA_SECTION_";
+
+// --- SYSTEM SHEET POPULATION CONSTANTS -------------------------------------
+
+const RFF_ARCHIVE_SPREADSHEET_ID = "1PEEoXzPG-xRFuqDW_ZjPzyqdTUd_5AOwx0nbbzmMwBc";
+
+const ML_INDEX_REFRESH_DEFERRED_KEY = "ML_INDEX_REFRESH_DEFERRED";
+
+const DEMO_P_ARCHIVE_SHEET = "Archive - Refined Data";
+
+const INDEX_SHEET = "Index";
+
+const SHEET_TAB_ORDER = [
+  "Index",
+  "Refined Data",
+  "Master List",
+  "Monthly Change",
+  "Disenrolled Exclusion",
+  "Care Plan Due Date Report",
+  "Unlocked Care Plan Report",
+  "Banner Report",
+  DEMO_P_ARCHIVE_SHEET
+];
+
+const INDEX_HEADERS = [
+  "Month",
+  "Sheet Name",
+  "Link",
+  "Hidden?"
+];
+
+const INDEX_HEADER_ROW_COUNT = 4;
+
+const INDEX_DATA_START_ROW = 5;
+
+const INDEX_BUFFER_COLUMN = 5;
+
+const INDEX_TOTAL_COLUMNS = 9;
+
+const INDEX_FIXED_ROW_COUNT = 100;
 
 // --- QUARANTINED MUTABLE STATE ---------------------------------------------
 
@@ -5801,4 +5840,1005 @@ function getRequiredValidationFunctionNames_() {
 
 function runWorkflowSyncVerification() {
   return runDashboardQualityWorkflowSyncVerification_();
+}
+
+// --- FORMAT DASHBOARD DEFAULT SECTION SETTINGS --------------------------
+
+function getDefaultColumnDefinitionRows_() {
+  return [
+  ["AD1 - Phone", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["AD1 - Phone Valid Dates From", 80, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["AD1 - Phone Valid Dates To", 80, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["AD2 - Phone", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["AD2 - Phone Valid Dates From", 110, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["AD2 - Phone Valid Dates To", 110, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["AD3 - Phone", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["AD3 - Phone Valid Dates From", 110, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["AD3 - Phone Valid Dates To", 110, 7, true, true, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Added to Disenrolled Exclusion", 80, 7, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Additional Important Information", 80, 7, false, true, "CLIP", "left", "middle", ""],
+  ["Address 1 - Street", 250, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Address Line 1", 240, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Address Line 2", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Archive Reason", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Archived At", 80, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Banner Summary", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Capitation Date", 100, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Care Plan Start Date", 100, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Caseload - Activities", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - HCC", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - OT", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - PCP", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - PT", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - RD", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - RN", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - Social Work", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Caseload - Supervising MD", 100, 7, false, true, "CLIP", "left", "middle", ""],
+  ["City", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Columns With Change", 220, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Company", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 1", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 2", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 3", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 4", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 5", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 6", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 7", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - 8", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - First Name", 90, 9, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - Last Name", 90, 9, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - Notes", 100, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - Primary Language", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Contact - Summary", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["CP Type", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Custom Field 1 - Label", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Custom Field 1 - Value", 140, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Date of Birth", 90, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Date of Death", 80, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Demo P Source Sheet", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Demo P Update Month", 140, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Demo P Update Status", 140, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Disenrollment Date", 115, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Disenrollment Effective Date", 115, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Disenrollment Reason", 115, 10, false, false, "CLIP", "left", "middle", ""],
+  ["DPOA or Guardian Active", 90, 7, false, false, "CLIP", "left", "middle", ""],
+  ["Enrollment Date", 100, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Enrollment Status", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Equipment", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Face Sheet", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Fall Risk", 60, 10, false, false, "CLIP", "left", "middle", ""],
+  ["First Name", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["IDT Meeting Date", 100, 9, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Interpreter Needed", 95, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Last Care Plan", 100, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Last Name", 165, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Name", 180, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Next Care Plan Due", 100, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Notes", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Oxygen", 74, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Palliative Care", 95, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Participant Name", 250, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Participant PMR#", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Phone 1 - Label", 85, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Phone 1 - Value", 85, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Phone 2 - Label", 85, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Phone 2 - Value", 85, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Phone 3 - Label", 85, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Phone 3 - Value", 85, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Phone 4 - Label", 85, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Phone 4 - Value", 85, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Phone Number", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["PMR #", 100, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Preferred Name", 120, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Primary Language", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Primary PMR Row", 110, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Relationship", 110, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Residence Type", 95, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Safety - 2 Person", 84, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Source Month", 80, 10, true, false, "CLIP", "left", "middle", "mm/dd/yyyy"],
+  ["Source Sheet", 150, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Source Workflow", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["State", 69, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Type of Contact", 90, 10, false, true, "CLIP", "left", "middle", ""],
+  ["Wanderer", 90, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Completed", 120, 10, false, false, "CLIP", "left", "middle", ""],
+  ["HHA", 140, 10, false, false, "CLIP", "left", "middle", ""],
+  ["Zip", 80, 10, false, false, "CLIP", "left", "middle", ""]
+];
+}
+
+// --- SYSTEM ARCHIVE SURFACE POPULATION ----------------------------------
+
+function getArchiveSpreadsheetId_() {
+  const props = PropertiesService.getDocumentProperties();
+  const storedId = props.getProperty("RFF_ARCHIVE_SPREADSHEET_ID");
+  return storedId || RFF_ARCHIVE_SPREADSHEET_ID;
+}
+
+function configureArchiveSpreadsheetId() {
+  const ui = SpreadsheetApp.getUi();
+  const currentId = getArchiveSpreadsheetId_();
+  const response = ui.prompt(
+    "Configure Archive Spreadsheet",
+    "Enter the Google Sheets ID for the Archive workbook.\n\nCurrent ID: " + currentId,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  const newId = String(response.getResponseText() || "").trim();
+  if (!newId) return notify_("Configuration cancelled: ID cannot be blank.");
+  if (newId.length < 25) {
+    ui.alert("Invalid ID", "That does not appear to be a valid Google Sheets ID.", ui.ButtonSet.OK);
+    return;
+  }
+  PropertiesService.getDocumentProperties().setProperty("RFF_ARCHIVE_SPREADSHEET_ID", newId);
+  notify_("Archive Spreadsheet ID successfully updated.");
+}
+
+function openArchiveSpreadsheetOnce_() {
+  if (!RFF_ENABLE_AUTO_ARCHIVE_RAW_DATA) return null;
+  return SpreadsheetApp.openById(getArchiveSpreadsheetId_());
+}
+
+function appendDemoPArchiveRows_(sourceHeaders, rows, metadata, timing, timingLabel) {
+  if (!rows || rows.length === 0) return 0;
+  const prefix = String(timingLabel || "Demo P archive detail");
+  const markArchiveStep = function(label, details) {
+    if (timing) markFrameworkStep_(timing, prefix + " - " + label, details || "");
+  };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const archiveSheet = getOrCreateDemoPArchiveSheet_(ss, sourceHeaders, timing, prefix);
+  markArchiveStep("archive sheet ready: " + archiveSheet.getName());
+  const archiveHeaders = getHeaders_(archiveSheet, HEADER_ROW);
+  markArchiveStep("archive headers read | Columns: " + archiveHeaders.length);
+  const archiveWidth = Math.max(archiveHeaders.length, 1);
+  const sourceWidth = Math.max((sourceHeaders || []).length, 1);
+  const now = new Date();
+  const meta = metadata || {};
+  const sourceHeaderMap = buildHeaderIndexMap_(sourceHeaders || []);
+  const archiveHeaderMap = buildHeaderIndexMap_(archiveHeaders || []);
+  const sourcePMRIndex = getPMRIndex_(sourceHeaderMap);
+  markArchiveStep("archive header maps built | Source columns: " + sourceWidth + "; Archive columns: " + archiveWidth);
+
+  const payload = rows.map(function(row) {
+    const output = new Array(archiveWidth).fill("");
+    setArchiveValue_(output, archiveHeaderMap, "Archived At", now);
+    setArchiveValue_(output, archiveHeaderMap, "Archive Reason", meta.reason || "Demo P Row Archive");
+    setArchiveValue_(output, archiveHeaderMap, "Source Workflow", meta.workflow || "Demo P Workflow");
+    setArchiveValue_(output, archiveHeaderMap, "Source Month", meta.monthLabel || "");
+    setArchiveValue_(output, archiveHeaderMap, "Source Sheet", meta.sourceSheet || "Demo P");
+    (sourceHeaders || []).forEach(function(header, idx) {
+      if (archiveHeaderMap[header] !== undefined) output[archiveHeaderMap[header]] = row[idx];
+    });
+    if (archiveHeaderMap["Participant PMR#"] !== undefined && sourcePMRIndex !== -1) {
+      output[archiveHeaderMap["Participant PMR#"]] = row[sourcePMRIndex];
+    }
+    return output;
+  });
+  markArchiveStep("archive payload built | Rows: " + payload.length + "; Columns: " + archiveWidth);
+
+  const insertStartRow = Math.max(archiveSheet.getLastRow() + 1, DATA_START_ROW);
+  if (archiveSheet.getMaxRows() < insertStartRow + payload.length - 1) {
+    archiveSheet.insertRowsAfter(archiveSheet.getMaxRows(), insertStartRow + payload.length - 1 - archiveSheet.getMaxRows());
+    markArchiveStep("archive row capacity expanded | Insert start row: " + insertStartRow + "; Rows: " + payload.length);
+  } else {
+    markArchiveStep("archive row capacity already sufficient | Insert start row: " + insertStartRow + "; Rows: " + payload.length);
+  }
+  if (archiveSheet.getMaxColumns() < archiveWidth) {
+    archiveSheet.insertColumnsAfter(archiveSheet.getMaxColumns(), archiveWidth - archiveSheet.getMaxColumns());
+    markArchiveStep("archive column capacity expanded | Columns: " + archiveWidth);
+  } else {
+    markArchiveStep("archive column capacity already sufficient | Columns: " + archiveWidth);
+  }
+  archiveSheet.getRange(insertStartRow, 1, payload.length, archiveWidth).setValues(payload);
+  markArchiveStep("archive values written | Rows: " + payload.length + "; Columns: " + archiveWidth);
+  hideSheetIfNeeded_(archiveSheet, timing, prefix + " - archive sheet hidden after write");
+  clearSheetRuntimeCachesForSheet_(archiveSheet);
+  markArchiveStep("archive runtime caches cleared");
+  return payload.length;
+}
+
+function setArchiveValue_(row, headerMap, header, value) {
+  if (headerMap && headerMap[header] !== undefined) row[headerMap[header]] = value;
+}
+
+function getOrCreateDemoPArchiveSheet_(ss, sourceHeaders, timing, timingPrefix) {
+  const prefix = String(timingPrefix || "Demo P archive detail");
+  const markArchiveStep = function(label, details) {
+    if (timing) markFrameworkStep_(timing, prefix + " - sheet readiness - " + label, details || "");
+  };
+  let sheet = ss.getSheetByName(DEMO_P_ARCHIVE_SHEET);
+  const archiveHeaders = getDemoPArchiveHeaders_(sourceHeaders);
+  markArchiveStep("lookup complete", sheet ? "Existing archive sheet found" : "Archive sheet will be created");
+  if (!sheet) {
+    const template = ss.getSheetByName(DEMO_P_TEMPLATE_SHEET);
+    markArchiveStep("template lookup complete", template ? DEMO_P_TEMPLATE_SHEET : "No Demo P template found");
+    if (template) {
+      sheet = template.copyTo(ss);
+      markArchiveStep("template copied for archive sheet");
+      setUniqueSheetName_(sheet, DEMO_P_ARCHIVE_SHEET);
+      placeCreatedSheetInConfiguredOrder_(sheet);
+      markArchiveStep("archive sheet named and placed in configured creation order");
+    } else {
+      sheet = insertGovernedOutputSheet_(ss, DEMO_P_ARCHIVE_SHEET);
+      markArchiveStep("blank archive sheet inserted in configured creation order");
+    }
+  }
+  if (sheet.getMaxColumns() < archiveHeaders.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), archiveHeaders.length - sheet.getMaxColumns());
+    markArchiveStep("archive columns expanded | Columns: " + archiveHeaders.length);
+  } else {
+    markArchiveStep("archive columns already sufficient | Columns: " + archiveHeaders.length);
+  }
+  ensureStandardTitleRows_(sheet);
+  markArchiveStep("standard title rows ensured");
+  sheet.getRange("A1").setValue(DEMO_P_ARCHIVE_SHEET);
+  sheet.getRange(HEADER_ROW, 1, 1, archiveHeaders.length).setValues([archiveHeaders]);
+  markArchiveStep("archive title/header rows written");
+  try { sheet.setFrozenRows(HEADER_ROW); markArchiveStep("archive frozen rows ensured"); } catch (err) { logBestEffortWarning_("Archive - Demo P frozen rows skipped: " + err.message); }
+  hideSheetIfNeeded_(sheet, timing, prefix + " - sheet readiness - archive sheet hidden");
+  return sheet;
+}
+
+function getDemoPArchiveHeaders_(sourceHeaders) {
+  const headers = ["Archived At", "Archive Reason", "Source Workflow", "Source Month", "Source Sheet"];
+  (sourceHeaders || []).forEach(function(header) {
+    const clean = String(header || "").trim();
+    if (clean && headers.indexOf(clean) === -1) headers.push(clean);
+  });
+  return headers;
+}
+
+// --- INDEX SYSTEM SHEET & TAB ORGANIZATION ------------------------------
+
+function getConfiguredSheetCreationIndex_(ss, sheetName, ignoreSheetId) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  const targetName = String(sheetName || "").trim();
+
+  // Get the rank profile for the new sheet being created
+  const profile = getSheetSortProfileByName_(targetName);
+  const targetRecord = {
+    name: targetName,
+    rank: profile.rank,
+    group: profile.group
+  };
+
+  // Collect all workbook sheets, optionally ignoring a sheet (useful during renames/deletions)
+  const sheets = ss.getSheets().filter(function(sheet) {
+    return !ignoreSheetId || sheet.getSheetId() !== ignoreSheetId;
+  });
+
+  const sheetRecords = sheets.map(function(sheet) {
+    return buildSheetSortRecord_(sheet);
+  });
+
+  // Determine insertion position based strictly on numeric category rank
+  let targetIndex = 1;
+  sheetRecords.forEach(function(record) {
+    if (compareSheetSortRecords_(record, targetRecord) <= 0) {
+      targetIndex = Math.max(targetIndex, record.sheet.getIndex() + 1);
+    }
+  });
+
+  return Math.max(1, Math.min(targetIndex, ss.getNumSheets() + 1));
+}
+
+function placeCreatedSheetInConfiguredOrder_(sheet) {
+  if (!sheet || !sheet.getParent) return false;
+  const ss = sheet.getParent();
+  const targetIndex = getConfiguredSheetCreationIndex_(ss, sheet.getName(), sheet.getSheetId());
+  if (sheet.getIndex() === targetIndex) return false;
+  const wasHidden = typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden();
+  try {
+    if (wasHidden && typeof sheet.showSheet === "function") sheet.showSheet();
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(Math.max(1, Math.min(targetIndex, ss.getNumSheets())));
+    clearMonthlySheetLookupCache_();
+    return true;
+  } catch (err) {
+    logBestEffortWarning_("Created-sheet placement skipped for " + sheet.getName() + ": " + err.message);
+    return false;
+  } finally {
+    if (wasHidden && typeof sheet.hideSheet === "function") {
+      try { sheet.hideSheet(); } catch (hideErr) {
+        logBestEffortWarning_("Created-sheet placement visibility restore skipped for " + sheet.getName() + ": " + hideErr.message);
+      }
+    }
+  }
+}
+
+function isUnformattedImportSheetNameForIndex_(sheetName) {
+  const name = String(sheetName || "").trim();
+  if (!name) return false;
+  if (/^(B|CD|UC|RD)$/i.test(name)) return true;
+  if (/^(B|CD|UC|RD)\s+/i.test(name)) return true;
+  return name.indexOf("Source - Banners") === 0 ||
+    name.indexOf("Source - Banner Report") === 0 ||
+    name.indexOf("Source - CP Due") === 0 ||
+    name.indexOf("Source - Care Plan Due") === 0 ||
+    name.indexOf("Source - Unlock CP") === 0 ||
+    name.indexOf("Source - Unlocked") === 0;
+}
+
+function getIndexRestoreWebAppUrl_() {
+  try {
+    const configuredUrl = String(PropertiesService.getDocumentProperties().getProperty("ML_INDEX_RESTORE_WEB_APP_URL") || "").trim();
+    if (configuredUrl) return configuredUrl;
+  } catch (err) {
+    logBestEffortWarning_("Index restore configured Web App URL lookup skipped: " + err.message);
+  }
+
+  try {
+    const deployedUrl = String(ScriptApp.getService().getUrl() || "").trim();
+    if (/^https:\/\/script\.google\.com\/macros\/s\//i.test(deployedUrl)) return deployedUrl;
+  } catch (err) {
+    logBestEffortWarning_("Index restore deployed Web App URL auto-detection skipped: " + err.message);
+  }
+
+  return "";
+}
+
+function configureIndexRestoreWebAppUrl() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getDocumentProperties();
+  const current = getIndexRestoreWebAppUrl_();
+  const response = ui.prompt(
+    "Configure Index Restore Web App URL",
+    "Paste the deployed Web App /exec URL used by Index restore hyperlinks. Leave blank to use the deployed Web App URL auto-detected by ScriptApp.getService().getUrl(); if no deployment URL is available, the Index will show a configuration warning in Restore Action.\n\nCurrent URL: " + (current || "(auto-detect / not configured)"),
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+  const value = String(response.getResponseText() || "").trim();
+  if (value) props.setProperty("ML_INDEX_RESTORE_WEB_APP_URL", value);
+  else props.deleteProperty("ML_INDEX_RESTORE_WEB_APP_URL");
+  updateIndexSheet();
+  ui.alert("Index Restore Web App URL", value ? "Index restore hyperlinks are now enabled with the configured URL and the Index was rebuilt." : "Configured URL cleared. The Index was rebuilt and will use the deployed Web App URL automatically when available; otherwise the menu-based restore fallback remains available.", ui.ButtonSet.OK);
+}
+
+function buildIndexRestoreHyperlinkFormula_(targetSheetName, actionType) {
+  const webAppUrl = getIndexRestoreWebAppUrl_();
+  if (!webAppUrl || !targetSheetName) return "🔄 Click to Restore";
+  const restoreAction = String(actionType || "demo_p_archive").trim() || "demo_p_archive";
+  const compositeLinkUrl = webAppUrl + "?restoreTarget=" + encodeURIComponent(targetSheetName) +
+    "&action=" + encodeURIComponent(restoreAction);
+  return '=HYPERLINK("' + compositeLinkUrl + '", "🔄 Click to Restore")';
+}
+
+function hasIndexSheetShell_(sheet) {
+  if (!sheet || sheet.getLastRow() < INDEX_HEADER_ROW_COUNT) return false;
+  try {
+    const titleLeft = String(sheet.getRange("A1").getValue() || "").trim();
+    const titleRight = String(sheet.getRange("F1").getValue() || "").trim();
+    return titleLeft === "Active Operational Sheets Workspace" && titleRight === "External Drive Cold-Storage Archives";
+  } catch (err) {
+    return false;
+  }
+}
+
+function buildIndexSheetShell_(sheet) {
+  const dashboard = loadDashboardConfig_();
+  const globals = dashboard.globals || {};
+  const theme = getThemeColorsFromBase_("#668BCC", globals);
+  const archiveId = getArchiveSpreadsheetId_();
+
+  sheet.clear(); // One-time structural reset
+
+  const headerMatrix = [
+    ["Active Operational Sheets Workspace", "", "", "", "", "External Drive Cold-Storage Archives", "", "", "", ""],
+    ["Generated", new Date(), "", "", "", "Archive File ID", archiveId, "", "", ""],
+    ["", "", "", "", "", "", "", "", "", ""],
+    ["Section / Month", "Sheet Tab Name", "Workspace Link", "Visibility", "", "Archive Month", "Archive Sheet Name", "Link to Sheet", "Status", "Restore Action"]
+  ];
+
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
+
+  for (let r = 0; r < 4; r++) {
+    const bgRow = new Array(10).fill("#FFFFFF");
+    const fwRow = new Array(10).fill("normal");
+    const fcRow = new Array(10).fill("#000000");
+    bgRow[4] = "#EDEDED";
+
+    if (r === 0) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level3; fwRow[c] = "bold"; fcRow[c] = "#FFFFFF"; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#79b5d2"; fwRow[c] = "bold"; fcRow[c] = "#FFFFFF"; }
+    } else if (r === 1) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level4; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#f2f7f9"; }
+    } else if (r === 3) {
+      for (let c = 0; c < 4; c++) { bgRow[c] = theme.level2; fwRow[c] = "bold"; }
+      for (let c = 5; c < 10; c++) { bgRow[c] = "#9fcadf"; fwRow[c] = "bold"; }
+    }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
+  }
+
+  sheet.getRange(1, 1, 4, 10)
+       .setValues(headerMatrix)
+       .setBackgrounds(backgrounds)
+       .setFontWeights(fontWeights)
+       .setFontColors(fontColors);
+
+  sheet.getRange(1, 1, 1, 4).merge().setFontSize(12);
+  sheet.getRange(1, 6, 1, 5).merge().setFontSize(12);
+
+  try {
+    if (typeof sheet.setColumnWidths === "function") {
+      sheet.setColumnWidths(1, 4, 160);
+      sheet.setColumnWidths(6, 5, 160);
+    } else {
+      [1, 2, 3, 4, 6, 7, 8, 9, 10].forEach(function(col) { sheet.setColumnWidth(col, 160); });
+    }
+  } catch (err) {
+    logBestEffortWarning_("Index column resizing skipped: " + err.message);
+  }
+  sheet.setColumnWidth(INDEX_BUFFER_COLUMN, 30);
+  sheet.setFrozenRows(INDEX_HEADER_ROW_COUNT);
+  applyGlobalDefaultRowHeightsToSheet_(sheet, "Index Dashboard");
+  placeCreatedSheetInConfiguredOrder_(sheet);
+
+  return sheet;
+}
+
+function updateIndexLocalWorkspace_(sheet, theme) {
+  const ss = sheet.getParent();
+  const localRows = [];
+  const seenLocal = new Set([INDEX_SHEET]);
+
+  function localSheetRow_(sheetName) {
+    const sh = ss.getSheetByName(sheetName);
+    if (!sh || seenLocal.has(sheetName)) return null;
+    seenLocal.add(sheetName);
+    return [
+      "",
+      sheetName,
+      '=HYPERLINK("#gid=' + sh.getSheetId() + '","Open Live Tab")',
+      sh.isSheetHidden() ? "Hidden" : "Visible"
+    ];
+  }
+
+  // 1. Strict Group Hierarchy
+  const groupOrder = [
+    "Core Operational",
+    "Monthly Active",
+    "Monthly Sub-Reports",
+    "System & Configuration",
+    "Template"
+  ];
+
+  // 2. Bucket workbook sheets under their respective groups
+  const sheetsByGroup = {};
+  groupOrder.forEach(g => { sheetsByGroup[g] = []; });
+
+  ss.getSheets().forEach(function(workbookSheet) {
+    const sheetName = workbookSheet.getName();
+    if (seenLocal.has(sheetName)) return;
+    const profile = getSheetSortProfileByName_(sheetName);
+    const group = String(profile.group || "Other").trim() || "Other";
+    if (!sheetsByGroup[group]) {
+      sheetsByGroup[group] = [];
+    }
+    sheetsByGroup[group].push(sheetName);
+  });
+
+  // Include overflow groups (e.g. "Other" or "Unformatted") if present
+  const allGroups = groupOrder.concat(
+    Object.keys(sheetsByGroup).filter(g => groupOrder.indexOf(g) === -1)
+  );
+
+  // 3. Assemble matrix with a SINGLE header per group
+  allGroups.forEach(function(group) {
+    const sheetNames = sheetsByGroup[group] || [];
+    if (sheetNames.length === 0) return;
+
+    localRows.push([group, "", "", ""]); // Single group section header
+
+    sheetNames.forEach(function(sheetName) {
+      const row = localSheetRow_(sheetName);
+      if (row) localRows.push(row);
+    });
+  });
+
+  // 4. Build formatting arrays (Cols A-D)
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
+
+  for (let i = 0; i < localRows.length; i++) {
+    const bgRow = new Array(4).fill("#FFFFFF");
+    const fwRow = new Array(4).fill("normal");
+    const fcRow = new Array(4).fill("#000000");
+
+    const isSectionHeader = localRows[i][0] !== "" && localRows[i][1] === "";
+    for (let c = 0; c < 4; c++) {
+      if (isSectionHeader) {
+        bgRow[c] = theme.level3;
+        fwRow[c] = "bold";
+      } else {
+        bgRow[c] = i % 2 === 0 ? theme.level4 : "#FFFFFF";
+      }
+    }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
+  }
+
+  const startRow = INDEX_DATA_START_ROW; // Row 5
+  const oldLastRow = Math.max(sheet.getLastRow(), startRow);
+  const clearRows = Math.max(oldLastRow - startRow + 1, localRows.length, 1);
+
+  // Clear and repaint left side data area (Cols A-D)
+  sheet.getRange(startRow, 1, clearRows, 4)
+       .clearContent()
+       .setBackground("#FFFFFF")
+       .setFontWeight("normal")
+       .setFontColor("#000000");
+
+  if (localRows.length > 0) {
+    sheet.getRange(startRow, 1, localRows.length, 4)
+         .setValues(localRows)
+         .setBackgrounds(backgrounds)
+         .setFontWeights(fontWeights)
+         .setFontColors(fontColors);
+  }
+
+  return localRows.length;
+}
+
+function updateIndexArchiveWorkspace_(sheet, theme, preOpenedArchiveSs) {
+  const archiveRows = [];
+  const archiveId = getArchiveSpreadsheetId_();
+  try {
+    const archiveSs = preOpenedArchiveSs || SpreadsheetApp.openById(archiveId);
+    archiveSs.getSheets().forEach(function(ash) {
+      const ashName = ash.getName();
+      const ashDate = extractFirstDateFromSheetName_(ashName);
+      const archiveMonthDisplay = ashDate ? Utilities.formatDate(ashDate, Session.getScriptTimeZone(), "MMMM yyyy") : "";
+      archiveRows.push([
+        archiveMonthDisplay,
+        ashName,
+        '=HYPERLINK("https://docs.google.com/spreadsheets/d/' + archiveId + '/edit#gid=' + ash.getSheetId() + '","Open Archive Tab")',
+        ash.isSheetHidden() ? "Archived (Hidden)" : "Visible in Cold Storage",
+        buildIndexRestoreHyperlinkFormula_(ashName, "demo_p_archive")
+      ]);
+    });
+    archiveRows.sort((a, b) => a[0].localeCompare(b[0]));
+  } catch (err) {
+    archiveRows.push(["", "Archive Spreadsheet Unreachable", "", "Verify permissions/ID", ""]);
+  }
+
+  const backgrounds = [];
+  const fontWeights = [];
+  const fontColors = [];
+
+  for (let i = 0; i < archiveRows.length; i++) {
+    const bgRow = new Array(5).fill("#FFFFFF");
+    const fwRow = new Array(5).fill("normal");
+    const fcRow = new Array(5).fill("#000000");
+
+    for (let c = 0; c < 5; c++) {
+      bgRow[c] = i % 2 === 0 ? "#f2f7f9" : "#FFFFFF";
+    }
+    backgrounds.push(bgRow);
+    fontWeights.push(fwRow);
+    fontColors.push(fcRow);
+  }
+
+  const startRow = INDEX_DATA_START_ROW; // Row 5
+  const oldLastRow = Math.max(sheet.getLastRow(), startRow);
+  const clearRows = Math.max(oldLastRow - startRow + 1, archiveRows.length, 1);
+
+  // Clear right side data area (Cols F-J)
+  sheet.getRange(startRow, 6, clearRows, 5)
+       .clearContent()
+       .setBackground("#FFFFFF")
+       .setFontWeight("normal")
+       .setFontColor("#000000");
+
+  if (archiveRows.length > 0) {
+    sheet.getRange(startRow, 6, archiveRows.length, 5)
+         .setValues(archiveRows)
+         .setBackgrounds(backgrounds)
+         .setFontWeights(fontWeights)
+         .setFontColors(fontColors);
+  }
+
+  return archiveRows.length;
+}
+
+function updateIndexSheet(options) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(INDEX_SHEET);
+
+  let preOpenedArchiveSs = null;
+  let activeOnly = false;
+  let archiveOnly = false;
+  let forceShellRebuild = false;
+
+  if (options && typeof options.getSheets === "function") {
+    // Backward compatibility: preOpenedArchiveSs passed directly
+    preOpenedArchiveSs = options;
+  } else if (options && typeof options === "object") {
+    preOpenedArchiveSs = options.archiveSs || options.preOpenedArchiveSs || null;
+    activeOnly = !!options.activeOnly;
+    archiveOnly = !!options.archiveOnly;
+    forceShellRebuild = !!options.forceShellRebuild;
+  }
+
+  // Ensure structural shell exists, or force rebuild if requested
+  if (!sheet || forceShellRebuild || !hasIndexSheetShell_(sheet)) {
+    sheet = buildIndexSheetShell_(sheet || ss.insertSheet(INDEX_SHEET, 0));
+  }
+
+  const dashboard = loadDashboardConfig_();
+  const globals = dashboard.globals || {};
+  const theme = getThemeColorsFromBase_("#668BCC", globals);
+
+  let localCount = 0;
+  let archiveCount = 0;
+
+  // Update Active Workspace side (Cols A-D) unless archiveOnly
+  if (!archiveOnly) {
+    localCount = updateIndexLocalWorkspace_(sheet, theme);
+  }
+
+  // Update Archive Workspace side (Cols F-J) unless activeOnly
+  if (!activeOnly) {
+    archiveCount = updateIndexArchiveWorkspace_(sheet, theme, preOpenedArchiveSs);
+  }
+
+  // Stamp updated timestamp in B2
+  sheet.getRange("B2").setValue(new Date());
+
+  // Trim excess grid rows at bottom
+  const maxNeededDataRows = Math.max(localCount, archiveCount);
+  forceSheetRowCount_(sheet, Math.max(INDEX_FIXED_ROW_COUNT, INDEX_DATA_START_ROW + maxNeededDataRows));
+
+  PropertiesService.getDocumentProperties().setProperty("RFF_INDEX_SHEET_SIGNATURE", ss.getSheets().map(function(sh) {
+    return sh.getSheetId() + ":" + sh.getName();
+  }).join("|"));
+
+  ss.setActiveSheet(sheet);
+  ss.moveActiveSheet(1);
+  return sheet;
+}
+
+function createIndexSheet(options) {
+  return updateIndexSheet(options);
+}
+
+function refreshIndexAfterSheetWorkflow_(workflowName, options) {
+  try {
+    const opts = options || { activeOnly: true };
+    updateIndexSheet(opts);
+  } catch (err) {
+    logBestEffortWarning_((workflowName || "Workflow") + " index refresh skipped: " + err.message);
+  }
+}
+
+function restoreSheetFromActiveIndexRow(optionalTargetSheetName) {
+  var ui = SpreadsheetApp.getUi();
+  var mainSs = SpreadsheetApp.getActiveSpreadsheet();
+  var indexSheet = mainSs.getSheetByName(INDEX_SHEET);
+  var activeRange = mainSs.getActiveRange();
+  var targetSheetName = String(optionalTargetSheetName || "").trim();
+
+  if (!targetSheetName) {
+    // Enforce Index sheet isolation boundary.
+    if (!indexSheet || !activeRange || activeRange.getSheet().getSheetId() !== indexSheet.getSheetId()) {
+      ui.alert("Selection Required", "Please click on a row within the 'External Drive Cold-Storage Archives' grid selection table first.", ui.ButtonSet.OK);
+      return;
+    }
+
+    var row = activeRange.getRow();
+    var col = activeRange.getColumn();
+
+    // Hard stop if they are clicking headers or the local data side.
+    if (row < INDEX_DATA_START_ROW || col < 6) {
+      ui.alert("Invalid Selection", "Please click anywhere on an Archive entry row (Columns F through J) before requesting a restore.", ui.ButtonSet.OK);
+      return;
+    }
+
+    // Force path re-direction: capture the true sheet identity string from Column G.
+    targetSheetName = String(indexSheet.getRange(row, 7).getValue() || "").trim();
+  }
+
+  if (!targetSheetName || targetSheetName.indexOf("Open Archive") === 0 || targetSheetName.indexOf("Archive Sheet") === 0) {
+    ui.alert("Empty Selection", "The chosen row index coordinate does not contain a valid archived sheet identifier.", ui.ButtonSet.OK);
+    return;
+  }
+
+  if (mainSs.getSheetByName(targetSheetName)) {
+    ui.alert("Conflict Detected", "The sheet '" + targetSheetName + "' already exists locally in this workbook. Please rename or delete the local copy first.", ui.ButtonSet.OK);
+    return;
+  }
+
+  if (!optionalTargetSheetName) {
+    var confirmation = ui.alert(
+      "Confirm Sheet Retrieval",
+      "Are you sure you want to retrieve '" + targetSheetName + "' from cold storage and restore it as an active workspace tab?",
+      ui.ButtonSet.YES_NO
+    );
+    if (confirmation !== ui.Button.YES) return;
+  }
+
+  restoreSheetFromArchiveWorkbook(targetSheetName);
+  if (!optionalTargetSheetName) {
+    ui.alert("Success", "The sheet '" + targetSheetName + "' has been successfully restored from cold storage.", ui.ButtonSet.OK);
+  }
+}
+
+function restoreSheetFromArchiveWorkbook(targetSheetName) {
+  var mainSs = SpreadsheetApp.getActiveSpreadsheet();
+  targetSheetName = String(targetSheetName || "").trim();
+  if (!targetSheetName) throw new Error("Missing archive sheet name to restore.");
+  if (mainSs.getSheetByName(targetSheetName)) {
+    throw new Error("The sheet '" + targetSheetName + "' already exists locally in this workbook.");
+  }
+
+  var archiveId = getArchiveSpreadsheetId_();
+  var archiveSs = SpreadsheetApp.openById(archiveId);
+  var archiveSourceSheet = archiveSs.getSheetByName(targetSheetName);
+  if (!archiveSourceSheet) {
+    throw new Error("The sheet '" + targetSheetName + "' was not found inside the external archive spreadsheet database file.");
+  }
+
+  mainSs.toast("Retrieving '" + targetSheetName + "' from archive drive...", "Data Transfer Running", 5);
+  var restoredSheet = archiveSourceSheet.copyTo(mainSs);
+  restoredSheet.setName(targetSheetName);
+  placeCreatedSheetInConfiguredOrder_(restoredSheet);
+
+  if (typeof restoredSheet.showSheet === "function") {
+    restoredSheet.showSheet();
+  }
+  updateIndexSheet();
+  mainSs.setActiveSheet(restoredSheet);
+  return restoredSheet;
+}
+
+function escapeHtml_(text) {
+  if (text === null || text === undefined) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function doGet(e) {
+  e = e || { parameter: {} };
+  const targetSheetName = e.parameter && e.parameter.restoreTarget;
+  const actionType = e.parameter && e.parameter.action;
+  const safeTargetSheetName = escapeHtml_(targetSheetName);
+
+  if (!targetSheetName) {
+    return HtmlService.createHtmlOutput("<p style='font-family: sans-serif;color:#cc0000;'>⚠️ Error: Missing recovery sheet routing token parameter.</p>");
+  }
+
+  const lock = LockService.getDocumentLock();
+  let lockAcquired = false;
+  try {
+    if (lock.tryLock(15000)) {
+      lockAcquired = true;
+      if (actionType === "demo_p_archive") {
+        restoreSheetFromArchiveWorkbook(targetSheetName);
+      } else {
+        restoreSheetFromActiveIndexRow(targetSheetName);
+      }
+
+      return HtmlService.createHtmlOutput(
+        "<script>window.top.close();</script>" +
+        "<body style='font-family: sans-serif; text-align:center; padding-top: 35px; background-color:#f8f9fa;'>" +
+        "  <h3 style='color:#2b7a78;'>🔄 Restoration Complete!</h3>" +
+        "  <p>Processed pipeline synchronization parameters for target workspace: <b>" + safeTargetSheetName + "</b></p>" +
+        "  <p style='color:#777;font-size:11px;'>This deployment window can be safely closed.</p>" +
+        "</body>"
+      );
+    }
+    return HtmlService.createHtmlOutput("<p>⚠️ Server busy processing another task execution string. Click the hyperlink tab again.</p>");
+  } catch (err) {
+    return HtmlService.createHtmlOutput("<p style='font-family:sans-serif;color:#cc0000;'>❌ Recovery Routing Execution Failed: " + escapeHtml_(err && err.message ? err.message : err) + "</p>");
+  } finally {
+    if (lockAcquired) {
+      try {
+        lock.releaseLock();
+      } catch (releaseErr) {
+        logBestEffortWarning_("Archive web restore lock release skipped: " + (releaseErr && releaseErr.message ? releaseErr.message : releaseErr));
+      }
+    }
+  }
+}
+
+function generateArchiveFileIndex_() {
+  return updateIndexSheet();
+}
+
+function getSheetSortProfileByName_(sheetName) {
+  const name = String(sheetName || "").trim();
+  const lowerName = name.toLowerCase();
+  const profiles = getTabOrganizationProfilesForSort_();
+
+  for (let i = 0; i < profiles.length; i++) {
+    const profile = profiles[i];
+    const key = String(profile.nameOrPrefix || "").trim();
+    if (!key) continue;
+    const lowerKey = key.toLowerCase();
+    const exactMatch = lowerName === lowerKey;
+    const prefixMatch = lowerName.indexOf(lowerKey + " ") === 0 || lowerName.indexOf(lowerKey + " -") === 0 || lowerName.indexOf(lowerKey) === 0;
+    if (!exactMatch && !prefixMatch) continue;
+
+    let rank = numberOrDefault_(profile.rankBase, 600);
+    if (String(profile.special || "").trim().toUpperCase() === "DYNAMIC RANKING") {
+      const monthDate = extractFirstDateFromSheetName_(name);
+      const month = monthDate ? monthDate.getMonth() + 1 : 0;
+      // Multiplier updated to 15 to prevent cross-month sheet overlap
+      rank = month >= 1 && month <= 12 ? rank + ((12 - month) * 15) : 600;
+    }
+
+    return {
+      rank: rank,
+      group: profile.group || "Other"
+    };
+  }
+
+  return { rank: 600, group: "Other" };
+}
+
+function getGlobalSheetSortRankByName_(sheetName) {
+  return getSheetSortProfileByName_(sheetName).rank;
+}
+
+function buildSheetSortRecord_(sheet) {
+  const name = String(sheet && sheet.getName ? sheet.getName() : "").trim();
+  const profile = getSheetSortProfileByName_(name);
+  return {
+    sheet: sheet,
+    name: name,
+    rank: profile.rank,
+    group: profile.group
+  };
+}
+
+function compareSheetSortRecords_(a, b) {
+  const rankDiff = a.rank - b.rank;
+  if (rankDiff !== 0) return rankDiff;
+  return a.name.localeCompare(b.name);
+}
+
+function getOrderedSheetSortRecords_(ss, monthParts, options) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  options = options || {};
+  void monthParts;
+  return ss.getSheets()
+    .map(function(sheet) { return buildSheetSortRecord_(sheet); })
+    .filter(function(record) {
+      if (options.operationalOnly && !record.operational) return false;
+      if (options.visibleOnly && typeof record.sheet.isSheetHidden === "function" && record.sheet.isSheetHidden()) return false;
+      return true;
+    })
+    .sort(compareSheetSortRecords_);
+}
+
+function moveSheetToPositionPreservingVisibility_(ss, record, targetPosition, context) {
+  if (!record || !record.sheet || record.sheet.getIndex() === targetPosition) return false;
+  const sheet = record.sheet;
+  const wasHidden = typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden();
+  try {
+    if (wasHidden) sheet.showSheet();
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(Math.max(1, Math.min(targetPosition, ss.getNumSheets())));
+    return true;
+  } catch (err) {
+    logBestEffortWarning_((context || "Sheet sort") + " skipped for " + record.name + ": " + err.message);
+    return false;
+  } finally {
+    if (wasHidden) {
+      try {
+        if (!sheet.isSheetHidden()) {
+          activateVisibleSheetBeforeHiding_(sheet);
+          sheet.hideSheet();
+        }
+      } catch (hideErr) {
+        logBestEffortWarning_((context || "Sheet sort") + " visibility restore skipped for " + record.name + ": " + hideErr.message);
+      }
+    }
+  }
+}
+
+function applySheetSortRecords_(ss, records, startPosition, context) {
+  let moves = 0;
+  let position = startPosition || 1;
+  (records || []).forEach(function(record) {
+    if (moveSheetToPositionPreservingVisibility_(ss, record, position, context)) moves++;
+    position++;
+  });
+  clearMonthlySheetLookupCache_();
+  return moves;
+}
+
+function captureHiddenSheetIds_(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  const hiddenIds = {};
+  ss.getSheets().forEach(function(sheet) {
+    if (sheet.isSheetHidden && sheet.isSheetHidden()) hiddenIds[sheet.getSheetId()] = true;
+  });
+  return hiddenIds;
+}
+
+function restoreHiddenSheetIds_(ss, hiddenIds, context) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  hiddenIds = hiddenIds || {};
+  ss.getSheets().forEach(function(sheet) {
+    if (!hiddenIds[sheet.getSheetId()] || !sheet.isSheetHidden || sheet.isSheetHidden()) return;
+    try {
+      activateVisibleSheetBeforeHiding_(sheet);
+      sheet.hideSheet();
+    } catch (err) {
+      logBestEffortWarning_((context || "Sheet visibility restore") + " skipped for " + sheet.getName() + ": " + err.message);
+    }
+  });
+}
+
+function enforceGlobalSheetSortOrder_(monthParts) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hiddenSheetIds = captureHiddenSheetIds_(ss);
+  const records = getOrderedSheetSortRecords_(ss, monthParts);
+  const moves = applySheetSortRecords_(ss, records, 1, "Global sheet sort"); // Removed tail block function
+  restoreHiddenSheetIds_(ss, hiddenSheetIds, "Global sheet sort visibility restore");
+  return moves;
+}
+
+function extractFirstDateFromSheetName_(sheetName) {
+  const text = String(sheetName || "").trim();
+
+  let match = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})/);
+  if (match) {
+    const month = Number(match[1]);
+    const day = Number(match[2]);
+    let year = Number(match[3]);
+    if (year < 100) year += 2000;
+    const date = createLocalDateOnly_(year, month - 1, day);
+    if (
+      date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+    ) {
+      return date;
+    }
+  }
+
+  match = text.match(/(?:^|\s|-)(\d{1,2})\.(\d{2}|\d{4})(?:\s|$|\()/);
+  if (match) {
+    const month = Number(match[1]);
+    let year = Number(match[2]);
+    if (year < 100) year += 2000;
+    const date = createLocalDateOnly_(year, month - 1, 1);
+    if (date.getFullYear() === year && date.getMonth() === month - 1) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
+function forceBaseTemplateHidden_() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RFF_BASE_TEMPLATE_NAME);
+    if (sheet && !sheet.isSheetHidden()) sheet.hideSheet();
+  } catch (err) {
+    logBestEffortWarning_("RFF_BASE_TEMPLATE hide enforcement skipped: " + err.message);
+  }
+}
+
+function enforceGlobalSheetSortOrder(monthParts) {
+  return enforceGlobalSheetSortOrder_(monthParts || getMonthDateParts_(new Date()));
+}
+
+function runDeferredIndexRefreshIfNeeded_() {
+  const props = PropertiesService.getDocumentProperties();
+  if (props.getProperty(ML_INDEX_REFRESH_DEFERRED_KEY) !== "true") return false;
+  props.deleteProperty(ML_INDEX_REFRESH_DEFERRED_KEY);
+  updateIndexSheet();
+  return true;
 }
