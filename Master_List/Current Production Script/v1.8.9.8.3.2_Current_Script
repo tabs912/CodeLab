@@ -23,7 +23,6 @@ const MASTER_LIST_MERGE_REBUILD_SECTION = "FULL_SCRIPT";
 
 const MASTER_LIST_MERGE_BASELINE_VERSION = "1.6.22.3";
 
-
 let ML_RUNTIME_CACHE_STORE_ = null;
 
 function getRuntimeCache_() {
@@ -59,12 +58,6 @@ let RFF_DEFER_TEMPLATE_HIDE_DURING_BATCH_ = false;
 
 const RFF_VERSION = MASTER_LIST_MERGE_ML_VERSION;
 
-
-
-
-
-
-
 const RFF_TEMPLATE_STAGED_BUILD_ENABLED = false;
 
 const RFF_TEMPLATE_STAGED_FIRST_BUILD_FOR_HIGH_RISK_ONLY = false;
@@ -77,10 +70,7 @@ const RFF_TEMPLATE_ALWAYS_STAGED_TEMPLATE_NAMES = [];
 
 const RFF_BASE_TEMPLATE_NAME = "RFF_BASE_TEMPLATE";
 
-
 const RFF_FORMATTER_DATE_PROMPT = "Enter any date in the report month. Example: 05/01/26";
-
-
 
 const RFF_ARCHIVE_SPREADSHEET_ID = "1PEEoXzPG-xRFuqDW_ZjPzyqdTUd_5AOwx0nbbzmMwBc";
 
@@ -127,7 +117,6 @@ const RFF_OUTPUT_EXTEND_TEMPLATE_FORMATTING = true;
 
 const RFF_SKIP_DUPLICATE_TEMPLATE_FORMAT_ENFORCEMENT = false;
 
-
 const HEADER_ROW = 4;
 
 const DATA_START_ROW = 5;
@@ -140,11 +129,9 @@ const RFF_EXCEL_EPOCH_MONTH = 11;
 
 const RFF_EXCEL_EPOCH_DAY = 30;
 
-
 const FORMAT_ALLOWED_EMPTY_COLUMNS = 2;
 
 const FORMAT_DELETE_BLANK_ROWS_AFTER = 400;
-
 
 const SHEET_TYPE = Object.freeze({
   BANNER: "Banners",
@@ -172,7 +159,6 @@ const SHEET_BASE_COLORS = {
 const MASTER_LIST_ADDED_HEADERS = [
 
 ];
-
 
 const MASTER_LIST_PREFIX = "Master List";
 
@@ -231,16 +217,12 @@ const MASTER_LIST_TEMPLATE_SHEET = "Template - Master List";
 
 const DEMO_P_TEMPLATE_SHEET = "Template - Refined Data";
 
-
-
-
 const DATE_DISPLAY_FORMAT = "mm/dd/yyyy";
 
 const RFF_RE_MONTH_YEAR = /^(\d{1,2})[\.\/-](\d{2}|\d{4})$/;
 const RFF_RE_DATE_MDY = /^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/;
 
 const DATE_SHEET_FORMAT = "MM.yy";
-
 
 const GLOBAL_DATE_FORMAT_HEADERS = Object.freeze([
   "AD1 - Phone Valid Dates From",
@@ -261,14 +243,10 @@ const GLOBAL_DATE_FORMAT_HEADERS = Object.freeze([
   "Next Care Plan Due",
 ]);
 
-
 const TITLE_INFO_MOVE_CELLS = Object.freeze({
   [SHEET_TYPE.CARE_PLAN_DUE]: ["A2", "C2", "A3", "C3", "D3", "E3"],
   [SHEET_TYPE.UNLOCKED]: ["A2", "A3", "B3", "C3", "D2", "E2", "F2", "G2"]
 });
-
-
-
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -395,40 +373,6 @@ function c_(width, fontSize, dateColumn, hideColumn) {
     numberFormat: dateColumn ? RFF_DEFAULTS.defaultDateFormat : ""
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function getTemplateDrivenActiveSheetContext_(ss, sheetType) {
   ss = ss || SpreadsheetApp.getActive();
@@ -562,7 +506,6 @@ function sortSheetDefinitionsByProductionOrder_(sheetDefinitions) {
   });
 }
 
-
 function notify_(message) {
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast(String(message), "Master List Tools", 5);
@@ -618,22 +561,15 @@ function showQuickStartToast_(message) {
   SpreadsheetApp.flush();
 }
 
-
-
-
 function quickBuildAllTemplates() {
   showQuickStartToast_("Quick Build All Templates: building hidden templates and validating...");
   buildAllTemplatesAndValidate();
   showQuickStartToast_("Quick Build All Templates complete.");
 }
 
-
-
-
 function isBlankCell_(value) {
   return value === null || value === undefined || String(value).trim() === "";
 }
-
 
 function normalizeToDateObject_(value) {
   if (value instanceof Date) {
@@ -683,7 +619,6 @@ function normalizeToDateObject_(value) {
   const parsedDate = isNaN(timestamp) ? null : new Date(timestamp);
   return parsedDate && isReasonableReportDate_(parsedDate) ? parsedDate : null;
 }
-
 
 function spreadsheetSerialDateToLocalDate_(serialValue) {
   if (serialValue === null || serialValue === undefined || serialValue === "") return null;
@@ -765,7 +700,6 @@ function isSameDate_(a, b) {
 function isSameMonth_(a, b) {
   return monthKey_(a) !== "" && monthKey_(a) === monthKey_(b);
 }
-
 
 function buildMonthlySheetName_(prefix, firstDay, lastDay) {
 
@@ -875,7 +809,6 @@ function setUniqueSheetName_(sheet, desiredName) {
   return name;
 }
 
-
 function setRequiredSheetName_(sheet, desiredName) {
   if (!sheet || !desiredName) return desiredName;
 
@@ -896,7 +829,6 @@ function setRequiredSheetName_(sheet, desiredName) {
 
   return desiredName;
 }
-
 
 function getHeaders_(sheet, headerRow) {
   headerRow = headerRow || HEADER_ROW;
@@ -955,7 +887,6 @@ function normalizeHeader_(value) {
     .replace(/[–—]/g, "-")
     .replace(/\s+/g, " ");
 }
-
 
 function normalizePMR_(value) {
   return String(value === null || value === undefined ? "" : value)
@@ -1022,7 +953,6 @@ function normalizeKeyPart_(value) {
     .replace(/\s+/g, " ");
 }
 
-
 function getDataValues_(sheet, headerRow, dataStartRow) {
   headerRow = headerRow || HEADER_ROW;
   dataStartRow = dataStartRow || DATA_START_ROW;
@@ -1060,8 +990,6 @@ function getDataValues_(sheet, headerRow, dataStartRow) {
     lastCol: lastCol
   };
 }
-
-
 
 function getRawDataSourceDataForOutput_(sheet) {
   if (!sheet) {
@@ -1213,7 +1141,6 @@ function buildMasterListHeadersBeforeDataCopy_(demoSheet, masterSheet) {
   clearSheetRuntimeCachesForSheet_(masterSheet);
 }
 
-
 function ensureHeaders_(sheet, headers, headerRow) {
   if (!sheet || !headers || !headers.length) return [];
   headerRow = headerRow || HEADER_ROW;
@@ -1267,7 +1194,6 @@ function trimOutputSheetToDataSize_(sheet, rowCount, sheetType) {
   forceSheetRowCount_(sheet, desiredRows);
 }
 
-
 function normalizeCompareValue_(value) {
   if (value === null || value === undefined || value === "") return "";
   if (value instanceof Date) return isNaN(value.getTime()) ? "" : value.getTime();
@@ -1315,7 +1241,6 @@ function parseBoolean_(value) {
   return ["true", "yes", "y", "1", "x"].indexOf(text) !== -1;
 }
 
-
 function clearHeaderCacheForSheet_(sheet) {
   if (!sheet) return;
   const prefix = sheet.getSheetId() + ":";
@@ -1345,7 +1270,6 @@ function getHeaderCacheKey_(sheet, headerRow) {
 function clearMonthlySheetLookupCache_() {
   getRuntimeCache_().monthlySheets = {};
 }
-
 
 function insertGovernedOutputSheet_(ss, sheetName) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
@@ -1409,7 +1333,6 @@ function placeCreatedSheetInConfiguredOrder_(sheet) {
   }
 }
 
-
 function getMonthlySheetLookupCacheKey_(ss, prefix, firstDay, lastDay) {
   const spreadsheetId = ss && ss.getId ? ss.getId() : "";
   const startKey = dateKey_(firstDay);
@@ -1445,7 +1368,6 @@ function getSheetDimensions_(sheet) {
   if (key) getRuntimeCache_().dimensions[key] = Object.assign({}, dimensions);
   return dimensions;
 }
-
 
 function monthKey_(value) {
   const d = normalizeToDateObject_(value);
@@ -1506,13 +1428,11 @@ function buildRowsByPMR_(sheet, headerRow, dataStartRow) {
   return result;
 }
 
-
 function safeSheetName_(value) {
   return normalizeText_(value)
     .replace(/[\\\/\?\*\[\]:]/g, "-")
     .substring(0, 99);
 }
-
 
 function compareValues_(left, right) {
   return normalizeText_(left) === normalizeText_(right);
@@ -1530,41 +1450,10 @@ function toNumber_(value, fallback) {
   return numberOrDefault_(value, fallback || 0);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function getGlobalBorderStyle_(globals) {
   const styleName = String((globals && globals.globalBorderStyle) || "SOLID").trim().toUpperCase();
   return SpreadsheetApp.BorderStyle[styleName] || SpreadsheetApp.BorderStyle.SOLID;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function markRuntimeStep_(timing, label, details) {
   if (!timing) return;
@@ -1608,42 +1497,6 @@ function logBestEffortWarning_(message, details) {
   logRuntimeWarning_("Best Effort", cleanMessage, details);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function trimSheetToColumnCount_(sheet, requiredCols, label) {
   if (!sheet || !requiredCols) return;
   try {
@@ -1658,43 +1511,6 @@ function trimSheetToColumnCount_(sheet, requiredCols, label) {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function formatSeconds_(seconds) {
   const value = Number(seconds || 0);
   if (value < 60) return value.toFixed(2) + " sec";
@@ -1704,27 +1520,14 @@ function formatSeconds_(seconds) {
   return minutes + " min " + remaining.toFixed(1) + " sec";
 }
 
-
-
-
-
-
-
 // ============================================================================
 // MENU FUNCTIONS
 // ============================================================================
-
-
 
 /**
  * Dynamic Configuration Value Edit Interceptor.
  * Paints row configuration parameters on value modification updates.
  */
-
-
-
-
-
 
 // ============================================================================
 // WAVE 4.1 CONSOLIDATED PRODUCTION PIPELINES
@@ -1796,15 +1599,11 @@ function updateBaseTemplateCanvas_(ss, sheetType, dashboard) {
   return template;
 }
 
-
-
 function rebuildTemplateCanvas_(dashboard, sheetDef, timing) {
   const sheet = createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing);
   if (sheet && sheet.getMaxColumns() > 0) sheet.showColumns(1, sheet.getMaxColumns());
   return sheet;
 }
-
-
 
 function safeFlattenAndProcessContacts_(workingData, preservePrimaryRows) {
   if (!workingData || !workingData.values || !workingData.headerMap) return 0;
@@ -1826,11 +1625,6 @@ function processRefinedDataUnified_(workingData, monthParts, sourceSheetName, up
   return workingData.values;
 }
 
-
-
-
-
-
 // Public compatibility aliases route every trigger to one canonical engine.
 function buildDemoPFromScratch() { return buildRefinedDataFromScratch(); }
 function updateDemoPMonthlySync() { return updateRefinedDataMonthlySync(); }
@@ -1840,13 +1634,6 @@ function buildMonthlyChangeReport() { return buildMonthlyChangeFromSources(); }
 function buildMasterListReport() { return buildMasterListFromRefinedData(); }
 function createMasterList() { return buildMasterListFromRefinedData(); }
 
-
-
-
-
-
-
-
 function hideTemplates_() {
   return hideReportTemplates();
 }
@@ -1854,16 +1641,6 @@ function hideTemplates_() {
 function showTemplates_() {
   return showReportTemplates();
 }
-
-
-
-
-
-
-
-
-
-
 
 function resolveSheetDefinitionForLayoutSnapshot_(dashboard, sheet) {
   if (!dashboard || !sheet) return null;
@@ -1963,16 +1740,6 @@ function getDefaultLayoutSnapshotBorderConfig_(globals) {
   };
 }
 
-
-
-
-
-
-
-
-
-
-
 function applyLayoutSnapshotBorder_(range, borderConfig) {
   const style = SpreadsheetApp.BorderStyle[borderConfig.style] || SpreadsheetApp.BorderStyle.SOLID;
   range.setBorder(
@@ -1987,43 +1754,9 @@ function applyLayoutSnapshotBorder_(range, borderConfig) {
   );
 }
 
-
-
 // ============================================================================
 // FORMAT DASHBOARD AND GLOBAL DEFAULTS FUNCTIONS
 // ============================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 let RFF_LAST_TEMPLATE_REFRESH_MODE_ = "";
 
@@ -2082,40 +1815,9 @@ const RFF_MONTHLY_CHANGE_SUBSECTIONS = [
   "Other Changes"
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ============================================================================
 // TEMPLATE FUNCTIONS AND VALIDATION FORMATTERS
 // ============================================================================
-
-
-
 
 function buildAllTemplatesAndValidate() {
   const buildResult = runFrameworkTimed_("Build All Templates And Validate", function(timing) {
@@ -2169,7 +1871,6 @@ function ensureGoldenMasterTemplate_(dashboard, timing) {
   return baseSheet;
 }
 
-
 function summarizeTemplateRefreshModes_(templateResults) {
   const counts = {};
   (templateResults || []).forEach(function(result) {
@@ -2180,8 +1881,6 @@ function summarizeTemplateRefreshModes_(templateResults) {
     return key + "=" + counts[key];
   }).join("; ");
 }
-
-
 
 function hideReportTemplates(dashboardOverride, timing) {
   if (timing) return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), true, timing);
@@ -2250,63 +1949,12 @@ function validateReportTemplatesCore_(dashboard, timing, options) {
   return results;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function shouldUseStagedTemplateBuild_(sheetDef, templateExisted) {
   if (!RFF_TEMPLATE_STAGED_BUILD_ENABLED) return false;
   if (templateExisted) return true;
   if (!RFF_TEMPLATE_STAGED_FIRST_BUILD_FOR_HIGH_RISK_ONLY) return true;
   return RFF_TEMPLATE_ALWAYS_STAGED_TEMPLATE_NAMES.indexOf(String(sheetDef && sheetDef.templateName || "").trim()) !== -1;
 }
-
-
-
-
-
-
 
 function getTemplateBuildSheetName_(templateName) {
   return String(templateName || "Template") + " __BUILDING";
@@ -2342,8 +1990,6 @@ function validateBuiltTemplateMinimumStructure_(sheet, dashboard, sheetDef, head
   }
 }
 
-
-
 function ensureSheetMinimumColumns_(sheet, colCount) {
   colCount = Math.max(Number(colCount || 1), 1);
   const currentCols = sheet.getMaxColumns();
@@ -2351,7 +1997,6 @@ function ensureSheetMinimumColumns_(sheet, colCount) {
     sheet.insertColumnsAfter(currentCols, colCount - currentCols);
   }
 }
-
 
 function clearTemplateForFullBuild_(sheet, sheetDef, timing, templateExisted) {
 
@@ -2779,8 +2424,6 @@ function isDateFormatText_(format) {
   return text.indexOf("d") !== -1 && text.indexOf("y") !== -1 && text.indexOf("m") !== -1;
 }
 
-
-
 function applyHiddenColumnSettingsInRuns_(sheet, hiddenFlags) {
   if (!sheet || !hiddenFlags || hiddenFlags.length === 0) return;
 
@@ -2863,9 +2506,6 @@ function applyNativeBandingToRange_(sheet, range, theme) {
   return banding;
 }
 
-
-
-
 function formatMonthlyChangeSubsectionBlock_(sheet, titleRow, label, colCount, dashboard, sheetDef, writeLabel) {
   if (!writeLabel) return;
   const headers = getHeadersForSheetType_(dashboard, SHEET_TYPE.MONTHLY_CHANGE).slice(0, colCount);
@@ -2889,12 +2529,6 @@ function writeTemplateMetadata_(sheet, dashboard, sheetDef, colCount) {
     logBestEffortWarning_("Template metadata skipped for " + sheet.getName() + ": " + err.message);
   }
 }
-
-
-
-
-
-
 
 function ensureTemplateFilter_(sheet, headerRow, rowCount, colCount, sheetDef, timing) {
   const expectedRows = Math.max(rowCount - headerRow + 1, 1);
@@ -3094,8 +2728,6 @@ function hideSheetIfNeeded_(sheet, timing, stepName) {
   }
 }
 
-
-
 function formatMonthlySheets() {
   const monthParts = promptForLockedYearReportMonth_("Format Monthly Sheets");
   if (!monthParts) return null;
@@ -3172,9 +2804,6 @@ function formatMonthlySheets() {
     return { completed: completed, skipped: skipped };
   });
 }
-
-
-
 
 function findMonthlyImportSheetForRoute_(ss, route, monthParts) {
   const candidates = getMonthlyImportSheetCandidatesForRoute_(ss, route);
@@ -3273,17 +2902,6 @@ function buildPromptedMonthContext_(monthParts) {
   };
 }
 
-
-
-
-
-
-
-
-
-
-
-
 function resolveMonthlyFormatterSourceSheet_(ss, activeSheet, monthParts, keywords, validator, workflowName, preferredOutputName) {
   const monthLabel = Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
   const candidates = [];
@@ -3321,9 +2939,6 @@ function resolveMonthlyFormatterSourceSheet_(ss, activeSheet, monthParts, keywor
   throw new Error("No valid same-month source sheet was found for " + workflowName + ". Select the imported source tab for " + monthLabel + " and rerun.");
 }
 
-
-
-
 function validateActiveBannerFormatterOutput() {
   return runFrameworkTimed_("Validate Active Banner Output", function(timing) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -3354,8 +2969,6 @@ function archiveActiveRawDataSheet() {
     return sheet;
   });
 }
-
-
 
 function parseReportMonthInput_(value) {
   const text = String(value || "").trim().toLowerCase();
@@ -3583,14 +3196,9 @@ function autoHidePreviousMonthSheetsAfterWorkflow_(monthParts) {
   });
 }
 
-
-
-
 function getLiveTemplateValidationStatus_() {
   return getLiveSheetStatus_(RFF_DASHBOARD_QUALITY_SHEET, "Template Validation");
 }
-
-
 
 function getLiveSheetStatus_(sheetName, label) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
@@ -3840,9 +3448,6 @@ function getSheetTypeForOrganization_(sheetName) {
   return "Other";
 }
 
-
-
-
 function collectWorkflowSyncVerificationRows_() {
   return [
     ["Sync Check Area", "Verification Item", "Status", "Quality Notes"],
@@ -3851,27 +3456,12 @@ function collectWorkflowSyncVerificationRows_() {
   ];
 }
 
-
-
-
-
-
-
 function functionSourceContainsAll_(fn, tokens) {
   const source = String(fn || "");
   return (tokens || []).every(function(token) {
     return source.indexOf(token) !== -1;
   });
 }
-
-
-
-
-
-
-
-
-
 
 function ensureStandardTitleRows_(sheet) {
   if (!sheet) return;
@@ -4032,8 +3622,6 @@ function writeBannerReportDates_(sheet, reportDate) {
   sheet.getRange("D2").setValue(endDate).setNumberFormat("m/d/yyyy");
 }
 
-
-
 function ensureSheetHasAtLeastRows_(sheet, requiredRows) {
   const currentRows = sheet.getMaxRows();
   if (currentRows < requiredRows) {
@@ -4091,7 +3679,6 @@ function archiveRawSourceAndDeleteLocal_(ss, rawSheet, archiveName, outputSheet,
   }
 }
 
-
 function archiveRawSourceSheet_(sourceSheet, archiveName, timing, timingLabel, preOpenedArchiveSs) {
   const safeName = archiveName || sourceSheet.getName();
   const prefix = String(timingLabel || "Raw archive detail");
@@ -4125,7 +3712,6 @@ function archiveRawSourceSheet_(sourceSheet, archiveName, timing, timingLabel, p
 
   return archived;
 }
-
 
 function hideMonthlyImportSheets() {
   const monthParts = promptForLockedYearReportMonth_("Hide Sub-Reports (Month & Prior)");
@@ -4213,7 +3799,6 @@ function archiveMonthlyActiveSheets() {
   });
 }
 
-
 function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const archiveId = typeof getDocumentPropertiesCached_ === "function" ?
@@ -4257,7 +3842,6 @@ function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
   );
   return result;
 }
-
 
 function findArchiveMonthlyCandidateSheetsUpToDate_(ss, keywords, cutoffDate) {
   const keywordList = (keywords || []).map(function(keyword) {
@@ -4367,7 +3951,6 @@ function deleteArchiveSheetIfExists_(archiveSs, sheetName) {
   deleteSheetSafely_(archiveSs, existing, "archive sheet replacement");
 }
 
-
 function formatMonthlyChangeSubheaderRow(sheet, rowNumber, label) {
   formatMonthlyChangeSubsectionBlock(sheet, rowNumber, label);
 }
@@ -4387,7 +3970,6 @@ function formatMonthlyChangeSubsectionBlock(sheet, titleRow, label) {
 function getMonthlyChangeSubsectionLabels() {
   return RFF_MONTHLY_CHANGE_SUBSECTIONS.slice();
 }
-
 
 function normalizeNumberFormatForCompare_(format) {
   let text = String(format || "")
@@ -4415,18 +3997,10 @@ function numberFormatsMatch_(actual, expected) {
   return a === e;
 }
 
-
-
 function writeTemplateValidationReport_(results, options) {
   saveDashboardQualityRowsForTemplateValidation_(results, options);
   deleteLegacyQualityReportSheet_(RFF_VALIDATION_SHEET);
 }
-
-
-
-
-
-
 
 function buildRawDataInPlaceFormattingContext_(sourceSheet, dashboard, sheetDef, monthParts) {
   const headers = getHeadersForSheetType_(dashboard, sheetDef.sheetType);
@@ -4549,14 +4123,11 @@ function rowLooksLikeParticipantHeader_(row) {
   });
 }
 
-
-
 const ML_LAST_RAW_DATA_DISENROLLED_BUILD_RESULT_ = {
   pmrsRemoved: 0,
   rowsRemoved: 0,
   rowsCopied: 0
 };
-
 
 function isTextSensitiveMappedHeader_(header) {
   const normalized = normalizeHeader_(header);
@@ -4655,10 +4226,6 @@ function applyOutputVisibilityPolicy_(sheet, dashboard, sheetType, timing) {
   }
 }
 
-
-
-
-
 function ensureOutputSheetHasFormattedRows_(sheet, requiredRows, width) {
   if (!sheet) return;
 
@@ -4682,10 +4249,6 @@ function ensureOutputSheetHasFormattedRows_(sheet, requiredRows, width) {
     }
   }
 }
-
-
-
-
 
 function buildSourceMapByCompositeKeyForDemoPBanner_(sheet, headerRow, dataStartRow, keyHeaders) {
   const lastRow = sheet.getLastRow();
@@ -4727,13 +4290,6 @@ function buildSourceMapByCompositeKeyForDemoPBanner_(sheet, headerRow, dataStart
 
   return map;
 }
-
-
-
-
-
-
-
 
 function getUntouchedSourceDataForTemplate_(sourceSheet, targetHeaders) {
   const lastRow = Math.max(sourceSheet.getLastRow(), 1);
@@ -4881,9 +4437,6 @@ function formatCarePlanDueReport() { return executeSingleFormatterWorkflow_("CD"
 function formatUnlockedCarePlanReport() { return executeSingleFormatterWorkflow_("UC"); }
 function formatRawData() { return executeSingleFormatterWorkflow_("RD"); }
 
-
-
-
 function buildRawArchiveNameForSheetType_(sheetType, monthParts) {
   const suffix = Utilities.formatDate(monthParts.firstDay, Session.getScriptTimeZone(), "MM.yy");
 
@@ -4928,8 +4481,6 @@ function collectMovedTitleInfoCells_(sheet, sheetType) {
 
   return parts.join(" ");
 }
-
-
 
 function getRawDataApprovedAddedColumns_() {
   return [
@@ -5075,11 +4626,6 @@ function isOngoingOutputSheetType_(sheetType) {
     value === RFF_SHEET_TYPES.DISENROLLED_EXCLUSION;
 }
 
-
-
-
-
-
 // ============================================================================
 // SYNC FUNCTIONS
 // ============================================================================
@@ -5215,8 +4761,6 @@ function syncRowsFromSourceMapData_(data, sourceMap, config, pmrFilter) {
   });
 }
 
-
-
 function normalizeSyncKey_(value, header) {
   if (value === null || value === undefined) return "";
   const text = String(value).trim().toLowerCase();
@@ -5301,7 +4845,6 @@ function buildSourceMapByCompositeKeyForPart5_(sheet, headerRow, dataStartRow, k
   return map;
 }
 
-
 function shouldProcessRowByPMR_(row, headerMap, pmrFilter) {
 
 
@@ -5333,7 +4876,6 @@ function normalizeSyncFieldPairs_(fields) {
     return [item, item];
   });
 }
-
 
 function syncMasterListFromUnlockedCarePlan_(masterSheet, monthParts, pmrFilter) {
   const sourceSheet = getCurrentUnlockedCarePlanSheet_(monthParts);
@@ -5435,9 +4977,6 @@ function syncRowsFromSourceMap_(masterSheet, sourceMap, config, pmrFilter) {
 
   if (data.range) data.range.setValues(values);
 }
-
-
-
 
 // ============================================================================
 // DEMO P FUNCTIONS
@@ -5547,9 +5086,6 @@ const DEMO_P_BANNER_SYNC_HEADERS = [
   "Palliative Care"
 ];
 
-
-
-
 function processDemoP() { return buildRefinedDataFromScratch(); }
 
 function buildRefinedDataFromScratch() {
@@ -5616,7 +5152,6 @@ function updateRefinedDataMonthlySync() {
     return demoSheet;
   });
 }
-
 
 function buildDemoPMonthlySyncRetainedRows_(data, changedPMRs, width) {
   const pmrIdx = getPMRIndex_(data.headerMap);
@@ -5901,7 +5436,6 @@ function isPMRHeaderValue_(value) {
   });
 }
 
-
 function removeActiveDemoPPMRsFromDisenrolledExclusion_(demoSheet) {
   if (!demoSheet) return 0;
 
@@ -5978,7 +5512,6 @@ function removeActiveDemoPPMRsFromDisenrolledExclusion_(demoSheet) {
   }
   return deletedCount;
 }
-
 
 function buildDemoPFreshRowsForPMRs_(rawSheet, demoHeaders, changedPMRs, monthParts, timing) {
   if (!rawSheet || !changedPMRs || changedPMRs.size === 0) return [];
@@ -6251,8 +5784,6 @@ function createActiveDemoPFromRawData_(rawSheet, targetName, monthParts, timing)
   };
 }
 
-
-
 function populateDemoPUpdateColumns_(data, monthParts, sourceSheetName, status) {
   if (!data || !data.headerMap || !data.values) return;
   const statusIdx = data.headerMap["Demo P Update Status"];
@@ -6466,7 +5997,6 @@ function applyDemoPDateFormattingByHeader_(sheet) {
   }
 }
 
-
 const BANNER_SYNC_FIELDS = [
   "Safety - 2 Person",
   "Wanderer",
@@ -6487,9 +6017,6 @@ const CARE_PLAN_DUE_SYNC_FIELDS = [
   "Next Care Plan Due",
   "CP Type"
 ];
-
-
-
 
 // ============================================================================
 // MONTHLY CHANGE FUNCTIONS
@@ -6616,8 +6143,6 @@ function buildMonthlyChangeReportForMonth_(monthParts, timing, options) {
 
   return reportSheet;
 }
-
-
 
 function isMonthlyChangeDisenrollmentEffectiveDate_(effectiveDate, monthParts) {
   return !!(monthParts && isSameDate_(effectiveDate, monthParts.firstDay));
@@ -6833,7 +6358,6 @@ function compareRawDataForMonthlyChange_(previousDemo, currentDemo, monthParts) 
     otherChangedColumnsByPMR: otherChangedColumnsByPMR
   };
 }
-
 
 function rowsWithDOBOnlyForSection_(items, headerMap) {
   const dobIdx = getDOBIndex_(headerMap);
@@ -7095,7 +6619,6 @@ function displayValueForReport_(value) {
   return value === null || value === undefined ? "" : String(value);
 }
 
-
 function buildMonthlyChangeReportSectionLayout_(reportSheet, sourceSheet, headers, monthParts) {
   const reportHeaders = getMonthlyChangeReportHeaders_(headers || []);
   const lastCol = Math.max(reportHeaders.length, 1);
@@ -7118,14 +6641,11 @@ function buildMonthlyChangeReportSectionLayout_(reportSheet, sourceSheet, header
   reportSheet.setFrozenColumns(2);
 }
 
-
 function padRowToWidth_(rowValues, width) {
   const output = (rowValues || []).slice(0, width);
   while (output.length < width) output.push("");
   return output;
 }
-
-
 
 function getMonthlyChangeSectionSpecs_(sectionData) {
   return [
@@ -7417,7 +6937,6 @@ function runMonthlyStart() {
   });
 }
 
-
 function runMonthlyUpdate() {
   const monthParts = promptForLockedYearReportMonth_("Create Monthly Update");
   if (!monthParts) return;
@@ -7465,7 +6984,6 @@ function runMonthlyUpdate() {
     return { reportSheet: reportSheet, demoSheet: demoSheet, disenrolledResult: disenrolledResult, masterSheet: masterSheet };
   });
 }
-
 
 function updateDemoPMonthlySyncForMonth_(monthParts, timing, options) {
   if (!monthParts) return null;
@@ -7553,9 +7071,6 @@ function updateDemoPMonthlySyncForMonth_(monthParts, timing, options) {
   return demoSheet;
 }
 
-
-
-
 function createDisenrolledListForMonth_(monthParts, timing, options) {
   options = options || {};
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -7599,10 +7114,6 @@ function createDisenrolledListForMonth_(monthParts, timing, options) {
   }
   return result;
 }
-
-
-
-
 
 // ============================================================================
 // MASTER LIST FUNCTIONS
@@ -7793,9 +7304,6 @@ function buildPrimaryDemoPRowsInMemory_(demoSheet, masterHeaders, masterHeaderMa
   return output;
 }
 
-
-
-
 function createOrRefreshMasterListTemplate_(ss) {
 
 
@@ -7835,8 +7343,6 @@ function getMonthPartsFromTitleRows_(sheet) {
   };
 }
 
-
-
 function isUnformattedImportSheetNameForIndex_(sheetName) {
   const name = String(sheetName || "").trim();
   if (!name) return false;
@@ -7849,7 +7355,6 @@ function isUnformattedImportSheetNameForIndex_(sheetName) {
     name.indexOf("Source - Unlock CP") === 0 ||
     name.indexOf("Source - Unlocked") === 0;
 }
-
 
 function getIndexRestoreWebAppUrl_() {
   try {
@@ -8238,7 +7743,6 @@ function refreshIndexAfterSheetWorkflow_(workflowName, options) {
   }
 }
 
-
 /**
  * Restores a historic sheet tab from the external Cold-Storage Archive
  * back into the active Master List workbook based on row selections or a routed target name.
@@ -8484,8 +7988,6 @@ function applySheetSortRecords_(ss, records, startPosition, context) {
   return moves;
 }
 
-
-
 function captureHiddenSheetIds_(ss) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
   const hiddenIds = {};
@@ -8561,13 +8063,6 @@ function forceBaseTemplateHidden_() {
     logBestEffortWarning_("RFF_BASE_TEMPLATE hide enforcement skipped: " + err.message);
   }
 }
-
-
-
-
-
-
-
 
 function assignSortOrderAndHideExtraRows() {
   const sheet = SpreadsheetApp.getActiveSheet();
@@ -8802,7 +8297,6 @@ function populateParticipantNameData_(data, pmrFilter) {
   });
 }
 
-
 function populateDemoPNameData_(data, pmrFilter) {
   if (!data || !data.values || !data.values.length || !data.headerMap) return;
   const headerMap = data.headerMap;
@@ -8939,7 +8433,6 @@ function combineNotesSummaryData_(data, pmrFilter) {
   });
 }
 
-
 function buildMappedMasterRowFromDemoRow_(demoRow, demoHeaders, demoHeaderMap, masterHeaders, masterHeaderMap, monthParts, sourceSheetName, statusText) {
   const output = new Array(masterHeaders.length).fill("");
   demoHeaders.forEach((header, sourceIdx) => {
@@ -8971,17 +8464,6 @@ function showTemplates() {
 function enforceGlobalSheetSortOrder(monthParts) {
   return enforceGlobalSheetSortOrder_(monthParts || getMonthDateParts_(new Date()));
 }
-
-
-
-
-
-
-
-
-
-
-
 
 function getPrimaryMergeRowItem_(rows, headerMap) {
   const primaryIdx = headerMap ? headerMap["Primary PMR Row"] : undefined;
@@ -9222,9 +8704,6 @@ function getMergeRowValue_(row, headerMap, possibleHeaders) {
   return "";
 }
 
-
-
-
 // ============================================================================
 // DISENROLLMENT FUNCTIONS
 // ============================================================================
@@ -9243,7 +8722,6 @@ function buildDisenrolledExclusionFromRefinedData() {
   });
 }
 
-
 function buildDisenrolledPMRSetFromDemoPValues_(demoValues, demoHeaderMap) {
   const result = new Set();
   const pmrIdx = getPMRIndex_(demoHeaderMap);
@@ -9261,7 +8739,6 @@ function buildDisenrolledPMRSetFromDemoPValues_(demoValues, demoHeaderMap) {
   });
   return result;
 }
-
 
 function moveDisenrolledPMRsFromDemoPToExclusion_(demoSheet, monthParts, timing) {
   const result = { pmrsRemoved: 0, rowsRemoved: 0, rowsCopied: 0 };
@@ -9511,7 +8988,6 @@ function appendDisenrolledDeltasToExclusionSheet_(exclusionSheet, sourceHeaders,
   return appendPayload.length;
 }
 
-
 function writeDisenrolledAppendPayloadValues_(sheet, startRow, payload, width) {
   const rowCount = payload ? payload.length : 0;
   const result = {
@@ -9615,7 +9091,6 @@ function loadDisenrolledExclusionPMRsForPart3_() {
   return pmrs;
 }
 
-
 const CHANGE_SECTION_ENROLLMENTS = "Enrollments";
 
 const CHANGE_SECTION_DISENROLLMENTS = "Disenrollments";
@@ -9710,7 +9185,6 @@ const RAW_DEMO_P_DISENROLLMENT_FIELDS = [
   "Date of Death"
 ];
 
-
 function getCurrentRawDataSheet_(monthParts) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   return getMonthlySheetByPrefixAndDate_(ss, "Raw Data", monthParts.firstDay, monthParts.lastDay);
@@ -9728,7 +9202,6 @@ function getCurrentDemoPSheet_(monthParts) {
 
   return getMonthlySheetByPrefixAndDate_(ss, DEMO_P_PREFIX, monthParts.firstDay, monthParts.lastDay);
 }
-
 
 function getMonthlyChangeReportHeaders_(sourceHeaders) {
   const headers = sourceHeaders.slice();
@@ -9838,529 +9311,6 @@ function formatMonthlyChangeReportSectionSheet_(reportSheet, sourceHeaders) {
   reportSheet.setFrozenColumns(2);
 }
 
-
-// ============================================================================
-// DASHBOARD QUALITY AND FRAMEWORK DASHBOARD FUNCTIONS
-// ============================================================================
-
-
-
-
-
-
-
-
-
-
-
-// ============================================================================
-// MODULAR DASHBOARD QUALITY RUNNERS
-// ============================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function countSheetRowsBelowHeader_(sheet) {
-  if (!sheet) return 0;
-  return Math.max(sheet.getLastRow() - HEADER_ROW, 0);
-}
-
-function getLatestSheetByPrefix_(prefix) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const matches = ss.getSheets().filter(function(sheet) {
-    return sheet.getName().indexOf(prefix) === 0;
-  });
-  if (!matches.length) return null;
-  return matches.sort(function(a, b) {
-    return getGlobalSheetSortRankByName_(a.getName()) - getGlobalSheetSortRankByName_(b.getName()) || b.getName().localeCompare(a.getName());
-  })[0];
-}
-
-function countBlankRatioForHeaders_(sheet, headersToCheck) {
-  const emptyResult = { checked: 0, blanks: 0, ratio: 0, matchedHeaders: [], dataRows: 0 };
-  if (!sheet) return emptyResult;
-  const headers = getHeaders_(sheet, HEADER_ROW);
-  const headerMap = buildHeaderIndexMap_(headers);
-  const matchedHeaders = [];
-  const indexes = (headersToCheck || []).map(function(header) {
-    const idx = headerMap[header];
-    if (idx !== undefined) matchedHeaders.push(header);
-    return idx;
-  }).filter(function(idx) { return idx !== undefined; });
-  const dataRows = Math.max(sheet.getLastRow() - DATA_START_ROW + 1, 0);
-  if (!indexes.length || dataRows <= 0) return { checked: 0, blanks: 0, ratio: 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
-  const values = sheet.getRange(DATA_START_ROW, 1, dataRows, headers.length).getValues();
-  let checked = 0;
-  let blanks = 0;
-  values.forEach(function(row) {
-    indexes.forEach(function(idx) {
-      checked++;
-      if (normalizeCompareValue_(row[idx]) === "") blanks++;
-    });
-  });
-  return { checked: checked, blanks: blanks, ratio: checked ? blanks / checked : 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
-}
-
-
-
-
-
-
-
-
-
-
-
-function runOperationalDataPipelineValidations_(timing, qualitySheet) {
-  runDashboardQualitySectionIfDue_(RFF_PERFORMANCE_SUMMARY_KEY, "Section J Performance Summary", runDashboardQualityPerformanceSummary_, timing);
-  runDashboardQualitySectionIfDue_(RFF_MASTER_LIST_HEALTH_KEY, "Section K Raw Data Validation", runDashboardQualityRawDataValidation_, timing);
-  runDashboardQualitySectionIfDue_(RFF_CP_SYNC_DIAGNOSTICS_KEY, "Section L Care Plan Sync Validation", runDashboardQualityCarePlanSyncDiagnostics_, timing);
-  runDashboardQualitySectionIfDue_(RFF_WORKFLOW_SYNC_VERIFICATION_KEY, "Section M Workflow & Synchronization Verification", runDashboardQualityWorkflowSyncVerification_, timing);
-  runDashboardQualitySectionIfDue_(RFF_DEMO_P_PROCESSING_VALIDATION_KEY, "Section N Demo P Quality Validation", runDashboardQualityDemoPValidation_, timing);
-  runDashboardQualitySectionIfDue_(RFF_DISENROLLED_EXCLUSION_VALIDATION_KEY, "Section O Disenrolled Exclusion Validation", runDashboardQualityDisenrolledExclusionValidation_, timing);
-  runDashboardQualitySectionIfDue_(RFF_MONTHLY_CHANGE_VALIDATION_KEY, "Section P Monthly Change Validation", runDashboardQualityMonthlyChangeValidation_, timing);
-  if (qualitySheet && timing) markFrameworkStep_(timing, "Dashboard Quality operational data validations staged");
-}
-
-
-
-
-
-
-
-
-
-
-
-
-function repairAllTemplateDateFormats() {
-  return runFrameworkTimed_("Repair / Re-Enforce Date Formats", function(timing) {
-    const dashboard = loadDashboardConfig_();
-    markFrameworkStep_(timing, "Dashboard loaded");
-
-    dashboard.sheetDefinitions.forEach(function(sheetDef) {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetDef.templateName);
-      if (!sheet) {
-        markFrameworkStep_(timing, "Skipped missing template: " + sheetDef.templateName);
-        return;
-      }
-      const rowCount = Math.max(sheet.getMaxRows(), RFF_TEMPLATE_BASELINE_ROWS);
-      applyGovernedTextAndNumberFormats_(sheet, dashboard, getHeadersForSheetType_(dashboard, sheetDef.sheetType), DATA_START_ROW, Math.max(rowCount - DATA_START_ROW + 1, 1));
-      markFrameworkStep_(timing, "Date formats re-enforced: " + sheetDef.templateName);
-    });
-
-  });
-}
-
-
-const RFF_MASTER_LIST_HEALTH_KEY = "Master List Validation";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-let RFF_DASHBOARD_QUALITY_DEFER_WRITES_ = false;
-let ML_DASHBOARD_QUALITY_STAGED_BUFFERS_ = {};
-
-function normalizeSectionRowForWidth_(row, width) {
-  const out = (row || []).slice(0, width);
-  while (out.length < width) out.push("");
-  return out;
-}
-
-function rowHasAnyValue_(row) {
-  return (row || []).some(function(value) {
-    return String(value === null || value === undefined ? "" : value).trim() !== "";
-  });
-}
-
-function trimTrailingBlankRows_(rows) {
-  const out = (rows || []).slice();
-  while (out.length && !rowHasAnyValue_(out[out.length - 1])) out.pop();
-  return out;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function forceSheetRowCount_(sheet, desiredRows) {
-  if (!sheet || !desiredRows) return;
-  desiredRows = Math.max(1, Number(desiredRows) || 1);
-  const current = sheet.getMaxRows();
-  if (current > desiredRows) {
-    sheet.deleteRows(desiredRows + 1, current - desiredRows);
-  } else if (current < desiredRows) {
-    sheet.insertRowsAfter(current, desiredRows - current);
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function getStoredSectionStatusAndNotes_(sectionKey, statusCol) {
-  const rows = getDashboardQualitySectionRows_(sectionKey);
-  if (!rows || !rows.length) return { status: "NOT RUN", notes: "Section has not been run" };
-  const failures = [];
-  const warnings = [];
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i] || [];
-    const statuses = row.map(function(value) { return String(value || "").trim().toUpperCase(); });
-    if (statuses.indexOf("FAIL") !== -1 || statuses.indexOf("CRITICAL") !== -1) failures.push(row);
-    if (statuses.indexOf("WARNING") !== -1) warnings.push(row);
-  }
-  const issueRows = failures.length ? failures : warnings;
-  return {
-    status: failures.length ? "FAIL" : (warnings.length ? "WARNING" : "PASS"),
-    notes: issueRows.length ? issueRows.slice(0, 5).map(function(row) {
-      return row.filter(function(v) { return String(v || "").trim() !== ""; }).join(" | ");
-    }).join("; ") : "OK"
-  };
-}
-
-
-
-
-
-
-
-
-function appendRequiredFunctionChecks_(results, area, names) {
-  names.forEach(function(name) {
-    const exists = existsFunctionByName_(name);
-    results.push([area, name, exists ? "PASS" : "FAIL", exists ? "OK" : "Missing function"]);
-  });
-}
-
-function existsFunctionByName_(name) {
-  try {
-    return eval("typeof " + name) === "function";
-  } catch (err) {
-    return false;
-  }
-}
-
-
-
-function getRequiredHelperFunctionNames_() {
-  return [
-    "toBool_",
-    "truthy_",
-    "toNumber_",
-    "normalizeHeader_",
-    "normalizeText_",
-    "normalizeKey_",
-    "toWrapStrategy_",
-    "compareValues_",
-    "normalizeHex_",
-    "safeSheetName_"
-  ];
-}
-
-
-function getRequiredMenuFunctionNames_() {
-  return [
-    "setupReportFormattingDashboard",
-    "buildAllTemplatesAndValidate",
-    "runDashboardQualityQuick",
-    "runDashboardQualityStartUp",
-    "runDashboardQualityValidateTemplates",
-    "runDashboardQualityWorkflow",
-    "runFrameworkSmokeValidation",
-    "runFullQualityCheck",
-    "runFormatDashboardUpdates",
-    "createIndexSheet",
-    "restoreSheetFromActiveIndexRow",
-    "configureIndexRestoreWebAppUrl",
-    "formatMonthlySheets",
-    "runMonthlyStart",
-    "buildDemoPFromScratch",
-    "updateDemoPMonthlySync",
-    "createDisenrolledList",
-    "createMasterList",
-    "buildMonthlyChangeReport",
-    "hideReportTemplates",
-    "showReportTemplates",
-    "hideSystemSheetsNow",
-    "showSystemSheetsNow",
-    "formatBannerReport",
-    "formatCarePlanDueReport",
-    "formatUnlockedCarePlanReport",
-    "formatRawData",
-    "validateActiveBannerFormatterOutput",
-    "archiveActiveRawDataSheet",
-    "archiveMonthlyImportSheets",
-    "archiveMonthlyActiveSheets",
-    "enforceGlobalSheetSortOrder",
-    "hideTemplates",
-    "showTemplates",
-    "hideSystemSheets_",
-    "showSystemSheets_",
-    "clearDiagnosticsAndTimingLogs",
-    "toggleFrameworkTiming",
-    "formatDashboard",
-    "rebuildFormatDashboardDefaults",
-    "saveActiveLayoutToDashboardSettings",
-    "setupSystemSheets"
-  ];
-}
-
-
-
-
-
-function getRequiredTemplateFunctionNames_() {
-  return [
-    "createOrRefreshTemplateFromDashboard_",
-    "buildAllTemplatesAndValidate",
-    "hideReportTemplates",
-    "showReportTemplates"
-  ];
-}
-
-function getRequiredValidationFunctionNames_() {
-  return [
-    "validateTemplateFromDashboard_",
-    "validateReportTemplates",
-    "writeTemplateValidationReport_"
-  ];
-}
-
-
-
-
-function runWorkflowSyncVerification() {
-  return runDashboardQualityWorkflowSyncVerification_();
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ============================================================================
-// FRAMEWORK AND TIMING FUNCTIONS
-// ============================================================================
-
-
-
 function runWithWorkflowBusyFlag_(processName, callback) {
   const lock = LockService.getDocumentLock();
   if (!lock.tryLock(15000)) {
@@ -10404,16 +9354,6 @@ function runDeferredIndexRefreshIfNeeded_() {
   updateIndexSheet();
   return true;
 }
-
-
-
-
-
-
-
-
-
-
 
 function rebuildProductionMonthlyChangeTemplate() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -10476,7 +9416,6 @@ function rebuildProductionMonthlyChangeTemplate() {
   notify_("SUCCESS: Monthly Change Template sanitized and text-shielded.");
 }
 
-
 // ============================================================================
 // === SYSTEM SHEETS, DIAGNOSTICS & FORMAT DASHBOARD ==========================
 // ============================================================================
@@ -10484,7 +9423,7 @@ function rebuildProductionMonthlyChangeTemplate() {
 // Framework Timing Report, Dashboard Quality Report, themes, menus, and
 // diagnostics. Function declarations remain callable throughout Apps Script.
 //
-// Inventory: 45 constants and 257 functions.
+// Inventory: 46 constants, 2 mutable state values, and 274 functions.
 
 // --- QUARANTINED CONSTANTS ---------------------------------------------------
 
@@ -10589,6 +9528,8 @@ const RFF_SECTION_COLUMNS = "SECTION G - COLUMN DEFINITIONS";
 
 const RFF_SECTION_HEADERS = "SECTION H - SHEET HEADERS";
 
+const RFF_MASTER_LIST_HEALTH_KEY = "Master List Validation";
+
 const RFF_CP_SYNC_DIAGNOSTICS_KEY = "Care Plan Sync Validation";
 
 const RFF_WORKFLOW_SYNC_VERIFICATION_KEY = "Workflow & Synchronization Verification";
@@ -10653,6 +9594,11 @@ const RFF_SYSTEM_SHEET_BORDER_COLOR = "#cccccc";
 const RFF_DASHBOARD_QUALITY_MIN_SECTION_ROWS = 5;
 
 const RFF_QA_SECTION_PROP_PREFIX = "MLF_QA_SECTION_";
+
+// --- QUARANTINED MUTABLE STATE ---------------------------------------------
+
+let RFF_DASHBOARD_QUALITY_DEFER_WRITES_ = false;
+let ML_DASHBOARD_QUALITY_STAGED_BUFFERS_ = {};
 
 // --- QUARANTINED FUNCTIONS ---------------------------------------------------
 
@@ -16054,4 +15000,223 @@ function writeFrameworkTimingReportBestEffort_(timing) {
 
 function writeTimingReport_(timing) {
   writeFrameworkTimingReport_(timing);
+}
+// --- QUALITY DASHBOARD TESTING & TIMING SUPPORT -----------------------------
+
+function countSheetRowsBelowHeader_(sheet) {
+  if (!sheet) return 0;
+  return Math.max(sheet.getLastRow() - HEADER_ROW, 0);
+}
+
+function getLatestSheetByPrefix_(prefix) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const matches = ss.getSheets().filter(function(sheet) {
+    return sheet.getName().indexOf(prefix) === 0;
+  });
+  if (!matches.length) return null;
+  return matches.sort(function(a, b) {
+    return getGlobalSheetSortRankByName_(a.getName()) - getGlobalSheetSortRankByName_(b.getName()) || b.getName().localeCompare(a.getName());
+  })[0];
+}
+
+function countBlankRatioForHeaders_(sheet, headersToCheck) {
+  const emptyResult = { checked: 0, blanks: 0, ratio: 0, matchedHeaders: [], dataRows: 0 };
+  if (!sheet) return emptyResult;
+  const headers = getHeaders_(sheet, HEADER_ROW);
+  const headerMap = buildHeaderIndexMap_(headers);
+  const matchedHeaders = [];
+  const indexes = (headersToCheck || []).map(function(header) {
+    const idx = headerMap[header];
+    if (idx !== undefined) matchedHeaders.push(header);
+    return idx;
+  }).filter(function(idx) { return idx !== undefined; });
+  const dataRows = Math.max(sheet.getLastRow() - DATA_START_ROW + 1, 0);
+  if (!indexes.length || dataRows <= 0) return { checked: 0, blanks: 0, ratio: 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
+  const values = sheet.getRange(DATA_START_ROW, 1, dataRows, headers.length).getValues();
+  let checked = 0;
+  let blanks = 0;
+  values.forEach(function(row) {
+    indexes.forEach(function(idx) {
+      checked++;
+      if (normalizeCompareValue_(row[idx]) === "") blanks++;
+    });
+  });
+  return { checked: checked, blanks: blanks, ratio: checked ? blanks / checked : 0, matchedHeaders: matchedHeaders, dataRows: dataRows };
+}
+
+function runOperationalDataPipelineValidations_(timing, qualitySheet) {
+  runDashboardQualitySectionIfDue_(RFF_PERFORMANCE_SUMMARY_KEY, "Section J Performance Summary", runDashboardQualityPerformanceSummary_, timing);
+  runDashboardQualitySectionIfDue_(RFF_MASTER_LIST_HEALTH_KEY, "Section K Raw Data Validation", runDashboardQualityRawDataValidation_, timing);
+  runDashboardQualitySectionIfDue_(RFF_CP_SYNC_DIAGNOSTICS_KEY, "Section L Care Plan Sync Validation", runDashboardQualityCarePlanSyncDiagnostics_, timing);
+  runDashboardQualitySectionIfDue_(RFF_WORKFLOW_SYNC_VERIFICATION_KEY, "Section M Workflow & Synchronization Verification", runDashboardQualityWorkflowSyncVerification_, timing);
+  runDashboardQualitySectionIfDue_(RFF_DEMO_P_PROCESSING_VALIDATION_KEY, "Section N Demo P Quality Validation", runDashboardQualityDemoPValidation_, timing);
+  runDashboardQualitySectionIfDue_(RFF_DISENROLLED_EXCLUSION_VALIDATION_KEY, "Section O Disenrolled Exclusion Validation", runDashboardQualityDisenrolledExclusionValidation_, timing);
+  runDashboardQualitySectionIfDue_(RFF_MONTHLY_CHANGE_VALIDATION_KEY, "Section P Monthly Change Validation", runDashboardQualityMonthlyChangeValidation_, timing);
+  if (qualitySheet && timing) markFrameworkStep_(timing, "Dashboard Quality operational data validations staged");
+}
+
+function repairAllTemplateDateFormats() {
+  return runFrameworkTimed_("Repair / Re-Enforce Date Formats", function(timing) {
+    const dashboard = loadDashboardConfig_();
+    markFrameworkStep_(timing, "Dashboard loaded");
+
+    dashboard.sheetDefinitions.forEach(function(sheetDef) {
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetDef.templateName);
+      if (!sheet) {
+        markFrameworkStep_(timing, "Skipped missing template: " + sheetDef.templateName);
+        return;
+      }
+      const rowCount = Math.max(sheet.getMaxRows(), RFF_TEMPLATE_BASELINE_ROWS);
+      applyGovernedTextAndNumberFormats_(sheet, dashboard, getHeadersForSheetType_(dashboard, sheetDef.sheetType), DATA_START_ROW, Math.max(rowCount - DATA_START_ROW + 1, 1));
+      markFrameworkStep_(timing, "Date formats re-enforced: " + sheetDef.templateName);
+    });
+
+  });
+}
+
+function normalizeSectionRowForWidth_(row, width) {
+  const out = (row || []).slice(0, width);
+  while (out.length < width) out.push("");
+  return out;
+}
+
+function rowHasAnyValue_(row) {
+  return (row || []).some(function(value) {
+    return String(value === null || value === undefined ? "" : value).trim() !== "";
+  });
+}
+
+function trimTrailingBlankRows_(rows) {
+  const out = (rows || []).slice();
+  while (out.length && !rowHasAnyValue_(out[out.length - 1])) out.pop();
+  return out;
+}
+
+function forceSheetRowCount_(sheet, desiredRows) {
+  if (!sheet || !desiredRows) return;
+  desiredRows = Math.max(1, Number(desiredRows) || 1);
+  const current = sheet.getMaxRows();
+  if (current > desiredRows) {
+    sheet.deleteRows(desiredRows + 1, current - desiredRows);
+  } else if (current < desiredRows) {
+    sheet.insertRowsAfter(current, desiredRows - current);
+  }
+}
+
+function getStoredSectionStatusAndNotes_(sectionKey, statusCol) {
+  const rows = getDashboardQualitySectionRows_(sectionKey);
+  if (!rows || !rows.length) return { status: "NOT RUN", notes: "Section has not been run" };
+  const failures = [];
+  const warnings = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const statuses = row.map(function(value) { return String(value || "").trim().toUpperCase(); });
+    if (statuses.indexOf("FAIL") !== -1 || statuses.indexOf("CRITICAL") !== -1) failures.push(row);
+    if (statuses.indexOf("WARNING") !== -1) warnings.push(row);
+  }
+  const issueRows = failures.length ? failures : warnings;
+  return {
+    status: failures.length ? "FAIL" : (warnings.length ? "WARNING" : "PASS"),
+    notes: issueRows.length ? issueRows.slice(0, 5).map(function(row) {
+      return row.filter(function(v) { return String(v || "").trim() !== ""; }).join(" | ");
+    }).join("; ") : "OK"
+  };
+}
+
+function appendRequiredFunctionChecks_(results, area, names) {
+  names.forEach(function(name) {
+    const exists = existsFunctionByName_(name);
+    results.push([area, name, exists ? "PASS" : "FAIL", exists ? "OK" : "Missing function"]);
+  });
+}
+
+function existsFunctionByName_(name) {
+  try {
+    return eval("typeof " + name) === "function";
+  } catch (err) {
+    return false;
+  }
+}
+
+function getRequiredHelperFunctionNames_() {
+  return [
+    "toBool_",
+    "truthy_",
+    "toNumber_",
+    "normalizeHeader_",
+    "normalizeText_",
+    "normalizeKey_",
+    "toWrapStrategy_",
+    "compareValues_",
+    "normalizeHex_",
+    "safeSheetName_"
+  ];
+}
+
+function getRequiredMenuFunctionNames_() {
+  return [
+    "setupReportFormattingDashboard",
+    "buildAllTemplatesAndValidate",
+    "runDashboardQualityQuick",
+    "runDashboardQualityStartUp",
+    "runDashboardQualityValidateTemplates",
+    "runDashboardQualityWorkflow",
+    "runFrameworkSmokeValidation",
+    "runFullQualityCheck",
+    "runFormatDashboardUpdates",
+    "createIndexSheet",
+    "restoreSheetFromActiveIndexRow",
+    "configureIndexRestoreWebAppUrl",
+    "formatMonthlySheets",
+    "runMonthlyStart",
+    "buildDemoPFromScratch",
+    "updateDemoPMonthlySync",
+    "createDisenrolledList",
+    "createMasterList",
+    "buildMonthlyChangeReport",
+    "hideReportTemplates",
+    "showReportTemplates",
+    "hideSystemSheetsNow",
+    "showSystemSheetsNow",
+    "formatBannerReport",
+    "formatCarePlanDueReport",
+    "formatUnlockedCarePlanReport",
+    "formatRawData",
+    "validateActiveBannerFormatterOutput",
+    "archiveActiveRawDataSheet",
+    "archiveMonthlyImportSheets",
+    "archiveMonthlyActiveSheets",
+    "enforceGlobalSheetSortOrder",
+    "hideTemplates",
+    "showTemplates",
+    "hideSystemSheets_",
+    "showSystemSheets_",
+    "clearDiagnosticsAndTimingLogs",
+    "toggleFrameworkTiming",
+    "formatDashboard",
+    "rebuildFormatDashboardDefaults",
+    "saveActiveLayoutToDashboardSettings",
+    "setupSystemSheets"
+  ];
+}
+
+function getRequiredTemplateFunctionNames_() {
+  return [
+    "createOrRefreshTemplateFromDashboard_",
+    "buildAllTemplatesAndValidate",
+    "hideReportTemplates",
+    "showReportTemplates"
+  ];
+}
+
+function getRequiredValidationFunctionNames_() {
+  return [
+    "validateTemplateFromDashboard_",
+    "validateReportTemplates",
+    "writeTemplateValidationReport_"
+  ];
+}
+
+function runWorkflowSyncVerification() {
+  return runDashboardQualityWorkflowSyncVerification_();
 }
