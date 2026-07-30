@@ -1,0 +1,6 @@
+csv_file,represents_sheet,notes
+Create_Refresh_All_Templates.csv,Create / Refresh All Templates,Detailed rows for one requested process; dates/months removed in normalized process and step columns.
+Format_Monthly_Sheets.csv,Format Monthly Sheets,Detailed rows for one requested process; dates/months removed in normalized process and step columns.
+Create_Monthly_Start.csv,Create Monthly Start,Detailed rows for one requested process; dates/months removed in normalized process and step columns.
+Create_Monthly_Update.csv,Create Monthly Update,Detailed rows for one requested process; dates/months removed in normalized process and step columns.
+Process_Run_Totals.csv,Process Run Totals,One row per process run; repeated runs in the same log have separate run_number_in_same_log values.
