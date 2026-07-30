@@ -1925,6 +1925,110 @@ function getThemeColorsFromBase_(hex, globals) {
   return palette;
 }
 
+function hslToHex_(h, s, l) {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const component = function(n) {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
+  };
+  return ("#" + component(0) + component(8) + component(4)).toUpperCase();
+}
+
+function hexToHsl_(hex) {
+  let value = String(hex || "").replace("#", "").trim();
+  if (value.length === 3) value = value.split("").map(function(character) { return character + character; }).join("");
+  if (value.length !== 6) return { h: 200, s: 50, l: 50 };
+  const r = parseInt(value.substring(0, 2), 16) / 255;
+  const g = parseInt(value.substring(2, 4), 16) / 255;
+  const b = parseInt(value.substring(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let saturation = 0;
+  const lightness = (max + min) / 2;
+  if (max !== min) {
+    const delta = max - min;
+    saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === r) h = (g - b) / delta + (g < b ? 6 : 0);
+    if (max === g) h = (b - r) / delta + 2;
+    if (max === b) h = (r - g) / delta + 4;
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(saturation * 100), l: Math.round(lightness * 100) };
+}
+
+function calculateThemeLevels_(baseHex, hslPercents) {
+  const hsl = hexToHsl_(baseHex);
+  return {
+    base: normalizeHex_(baseHex),
+    level1: hslToHex_(hsl.h, hsl.s, hslPercents.l1),
+    level2: hslToHex_(hsl.h, hsl.s, hslPercents.l2),
+    level3: hslToHex_(hsl.h, hsl.s, hslPercents.l3),
+    level4: hslToHex_(hsl.h, hsl.s, hslPercents.l4),
+    level5: hslToHex_(hsl.h, hsl.s, hslPercents.l5)
+  };
+}
+
+function getDashboardHslPercents_() {
+  const defaults = { l1: 60, l2: 75, l3: 85, l4: 90, l5: 97 };
+  try {
+    const dashboard = loadDashboardConfig_();
+    const globals = dashboard.globals || {};
+    return {
+      l1: numberOrDefault_(globals.hslLevel1, defaults.l1),
+      l2: numberOrDefault_(globals.hslLevel2, defaults.l2),
+      l3: numberOrDefault_(globals.hslLevel3, defaults.l3),
+      l4: numberOrDefault_(globals.hslLevel4, defaults.l4),
+      l5: numberOrDefault_(globals.hslLevel5, defaults.l5)
+    };
+  } catch (err) {
+    return defaults;
+  }
+}
+
+function getSectionEThemeForSheet_(targetSheetName) {
+  const surfaces = getSystemSurfaceConfigMap_();
+  const surface = surfaces[targetSheetName] || surfaces[String(targetSheetName || "").replace(/^TEST /, "")];
+  const baseHex = surface && surface.titleFillColor ? surface.titleFillColor : RFF_SYSTEM_SHEET_TITLE_COLOR;
+  return calculateThemeLevels_(baseHex, getDashboardHslPercents_());
+}
+
+function recalculateDashboardHexCodes_(dashboardSheet) {
+  if (!dashboardSheet) return;
+  const values = dashboardSheet.getDataRange().getValues();
+  const hslPercents = { l1: 60, l2: 75, l3: 85, l4: 90, l5: 97 };
+  values.forEach(function(row) {
+    const setting = String(row[0] || "").trim();
+    if (setting === "HSL Level 1 Lightness %") hslPercents.l1 = Number(row[1]) || 60;
+    if (setting === "HSL Level 2 Lightness %") hslPercents.l2 = Number(row[1]) || 75;
+    if (setting === "HSL Level 3 Lightness %") hslPercents.l3 = Number(row[1]) || 85;
+    if (setting === "HSL Level 4 Lightness %") hslPercents.l4 = Number(row[1]) || 90;
+    if (setting === "HSL Level 5 Lightness %") hslPercents.l5 = Number(row[1]) || 97;
+  });
+
+  let sectionC = -1;
+  values.forEach(function(row, index) {
+    if (String(row[0] || "").trim() === RFF_SECTION_SHEETS) sectionC = index;
+  });
+  if (sectionC < 0) return;
+
+  for (let row = sectionC + 2; row < values.length; row++) {
+    const sheetType = String(values[row][0] || "").trim();
+    if (sheetType.indexOf("SECTION ") === 0) break;
+    if (!sheetType) continue;
+    const baseHex = String(values[row][4] || "").trim();
+    if (!baseHex) continue;
+    const theme = calculateThemeLevels_(baseHex, hslPercents);
+    if (dashboardSheet.getMaxColumns() >= 10) {
+      dashboardSheet.getRange(row + 1, 6, 1, 5).setNotes([[theme.level1, theme.level2, theme.level3, theme.level4, theme.level5]]);
+    }
+  }
+  clearDashboardConfigCache_();
+}
+
+
 function getGlobalBorderStyle_(globals) {
   const styleName = String((globals && globals.globalBorderStyle) || "SOLID").trim().toUpperCase();
   return SpreadsheetApp.BorderStyle[styleName] || SpreadsheetApp.BorderStyle.SOLID;
@@ -2302,7 +2406,7 @@ function rebuildFrameworkTimingReportShellCompact_(sheet) {
     logBestEffortWarning_("Framework Timing compact shell formatting skipped: " + err.message);
   }
 
-  applyFrameworkTimingSurfaceFromDashboard_(sheet);
+  applySystemStructure_(sheet, requiredCols, [], RFF_TIMING_SHEET, Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss"));
 }
 
 function hasFrameworkTimingReportShell_(sheet) {
@@ -2334,19 +2438,10 @@ function hasFrameworkTimingReportShell_(sheet) {
 function initializeFrameworkTimingSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(getFrameworkTimingReportSheetName_());
-
-  if (!sheet) {
-    sheet = insertGovernedOutputSheet_(ss, getFrameworkTimingReportSheetName_());
-  } else {
-    showSheetIfNeeded_(sheet);
-  }
-
-  if (!hasFrameworkTimingReportShell_(sheet)) {
-    rebuildFrameworkTimingReportShellCompact_(sheet);
-  } else {
-    applyFrameworkTimingSurfaceFromDashboard_(sheet);
-  }
-
+  if (!sheet) sheet = insertGovernedOutputSheet_(ss, getFrameworkTimingReportSheetName_());
+  else showSheetIfNeeded_(sheet);
+  if (!hasFrameworkTimingReportShell_(sheet)) rebuildFrameworkTimingReportShellCompact_(sheet);
+  applySystemStructure_(sheet, 8, [], RFF_TIMING_SHEET, Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss"));
   placeCreatedSheetInConfiguredOrder_(sheet);
   return sheet;
 }
@@ -2369,110 +2464,7 @@ function trimSheetToColumnCount_(sheet, requiredCols, label) {
   }
 }
 
-function applyFrameworkTimingSurfaceFromDashboard_(sheet, sectionIds) {
-  if (!sheet) return;
 
-  const widths = [220, 180, 475, 140, 140, 260, 120, 120];
-  trimSheetToColumnCount_(sheet, widths.length, "Framework Timing Report");
-  for (let i = 0; i < widths.length; i++) {
-    try {
-      if (sheet.getColumnWidth(i + 1) !== widths[i]) sheet.setColumnWidth(i + 1, widths[i]);
-    } catch (err) {
-      logBestEffortWarning_("Framework Timing width skipped for column " + (i + 1) + ": " + err.message);
-    }
-  }
-
-  const lastRow = Math.max(sheet.getLastRow(), 1);
-  const width = widths.length;
-  const registry = getFrameworkTimingSectionRegistry_();
-  const sectionTitles = {};
-  registry.forEach(function(section) {
-    sectionTitles[section.title] = true;
-  });
-
-  const requested = sectionIds && sectionIds.length ? sectionIds : registry.map(function(section) { return section.id; });
-  const ranges = [];
-  if (!sectionIds || !sectionIds.length) {
-    ranges.push({ startRow: 1, rowCount: lastRow });
-  } else {
-    requested.forEach(function(sectionId) {
-      const section = getFrameworkTimingSectionForId_(sectionId);
-      if (!section) return;
-      const titleRow = findFrameworkTimingSectionRow_(sheet, section.title);
-      if (!titleRow) return;
-      const replaceStartRow = Math.max(2, titleRow - 1);
-      const nextRow = findNextFrameworkTimingSectionRow_(sheet, titleRow + 1);
-      const endRow = nextRow ? Math.max(replaceStartRow, nextRow - 2) : lastRow;
-      ranges.push({ startRow: replaceStartRow, rowCount: Math.max(1, endRow - replaceStartRow + 1) });
-    });
-  }
-  if (!ranges.length) return;
-
-  try {
-    ranges.forEach(function(item) {
-      const rowCount = Math.max(1, Math.min(item.rowCount, lastRow - item.startRow + 1));
-      if (rowCount <= 0) return;
-      const range = sheet.getRange(item.startRow, 1, rowCount, width);
-      const values = range.getDisplayValues();
-      const backgrounds = [];
-      const fontWeights = [];
-      const fontStyles = [];
-      const fontSizes = [];
-
-      for (let r = 0; r < rowCount; r++) {
-        const absoluteRow = item.startRow + r;
-        const first = String((values[r] || [])[0] || "").trim();
-        const previousFirst = r > 0 ? String((values[r - 1] || [])[0] || "").trim() : "";
-        const twoBackFirst = r > 1 ? String((values[r - 2] || [])[0] || "").trim() : "";
-        let background = "#FFFFFF";
-        let weight = "normal";
-        let style = "normal";
-        let size = 10;
-
-        if (absoluteRow === 1) {
-          background = RFF_SYSTEM_SHEET_TITLE_COLOR;
-          weight = "bold";
-          size = 12;
-        } else if (sectionTitles[first]) {
-          background = RFF_SYSTEM_SHEET_SECTION_COLOR;
-          weight = "bold";
-        } else if (sectionTitles[previousFirst]) {
-          background = RFF_SYSTEM_SHEET_SUBHEADER_COLOR;
-          style = "italic";
-        } else if (sectionTitles[twoBackFirst]) {
-          background = RFF_SYSTEM_SHEET_SUBHEADER_COLOR;
-          weight = "bold";
-        }
-
-        backgrounds.push(new Array(width).fill(background));
-        fontWeights.push(new Array(width).fill(weight));
-        fontStyles.push(new Array(width).fill(style));
-        fontSizes.push(new Array(width).fill(size));
-      }
-
-      range
-        .setFontFamily("Arial")
-        .setVerticalAlignment("top")
-        .setHorizontalAlignment("left")
-        .setBorder(true, true, true, true, true, true, RFF_SYSTEM_SHEET_BORDER_COLOR, SpreadsheetApp.BorderStyle.DOTTED)
-        .setBackgrounds(backgrounds)
-        .setFontWeights(fontWeights)
-        .setFontStyles(fontStyles)
-        .setFontSizes(fontSizes);
-
-      if (item.startRow <= 3) {
-        sheet.getRange(item.startRow, 1, rowCount, width).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
-      } else {
-        sheet.getRange(item.startRow, 1, rowCount, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
-        sheet.getRange(item.startRow, 2, rowCount, width - 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-      }
-    });
-
-    sheet.setFrozenRows(1);
-  } catch (err) {
-    logBestEffortWarning_("Framework Timing styling skipped: " + err.message);
-  }
-}
 
 function getFrameworkTimingSectionForId_(sectionId) {
   const id = String(sectionId || "").trim().toUpperCase();
@@ -2484,47 +2476,10 @@ function getFrameworkTimingSectionForId_(sectionId) {
 
 function replaceFrameworkTimingSectionRows_(sheet, sectionId, rows, options) {
   if (!sheet) return;
-
   const section = getFrameworkTimingSectionForId_(sectionId);
   if (!section) throw new Error("Unknown Framework Timing Report section: " + sectionId);
-
-  if (!(options && options.skipShellCheck) && !hasFrameworkTimingReportShell_(sheet)) {
-    rebuildFrameworkTimingReportShellCompact_(sheet);
-  }
-
-  const width = 8;
-  let titleRow = findFrameworkTimingSectionRow_(sheet, section.title);
-  if (!titleRow) throw new Error("Framework Timing section not found: " + section.title);
-
-  const normalized = (rows || []).map(function(row) {
-    return normalizeSectionRowForWidth_(row || [], width);
-  });
-
-  const replaceStartRow = Math.max(2, titleRow - 1);
-  const nextRow = findNextFrameworkTimingSectionRow_(sheet, titleRow + 1);
-  const replaceEndRow = nextRow ? Math.max(replaceStartRow, nextRow - 2) : sheet.getLastRow();
-  let oldCount = Math.max(1, replaceEndRow - replaceStartRow + 1);
-  const output = [normalizeSectionRowForWidth_([], width)]
-    .concat([
-      normalizeSectionRowForWidth_([section.title], width),
-      normalizeSectionRowForWidth_(["Last Updated", new Date()], width),
-      normalizeSectionRowForWidth_(section.headers, width)
-    ])
-    .concat(normalized.length ? normalized : [normalizeSectionRowForWidth_(["Enter Data here"], width)])
-    .concat([normalizeSectionRowForWidth_([], width), normalizeSectionRowForWidth_([], width)]);
-
-  if (output.length > oldCount) {
-    sheet.insertRowsAfter(replaceStartRow + oldCount - 1, output.length - oldCount);
-    oldCount = output.length;
-  } else if (output.length < oldCount) {
-    sheet.deleteRows(replaceStartRow + output.length, oldCount - output.length);
-    oldCount = output.length;
-  }
-
-  sheet.getRange(replaceStartRow, 1, oldCount, width).clearContent();
-  sheet.getRange(replaceStartRow, 1, oldCount, width).setValues(output);
-  sheet.getRange(replaceStartRow + 2, 2).setNumberFormat("mm/dd/yyyy hh:mm:ss");
-  if (!options || !options.skipStyle) applyFrameworkTimingSurfaceFromDashboard_(sheet, [section.id]);
+  const matrix = [section.headers].concat((rows && rows.length) ? rows : [["Enter Data here"]]);
+  writeTimingSummarySection(section.title, matrix);
 }
 
 function getFrameworkTimingBenchmarkForProcess_(processName, mode) {
@@ -2827,11 +2782,8 @@ function worseTimingSeverity_(current, next) {
 
 function appendRuntimeTimingToFrameworkTimingReport_(timing) {
   if (!timing || !timing.steps || timing.steps.length === 0) return;
-
   try {
     const sheet = ensureFrameworkTimingReport_();
-    const existing = getFrameworkTimingDetailRows_(sheet);
-
     const rows = timing.steps.map(function(step) {
       return [
         step.timestamp || new Date(),
@@ -2843,9 +2795,7 @@ function appendRuntimeTimingToFrameworkTimingReport_(timing) {
         step.details || ""
       ];
     });
-
-    const combined = existing.concat(rows).slice(-getFrameworkTimingRetentionLimit_());
-    replaceFrameworkTimingSectionRows_(sheet, "D", combined, { skipStyle: true, skipShellCheck: true });
+    appendDetailedLogsContinuous_(sheet, rows);
   } catch (err) {
     logBestEffortWarning_("[WARNING] Framework Timing Report append skipped | " + err.message);
   }
@@ -2958,7 +2908,17 @@ function handleFormatDashboardValueHighlighting_(e) {
 
 
 function onEdit(e) {
+  if (!e || !e.range) return;
+  const sheet = e.range.getSheet();
+  if (sheet.getName() !== RFF_DASHBOARD_SHEET) return;
+
   handleFormatDashboardValueHighlighting_(e);
+
+  const startColumn = e.range.getColumn();
+  const endColumn = e.range.getLastColumn();
+  if ([2, 5, 12].some(function(column) { return column >= startColumn && column <= endColumn; })) {
+    recalculateDashboardHexCodes_(sheet);
+  }
 }
 
 
@@ -14005,10 +13965,7 @@ function rebuildDashboardQualityReportShellCompact_(sheet) {
     logBestEffortWarning_("Dashboard Quality shell title formatting skipped: " + err.message);
   }
 
-  applyDashboardQualityReportColumnSettings_(sheet);
-  styleDashboardQualityUpdatedSections_(sheet, RFF_DASHBOARD_QUALITY_SECTIONS.map(function(section) {
-    return section.title;
-  }));
+  applySystemStructure_(sheet, requiredCols, [], RFF_TEST_DASHBOARD_SHEET, Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss"));
 }
 
 function getDashboardQualitySectionTitleForKey_(sectionKey) {
@@ -14055,19 +14012,10 @@ function hasDashboardQualityTemplateShell_(sheet) {
 function initializeDashboardQualitySheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(RFF_TEST_DASHBOARD_SHEET);
-
-  if (!sheet) {
-    sheet = insertGovernedOutputSheet_(ss, RFF_TEST_DASHBOARD_SHEET);
-  } else {
-    showSheetIfNeeded_(sheet);
-  }
-
-  if (!hasDashboardQualityTemplateShell_(sheet)) {
-    rebuildDashboardQualityReportShellCompact_(sheet);
-  } else {
-    applyDashboardQualityReportColumnSettings_(sheet, { skipRangeFormat: true });
-  }
-
+  if (!sheet) sheet = insertGovernedOutputSheet_(ss, RFF_TEST_DASHBOARD_SHEET);
+  else showSheetIfNeeded_(sheet);
+  if (!hasDashboardQualityTemplateShell_(sheet)) rebuildDashboardQualityReportShellCompact_(sheet);
+  applySystemStructure_(sheet, RFF_DASHBOARD_QUALITY_COL_WIDTHS.length, [], RFF_TEST_DASHBOARD_SHEET, Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss"));
   placeCreatedSheetInConfiguredOrder_(sheet);
   return sheet;
 }
@@ -14086,6 +14034,207 @@ function migrateSystemSurfaceSectionToExpandedSchema_(dashboardSheet, timing) {
   writeDashboardDefaultsFast_(dashboardSheet);
   if (timing) markFrameworkStep_(timing, "Format Dashboard rebuilt with five-row sections and expanded Section E schema");
   return true;
+}
+
+
+function applySystemStructure_(sheet, maxCols, dataMatrix, targetSystemName, timestampStr) {
+  if (!sheet) return sheet;
+  maxCols = Math.max(Number(maxCols) || 1, 1);
+
+  if (sheet.getMaxColumns() < maxCols) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), maxCols - sheet.getMaxColumns());
+  } else if (sheet.getMaxColumns() > maxCols) {
+    sheet.deleteColumns(maxCols + 1, sheet.getMaxColumns() - maxCols);
+  }
+
+  if (dataMatrix && dataMatrix.length) {
+    if (sheet.getMaxRows() < dataMatrix.length) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), dataMatrix.length - sheet.getMaxRows());
+    }
+    const values = dataMatrix.map(function(row) {
+      return normalizeSectionRowForWidth_(row || [], maxCols);
+    });
+    sheet.getRange(1, 1, values.length, maxCols).setValues(values);
+  }
+
+  const totalRows = Math.max(sheet.getLastRow(), RFF_TEMPLATE_BASELINE_ROWS);
+  if (sheet.getMaxRows() < totalRows) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), totalRows - sheet.getMaxRows());
+  }
+
+  const theme = getSectionEThemeForSheet_(targetSystemName || sheet.getName());
+  sheet.setFrozenRows(4);
+  sheet.getRange(1, 1, 1, maxCols).setFontSize(14).setFontWeight("bold").setBackground(theme.level3);
+  sheet.getRange(2, 1, 1, maxCols).setFontSize(10).setFontWeight("normal").setBackground(theme.level3);
+  sheet.getRange(3, 1, 1, maxCols).setFontSize(10).setFontWeight("normal").setBackground(theme.level1);
+  sheet.getRange(4, 1, 1, maxCols).setFontSize(10).setFontWeight("bold").setBackground(theme.level2);
+
+  applyNativeBandingSafe_(sheet, 5, maxCols, totalRows, theme.level4, theme.level5);
+
+  const values = sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 1), 1).getDisplayValues();
+  values.forEach(function(row, index) {
+    if (String(row[0] || "").trim().toUpperCase().indexOf("SECTION ") !== 0) return;
+    const titleRow = index + 1;
+    const spacerRow = titleRow + 1;
+    const headerRow = titleRow + 2;
+    sheet.getRange(titleRow, 1, 1, maxCols).setFontWeight("bold").setFontSize(14).setBackground(theme.level3);
+    if (spacerRow <= sheet.getMaxRows()) sheet.getRange(spacerRow, 1, 1, maxCols).setBackground(theme.level1);
+    if (timestampStr && maxCols >= 3 && sheet.getName() !== RFF_DASHBOARD_SHEET) {
+      sheet.getRange(titleRow, 3).setValue(timestampStr).setFontWeight("normal").setFontStyle("italic").setFontSize(10);
+    }
+    if (headerRow <= sheet.getMaxRows()) {
+      sheet.getRange(headerRow, 1, 1, maxCols).setFontWeight("bold").setFontSize(8).setBackground(theme.level2);
+    }
+  });
+
+  const surfaces = getSystemSurfaceConfigMap_();
+  const surface = surfaces[targetSystemName] || surfaces[sheet.getName()];
+  if (surface && surface.defaultColumnWidths && surface.defaultColumnWidths.length) {
+    applyColumnWidthsInRuns_(sheet, surface.defaultColumnWidths.slice(0, maxCols));
+  } else {
+    for (let column = 1; column <= maxCols; column++) sheet.autoResizeColumn(column);
+  }
+
+  enforceSystemRowHeights_(sheet);
+  if (surface) {
+    const hidden = surface.hiddenTemplate || surface.outputVisibility === "HIDDEN";
+    if (hidden) hideSheetIfNeeded_(sheet); else showSheetIfNeeded_(sheet);
+  }
+  return sheet;
+}
+
+function enforceSystemRowHeights_(sheet) {
+  if (!sheet) return;
+  sheet.setRowHeight(1, 25);
+  sheet.setRowHeight(2, 20);
+  sheet.setRowHeight(3, 10);
+  sheet.setRowHeight(4, 25);
+
+  const values = sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 1), 1).getDisplayValues();
+  values.forEach(function(row, index) {
+    if (String(row[0] || "").trim().toUpperCase().indexOf("SECTION ") !== 0) return;
+    const titleRow = index + 1;
+    const bufferTopRow = titleRow - 1;
+    const spacerRow = titleRow + 1;
+    const headerRow = titleRow + 2;
+    const bufferBottomRow = titleRow + 3;
+    if (bufferTopRow > 0) sheet.setRowHeight(bufferTopRow, 25);
+    sheet.setRowHeight(titleRow, 25);
+    if (spacerRow <= sheet.getMaxRows()) sheet.setRowHeight(spacerRow, 10);
+    if (headerRow <= sheet.getMaxRows()) sheet.setRowHeight(headerRow, 25);
+    if (bufferBottomRow <= sheet.getMaxRows()) sheet.setRowHeight(bufferBottomRow, 25);
+  });
+}
+
+function applyNativeBandingSafe_(sheet, startRow, maxCols, totalRows, color1, color2) {
+  if (!sheet || totalRows < startRow || maxCols < 1) return;
+  const bandRange = sheet.getRange(startRow, 1, totalRows - startRow + 1, maxCols);
+  try {
+    sheet.getBandings().forEach(function(banding) { banding.remove(); });
+  } catch (err) {
+    logBestEffortWarning_("System surface banding cleanup skipped: " + err.message);
+  }
+  try {
+    const banding = bandRange.applyRowBanding();
+    if (banding) {
+      banding.setHeaderRowColor(null);
+      if (color1) banding.setFirstRowColor(color1);
+      if (color2) banding.setSecondRowColor(color2);
+    }
+  } catch (err) {
+    logBestEffortWarning_("System surface banding skipped: " + err.message);
+  }
+}
+
+
+function findSystemSectionTitleRow_(sheet, sectionTitle) {
+  if (!sheet) return 0;
+  const expected = String(sectionTitle || "").trim().toUpperCase();
+  const values = sheet.getRange(1, 1, Math.max(sheet.getLastRow(), 1), 1).getDisplayValues();
+  for (let index = 0; index < values.length; index++) {
+    const actual = String(values[index][0] || "").split("|")[0].trim().toUpperCase();
+    if (actual === expected) return index + 1;
+  }
+  return 0;
+}
+
+function findNextSystemSectionTitleRow_(sheet, startRow) {
+  const lastRow = Math.max(sheet.getLastRow(), 1);
+  if (startRow > lastRow) return 0;
+  const values = sheet.getRange(startRow, 1, lastRow - startRow + 1, 1).getDisplayValues();
+  for (let index = 0; index < values.length; index++) {
+    if (String(values[index][0] || "").trim().toUpperCase().indexOf("SECTION ") === 0) return startRow + index;
+  }
+  return 0;
+}
+
+function writeSystemSummarySection_(sheet, sectionTitle, dataMatrix, maxCols) {
+  if (!sheet) throw new Error("System section sheet is required.");
+  const titleRow = findSystemSectionTitleRow_(sheet, sectionTitle);
+  if (!titleRow) throw new Error("System section not found: " + sectionTitle);
+
+  const matrix = (dataMatrix || []).map(function(row) { return normalizeSectionRowForWidth_(row || [], maxCols); });
+  let header = matrix.length ? matrix[0] : normalizeSectionRowForWidth_(["Enter Data here"], maxCols);
+  let details = matrix.length > 1 ? matrix.slice(1) : [normalizeSectionRowForWidth_(["Enter Data here"], maxCols)];
+  let timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss");
+
+  if (String(header[0] || "").split("|")[0].trim() === String(sectionTitle || "").trim()) {
+    matrix.shift();
+    if (matrix.length && String(matrix[0][0] || "").trim() === "Last Updated") {
+      timestamp = matrix[0][1] || timestamp;
+      matrix.shift();
+    }
+    header = matrix.length ? matrix.shift() : normalizeSectionRowForWidth_(["Enter Data here"], maxCols);
+    details = matrix.length ? matrix : [normalizeSectionRowForWidth_(["Enter Data here"], maxCols)];
+  }
+
+  const headerRow = titleRow + 2;
+  const bufferRow = titleRow + 3;
+  const dataStartRow = titleRow + 4;
+  const nextSectionRow = findNextSystemSectionTitleRow_(sheet, dataStartRow);
+  const writableEndRow = nextSectionRow ? nextSectionRow - 2 : Math.max(sheet.getLastRow(), dataStartRow);
+  const availableRows = Math.max(writableEndRow - dataStartRow + 1, 1);
+  if (details.length > availableRows) {
+    const insertAfter = Math.max(dataStartRow + availableRows - 1, 1);
+    sheet.insertRowsAfter(insertAfter, details.length - availableRows);
+  }
+
+  sheet.getRange(titleRow, 1, 1, maxCols).clearContent();
+  sheet.getRange(titleRow, 1).setValue(sectionTitle);
+  if (maxCols >= 3) sheet.getRange(titleRow, 3).setValue(timestamp);
+  sheet.getRange(titleRow + 1, 1, 1, maxCols).clearContent();
+  sheet.getRange(headerRow, 1, 1, maxCols).clearContent().setValues([header]);
+  sheet.getRange(bufferRow, 1, 1, maxCols).clearContent();
+  const currentNextSection = findNextSystemSectionTitleRow_(sheet, dataStartRow);
+  const clearEndRow = currentNextSection ? currentNextSection - 2 : Math.max(sheet.getLastRow(), dataStartRow + details.length - 1);
+  if (clearEndRow >= dataStartRow) sheet.getRange(dataStartRow, 1, clearEndRow - dataStartRow + 1, maxCols).clearContent();
+  sheet.getRange(dataStartRow, 1, details.length, maxCols).setValues(details);
+
+  applySystemStructure_(sheet, maxCols, [], sheet.getName(), String(timestamp));
+  return { titleRow: titleRow, headerRow: headerRow, dataStartRow: dataStartRow, rowsWritten: details.length };
+}
+
+function writeDashboardQualitySection(sectionTitle, dataMatrix) {
+  const sheet = ensureDashboardQualityReportSheet_();
+  return writeSystemSummarySection_(sheet, sectionTitle, dataMatrix, RFF_DASHBOARD_QUALITY_COL_WIDTHS.length);
+}
+
+function writeTimingSummarySection(sectionTitle, dataMatrix) {
+  const sheet = ensureFrameworkTimingReport_();
+  return writeSystemSummarySection_(sheet, sectionTitle, dataMatrix, 8);
+}
+
+function appendDetailedLogsContinuous_(sheet, logsArray) {
+  if (!sheet || !logsArray || !logsArray.length) return;
+  const width = 7;
+  const rows = logsArray.map(function(row) { return normalizeSectionRowForWidth_(row || [], width); });
+  const lastRow = Math.max(sheet.getLastRow(), 4);
+  const startRow = lastRow + 1;
+  const requiredLastRow = startRow + rows.length - 1;
+  if (sheet.getMaxRows() < requiredLastRow) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), requiredLastRow - sheet.getMaxRows());
+  }
+  sheet.getRange(startRow, 1, rows.length, width).setValues(rows);
 }
 
 function getSystemSurfaceConfigMap_() {
@@ -14118,54 +14267,13 @@ function getSystemSurfaceConfigMap_() {
   return map;
 }
 
-function applySystemSurfaceStructure_(sheet, surface) {
-  if (!sheet || !surface) return sheet;
-  const widths = surface.defaultColumnWidths && surface.defaultColumnWidths.length ? surface.defaultColumnWidths : [RFF_DEFAULTS.defaultColumnWidth];
-  if (sheet.getMaxRows() < RFF_TEMPLATE_BASELINE_ROWS) sheet.insertRowsAfter(sheet.getMaxRows(), RFF_TEMPLATE_BASELINE_ROWS - sheet.getMaxRows());
-  if (sheet.getMaxColumns() < widths.length) sheet.insertColumnsAfter(sheet.getMaxColumns(), widths.length - sheet.getMaxColumns());
-  applyColumnWidthsInRuns_(sheet, widths);
-  if (surface.usesTitleRows) {
-    if (!String(sheet.getRange("A1").getDisplayValue() || "").trim()) sheet.getRange("A1").setValue(surface.displayName || surface.systemSheetName);
-    sheet.getRange(1, 1, 1, Math.max(widths.length, 1)).setBackground(surface.titleFillColor).setFontColor(surface.titleFontColor).setFontWeight("bold");
-  }
-  if (surface.usesFilter && sheet.getLastRow() >= HEADER_ROW && sheet.getLastColumn() > 0 && !sheet.getFilter()) {
-    sheet.getRange(HEADER_ROW, 1, Math.max(sheet.getLastRow() - HEADER_ROW + 1, 1), sheet.getLastColumn()).createFilter();
-  }
-  if (surface.usesAlternatingColors && sheet.getLastRow() >= DATA_START_ROW) {
-    const bandingRange = sheet.getRange(DATA_START_ROW, 1, Math.max(sheet.getLastRow() - DATA_START_ROW + 1, 1), Math.max(sheet.getLastColumn(), 1));
-    applyNativeBandingToRange_(sheet, bandingRange, { level3: surface.titleFillColor, level4: "#F7F7F7" });
-  }
-  const hidden = surface.hiddenTemplate || surface.outputVisibility === "HIDDEN";
-  if (hidden) hideSheetIfNeeded_(sheet); else showSheetIfNeeded_(sheet);
-  return sheet;
-}
 
-function buildSystemSheetsCore_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const surfaces = getSystemSurfaceConfigMap_();
-  const built = {};
-  Object.keys(surfaces).sort(function(a, b) { return surfaces[a].sortOrder - surfaces[b].sortOrder; }).forEach(function(name) {
-    if (name === RFF_BASE_TEMPLATE_NAME) return;
-    let sheet = ss.getSheetByName(name);
-    if (!sheet) sheet = insertGovernedOutputSheet_(ss, name);
-    applySystemSurfaceStructure_(sheet, surfaces[name]);
-    placeCreatedSheetInConfiguredOrder_(sheet);
-    built[name] = sheet;
-  });
-  return {
-    sheets: built,
-    dashboardConfigSheet: built[RFF_DASHBOARD_SHEET] || ss.getSheetByName(RFF_DASHBOARD_SHEET),
-    frameworkTiming: built[RFF_TIMING_SHEET] || ss.getSheetByName(RFF_TIMING_SHEET),
-    dashboardQuality: built[RFF_TEST_DASHBOARD_SHEET] || ss.getSheetByName(RFF_TEST_DASHBOARD_SHEET),
-    index: built.Index || ss.getSheetByName("Index"),
-    demoPArchive: built[DEMO_P_ARCHIVE_SHEET] || ss.getSheetByName(DEMO_P_ARCHIVE_SHEET)
-  };
-}
 
 function buildSystemSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashboard = loadDashboardConfig_();
   const surfaces = dashboard.systemSurfaces || {};
+  const timestampStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss");
 
   Object.keys(surfaces).forEach(function(key) {
     const surface = surfaces[key];
@@ -14176,26 +14284,14 @@ function buildSystemSheets() {
     if (!sheet) {
       sheet = insertGovernedOutputSheet_(ss, surface.systemSheetName);
     }
-    if (surface.defaultColumnWidths && surface.defaultColumnWidths.length) {
-      applyColumnWidthsInRuns_(sheet, surface.defaultColumnWidths);
-    }
+
+    const maxCols = Math.max(sheet.getLastColumn(), (surface.defaultColumnWidths ? surface.defaultColumnWidths.length : 8));
+    applySystemStructure_(sheet, maxCols, [], surface.displayName || surface.systemSheetName, timestampStr);
   });
-  notify_("System sheets physically built based on Section E configuration.");
+
+  notify_("System sheets physically built and formatted based on Section E configuration.");
 }
 
-function initializeSystemSheets_() {
-  const result = buildSystemSheetsCore_();
-  const qualitySheet = result.dashboardQuality;
-  const timingSheet = result.frameworkTiming;
-  if (qualitySheet) {
-    if (!hasDashboardQualityTemplateShell_(qualitySheet)) rebuildDashboardQualityReportShellCompact_(qualitySheet);
-    else applyDashboardQualityReportColumnSettings_(qualitySheet, { skipRangeFormat: true });
-  }
-  if (timingSheet) {
-    if (!hasFrameworkTimingReportShell_(timingSheet)) rebuildFrameworkTimingReportShellCompact_(timingSheet);
-  }
-  return result;
-}
 
 function ensureDashboardQualityReportSheet_() {
   return initializeDashboardQualitySheet_();
@@ -14439,33 +14535,15 @@ function saveDashboardQualitySectionRows_(sectionKey, rows, options) {
 
 function flushStagedDashboardQualitySectionsRows_(sheet, timing) {
   if (!sheet) return;
-  const width = RFF_DASHBOARD_QUALITY_COL_WIDTHS.length;
-  const masterQualityBuffer = [normalizeSectionRowForWidth_(["Dashboard Quality Report", "- v" + MASTER_LIST_MERGE_ML_VERSION + " -", "Report Formatter Framework"], width)];
-  const sectionStarts = [];
-  const updated = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy");
+  let written = 0;
   RFF_DASHBOARD_QUALITY_SECTIONS.forEach(function(section) {
     const staged = ML_DASHBOARD_QUALITY_STAGED_BUFFERS_[section.key];
     const stored = staged || getDashboardQualitySectionRows_(section.key) || [];
-    const header = stored.length ? normalizeSectionRowForWidth_(stored[0], width) : normalizeSectionRowForWidth_(getDefaultDashboardQualityDetailHeader_(section), width);
-    const details = stored.length > 1 ? stored.slice(1) : [["NOT RUN", getDashboardQualityNotRunMessage_(section)]];
-    sectionStarts.push({ startRow: masterQualityBuffer.length + 1, section: section, header: header });
-    masterQualityBuffer.push(normalizeSectionRowForWidth_([], width));
-    masterQualityBuffer.push(normalizeSectionRowForWidth_([section.title + " | Last Updated - " + updated], width));
-    masterQualityBuffer.push(normalizeSectionRowForWidth_([], width));
-    masterQualityBuffer.push(header);
-    masterQualityBuffer.push(normalizeSectionRowForWidth_([], width));
-    details.forEach(function(row) { masterQualityBuffer.push(normalizeSectionRowForWidth_(row, width)); });
+    const matrix = buildTimestampedDashboardQualitySectionRows_(section.key, stored);
+    writeDashboardQualitySection(section.title, matrix);
+    written++;
   });
-  if (sheet.getMaxRows() < masterQualityBuffer.length) sheet.insertRowsAfter(sheet.getMaxRows(), masterQualityBuffer.length - sheet.getMaxRows());
-  const clearRows = Math.max(sheet.getLastRow(), masterQualityBuffer.length, 1);
-  sheet.getRange(1, 1, clearRows, width).clearContent().breakApart();
-  sheet.getRange(1, 1, masterQualityBuffer.length, width).setValues(masterQualityBuffer);
-  const dashboard = loadDashboardConfig_();
-  const sheetDef = getSheetDefinitionByTypeOrNull_(dashboard, "Dashboard Quality Report") || { baseColor: "#79b5d2" };
-  sectionStarts.forEach(function(item) {
-    applySubHeaderBlock_(sheet, item.startRow, item.section.title, updated, item.header, dashboard, sheetDef, { valuesAlreadyWritten: true });
-  });
-  if (timing) markFrameworkStep_(timing, "Dashboard Quality master buffer flushed in one values write | Sections: " + sectionStarts.length);
+  if (timing) markFrameworkStep_(timing, "Dashboard Quality sections written non-destructively | Sections: " + written);
   ML_DASHBOARD_QUALITY_STAGED_BUFFERS_ = {};
 }
 
@@ -14642,61 +14720,8 @@ function getDashboardQualitySectionBoundsMap_(sheet) {
 
 function replaceDashboardQualitySectionsRows_(sheet, sectionWrites) {
   if (!sheet || !sectionWrites || !sectionWrites.length) return;
-
-  if (!hasDashboardQualityTemplateShell_(sheet)) {
-    rebuildDashboardQualityReportShellCompact_(sheet);
-  }
-
-  const width = RFF_DASHBOARD_QUALITY_COL_WIDTHS.length;
-  const bounds = getDashboardQualitySectionBoundsMap_(sheet);
-  const orderedWrites = sectionWrites.slice().sort(function(a, b) {
-    const aBound = bounds[a.title] || { replaceStartRow: 0 };
-    const bBound = bounds[b.title] || { replaceStartRow: 0 };
-    return aBound.replaceStartRow - bBound.replaceStartRow;
-  });
-
-  if (orderedWrites.every(function(sectionWrite) { return !!bounds[sectionWrite.title]; })) {
-    const startRow = bounds[orderedWrites[0].title].replaceStartRow;
-    const lastWrite = orderedWrites[orderedWrites.length - 1];
-    const lastBound = bounds[lastWrite.title];
-    const oldEndRow = lastBound.replaceStartRow + lastBound.oldCount - 1;
-    const output = [];
-
-    orderedWrites.forEach(function(sectionWrite) {
-      const normalized = (sectionWrite.rows || []).map(function(row) {
-        return normalizeSectionRowForWidth_(row || [], width);
-      });
-      output.push(normalizeSectionRowForWidth_([], width));
-      normalized.forEach(function(row) { output.push(row); });
-      output.push(normalizeSectionRowForWidth_([], width));
-      output.push(normalizeSectionRowForWidth_([], width));
-    });
-
-    const oldCount = Math.max(1, oldEndRow - startRow + 1);
-    if (output.length > oldCount) {
-      sheet.insertRowsAfter(oldEndRow, output.length - oldCount);
-    } else if (output.length < oldCount) {
-      sheet.deleteRows(startRow + output.length, oldCount - output.length);
-    }
-
-    if (output.length === oldCount && tryDashboardQualityAnchoredColumnWrite_(sheet, startRow, oldCount, output, width)) {
-      styleDashboardQualityUpdatedSections_(sheet, orderedWrites.map(function(sectionWrite) { return sectionWrite.title; }), { highlightProblemRows: true });
-      return;
-    }
-
-    const targetRange = sheet.getRange(startRow, 1, output.length, width);
-    targetRange.clearContent();
-    targetRange.setValues(output);
-    styleDashboardQualityUpdatedSections_(sheet, orderedWrites.map(function(sectionWrite) { return sectionWrite.title; }), { highlightProblemRows: true });
-    return;
-  }
-
-  sectionWrites.slice().sort(function(a, b) {
-    const aBound = bounds[a.title] || { replaceStartRow: 0 };
-    const bBound = bounds[b.title] || { replaceStartRow: 0 };
-    return bBound.replaceStartRow - aBound.replaceStartRow;
-  }).forEach(function(sectionWrite) {
-    replaceDashboardQualitySectionRows_(sheet, sectionWrite.title, sectionWrite.rows, { sectionBounds: bounds, deferStyle: true, skipBreakApart: true, skipShellCheck: true });
+  sectionWrites.forEach(function(sectionWrite) {
+    writeDashboardQualitySection(sectionWrite.title, sectionWrite.rows || []);
   });
   styleDashboardQualityUpdatedSections_(sheet, sectionWrites.map(function(sectionWrite) { return sectionWrite.title; }), { highlightProblemRows: true });
 }
@@ -14720,75 +14745,9 @@ function tryDashboardQualityAnchoredColumnWrite_(sheet, startRow, rowCount, outp
 
 function replaceDashboardQualitySectionRows_(sheet, sectionTitle, rows, options) {
   if (!sheet || !rows || !rows.length) return;
-
-  if (!(options && options.skipShellCheck) && !hasDashboardQualityTemplateShell_(sheet)) {
-    rebuildDashboardQualityReportShellCompact_(sheet);
-  }
-
-  const width = RFF_DASHBOARD_QUALITY_COL_WIDTHS.length;
-  const normalized = rows.map(function(row) {
-    return normalizeSectionRowForWidth_(row || [], width);
-  });
-
-  const bounds = options && options.sectionBounds ? options.sectionBounds : getDashboardQualitySectionBoundsMap_(sheet);
-  let sectionBound = bounds[sectionTitle];
-
-  if (!sectionBound) {
-    rebuildDashboardQualityReportShellCompact_(sheet);
-    sectionBound = getDashboardQualitySectionBoundsMap_(sheet)[sectionTitle];
-  }
-  if (!sectionBound) throw new Error("Dashboard Quality section not found after shell repair: " + sectionTitle);
-
-  const replaceStartRow = sectionBound.replaceStartRow;
-  let oldCount = sectionBound.oldCount;
-
-  const output = [normalizeSectionRowForWidth_([], width)].concat(normalized).concat([
-    normalizeSectionRowForWidth_([], width),
-    normalizeSectionRowForWidth_([], width)
-  ]);
-
-  if (output.length > oldCount) {
-    sheet.insertRowsAfter(replaceStartRow + oldCount - 1, output.length - oldCount);
-    oldCount = output.length;
-  } else if (output.length < oldCount) {
-    sheet.deleteRows(replaceStartRow + output.length, oldCount - output.length);
-    oldCount = output.length;
-  }
-
-  const targetRange = sheet.getRange(replaceStartRow, 1, oldCount, width);
-  if (dashboardQualitySectionContentMatches_(targetRange, output)) {
-    try {
-      sheet.getRange(replaceStartRow + 2, 2).setValue(output[2][1]).setNumberFormat("mm/dd/yyyy hh:mm:ss");
-    } catch (err) {
-      logBestEffortWarning_("Dashboard Quality Last Updated date-time format skipped for unchanged " + sectionTitle + ": " + err.message);
-    }
-    return;
-  }
-
-  if (tryDashboardQualityAnchoredColumnWrite_(sheet, replaceStartRow, oldCount, output, width)) {
-    try {
-      sheet.getRange(replaceStartRow + 2, 2).setNumberFormat("mm/dd/yyyy hh:mm:ss");
-    } catch (err) {
-      logBestEffortWarning_("Dashboard Quality Last Updated date-time format skipped for anchored " + sectionTitle + ": " + err.message);
-    }
-    if (!options || !options.deferStyle) {
-      styleDashboardQualityUpdatedSections_(sheet, [sectionTitle], { highlightProblemRows: true });
-    }
-    return;
-  }
-
-  targetRange.clearContent();
-  if (!options || !options.skipBreakApart) targetRange.breakApart();
-  targetRange.setValues(output);
-
-  try {
-    sheet.getRange(replaceStartRow + 2, 2).setNumberFormat("mm/dd/yyyy hh:mm:ss");
-  } catch (err) {
-    logBestEffortWarning_("Dashboard Quality Last Updated date-time format skipped for " + sectionTitle + ": " + err.message);
-  }
-
+  writeDashboardQualitySection(sectionTitle, rows);
   if (!options || !options.deferStyle) {
-    styleDashboardQualityUpdatedSections_(sheet, [sectionTitle]);
+    styleDashboardQualityUpdatedSections_(sheet, [sectionTitle], { highlightProblemRows: true });
   }
 }
 
@@ -15199,22 +15158,23 @@ function runDashboardQualityWorkflowSyncVerification_(timing) {
 
 
 function setupSystemSheets() {
-  buildSystemSheets();
   rebuildFormatDashboardDefaults();
+  buildSystemSheets();
   ensureFrameworkTimingReport_();
   runDashboardQualityStartUp();
-  notify_("System sheets setup and initialized.");
+  updateIndexSheet({ forceShellRebuild: true });
+  notify_("System sheets setup, initialized, formatted, and Index built.");
 }
 
 function verifyFrameworkConfiguration() {
   return runFrameworkTimed_("Start Up / Verify Framework Configuration", function(timing) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    const systemSheets = initializeSystemSheets_();
-    const quality = systemSheets.dashboardQuality;
+    buildSystemSheets();
+    const quality = ensureDashboardQualityReportSheet_();
     markFrameworkStep_(timing, "System sheets initialized");
 
-    const timingSheet = systemSheets.frameworkTiming;
+    ensureFrameworkTimingReport_();
     markFrameworkStep_(timing, "Framework Timing Report verified");
 
     const dashboard = ss.getSheetByName(RFF_DASHBOARD_SHEET);
