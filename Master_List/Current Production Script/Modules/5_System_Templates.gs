@@ -1,415 +1,233 @@
-// ============================================================================
-// SYSTEM_TEMPLATES.GS
-// Template Stamping, Canvas Synchronization & Validation Engine
-// ============================================================================
+/**
+ * SECTION C - RAW DATA VALIDATION
+ * Refactored to dynamically pull Banner fields from the Format Dashboard.
+ */
+function runDashboardQualityRawDataValidation_() {
+  const dashboard = loadDashboardConfig_();
+  const monthParts = getMonthDateParts_(new Date());
+  const rawSheet = getCurrentRawDataSheet_(monthParts);
+  const bannerSheet = getCurrentBannersSheet_(monthParts);
+  const rows = [];
 
-const RFF_BASE_TEMPLATE_NAME = "RFF_BASE_TEMPLATE";
+  if (!rawSheet) {
+    rows.push(["Raw Data Target", "FAIL", "Sheet Missing", "Active formatted Raw Data sheet not found for current month."]);
+  } else {
+    const rawData = getDataValues_(rawSheet, HEADER_ROW, DATA_START_ROW);
+    const rawPmrIdx = getPMRIndex_(rawData.headerMap);
+    const primaryIdx = rawData.headerMap["Primary PMR Row"];
 
-// --- TEMPLATE UTILITIES & HELPERS -------------------------------------------
+    if (primaryIdx === undefined || rawPmrIdx === -1) {
+      rows.push(["Primary PMR Assignment", "FAIL", "Schema Missing", "Primary PMR Row column or PMR header is missing."]);
+    } else {
+      let primaryCount = 0, multiPrimaryCount = 0;
+      const seenPmr = new Set();
 
-function isTemplateSheetName_(sheetName) {
-  return String(sheetName || "").trim().indexOf("Template - ") === 0;
-}
+      rawData.values.forEach(row => {
+        const pmr = normalizePMR_(row[rawPmrIdx]);
+        if (!pmr) return;
+        if (isPrimaryPMRRowValue_(row[primaryIdx])) {
+          primaryCount++;
+          if (seenPmr.has(pmr)) multiPrimaryCount++;
+          seenPmr.add(pmr);
+        }
+      });
 
-function applyTemplateColumnWidths_(sheet, template, width) {
-  const widths = [];
-  for (let col = 1; col <= width; col++) widths.push(template.getColumnWidth(col));
-  applyColumnWidthsInRuns_(sheet, widths);
-}
-
-function getDashboardConfigForTemplateVisibility_(dashboardOverride) {
-  if (dashboardOverride) return dashboardOverride;
-  try {
-    return loadDashboardConfig_();
-  } catch (err) {
-    logBestEffortWarning_("Template visibility dashboard config unavailable: " + err.message);
-    return { sheetDefinitions: [] };
-  }
-}
-
-function hideTemplateIfNeeded_(sheet, sheetDef, timing) {
-  try {
-    if (typeof sheet.isSheetHidden === "function" && sheet.isSheetHidden()) {
-      if (timing) markFrameworkStep_(timing, "Template already hidden: " + sheetDef.templateName);
-      return;
+      if (multiPrimaryCount > 0) rows.push(["Primary PMR Assignment", "FAIL", "Duplicate Primaries", `Detected ${multiPrimaryCount} instances where a single PMR has multiple 'Yes' rows.`]);
+      else if (primaryCount === 0 && rawData.values.length > 0) rows.push(["Primary PMR Assignment", "WARNING", "No Primaries Flags", "Raw Data rows exist but zero records are flagged as Primary PMR."]);
+      else rows.push(["Primary PMR Assignment", "PASS", "OK", `Primary row assignment logic is fully active; mapped ${seenPmr.size} unique primary flags.`]);
     }
-    hideSheetIfNeeded_(sheet, timing, "Hide template: " + sheetDef.templateName);
-  } catch (err) {
-    logBestEffortWarning_("Template hide skipped for " + sheetDef.templateName + ": " + err.message);
-  }
-}
 
-// --- GOLDEN MASTER & BASE CANVAS ENGINE -------------------------------------
+    if (!bannerSheet) {
+      rows.push(["Banner Sync Check", "WARNING", "Missing Monthly Banner Sheet", "Cannot cross-verify Banner columns because the formatted monthly Banners tab is missing."]);
+    } else {
+      // DYNAMIC: Pull governed Banner fields directly from the Format Dashboard
+      const bannerHeaders = getHeadersForSheetType_(dashboard, SHEET_TYPE.BANNER)
+        .filter(h => h !== "Last Name" && h !== "First Name" && h !== "Participant PMR#");
+      
+      let mappedCheckCount = 0, syncDiscrepancyCount = 0;
+      const bannerMap = buildSourceMapByCompositeKeyForDemoPBanner_(bannerSheet, HEADER_ROW, DATA_START_ROW, ["Participant PMR#", "Last Name", "First Name"]);
 
-/**
- * Ensures the blank Golden Master template (RFF_BASE_TEMPLATE) exists,
- * applies default plain-text canvas properties, and hides it.
- */
-function ensureGoldenMasterTemplate_(dashboard, timing) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let baseSheet = ss.getSheetByName(RFF_BASE_TEMPLATE_NAME);
-  if (!baseSheet) baseSheet = insertGovernedOutputSheet_(ss, RFF_BASE_TEMPLATE_NAME);
+      if (bannerMap.size > 0 && rawPmrIdx !== -1) {
+        const rawLastNameIdx = rawData.headerMap["Last Name"];
+        const rawFirstNameIdx = rawData.headerMap["First Name"];
 
-  const globals = (dashboard && dashboard.globals) || RFF_DEFAULTS;
-  resizeSheetGrid_(baseSheet, 500, 50);
+        rawData.values.forEach(row => {
+          if (rawLastNameIdx === undefined || rawFirstNameIdx === undefined) return;
+          if (primaryIdx !== undefined && !isPrimaryPMRRowValue_(row[primaryIdx])) return;
 
-  const canvas = baseSheet.getRange(1, 1, baseSheet.getMaxRows(), baseSheet.getMaxColumns());
-  canvas
-    .setNumberFormat("@")
-    .setFontFamily(globals.standardFont || "Arial")
-    .setFontColor(globals.standardFontColor || "#000000")
-    .setFontSize(globals.standardFontSize || 10)
-    .setHorizontalAlignment(globals.defaultHorizontalAlignment || "left")
-    .setVerticalAlignment(globals.defaultVerticalAlignment || "middle")
-    .setWrapStrategy(toWrapStrategy_(globals.defaultDataWrap || "CLIP"));
+          const key = [normalizeKeyPart_(row[rawPmrIdx]), normalizeKeyPart_(row[rawLastNameIdx]), normalizeKeyPart_(row[rawFirstNameIdx])].join("|||");
+          const sourceMatch = bannerMap.get(key);
+          if (!sourceMatch) return;
+          mappedCheckCount++;
 
-  safeSetRowHeights_(baseSheet, 1, baseSheet.getMaxRows(), globals.dataRowHeight || 25, "Golden Master Base");
-  hideSheetIfNeeded_(baseSheet, timing, "Golden Master base template hidden");
-  
-  if (timing) markFrameworkStep_(timing, "Golden Master prepared with plain-text canvas");
-  return baseSheet;
-}
+          bannerHeaders.forEach(field => {
+            const rawIdx = rawData.headerMap[field];
+            if (rawIdx === undefined) return;
+            if (String(row[rawIdx] || "").trim().toUpperCase() !== String(sourceMatch[field] || "").trim().toUpperCase()) syncDiscrepancyCount++;
+          });
+        });
 
-/**
- * Updates a specific template's header, column grid, and text/number formatting
- * dynamically using Format Dashboard settings.
- */
-function updateBaseTemplateCanvas_(ss, sheetType, dashboard) {
-  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
-  dashboard = dashboard || loadDashboardConfig_();
-  const globals = dashboard.globals || RFF_DEFAULTS;
-
-  const sheetDef = getSheetDefinitionByTypeOrNull_(dashboard, sheetType);
-  if (!sheetDef) throw new Error("Section C sheet definition not found: " + sheetType);
-
-  const headers = getHeadersForSheetType_(dashboard, sheetDef.sheetType);
-  if (!headers.length) throw new Error("Section H headers not found: " + sheetDef.sheetType);
-
-  let template = ss.getSheetByName(sheetDef.templateName);
-  if (!template) template = createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, null);
-
-  const width = headers.length;
-  resizeSheetGrid_(template, RFF_TEMPLATE_BASELINE_ROWS, width);
-
-  const theme = getThemeColorsFromBase_(sheetDef.baseColor, globals);
-  const headerHeight = Number(getTitleRowConfigForSheet_(dashboard, sheetDef, HEADER_ROW).height || globals.headerRowHeight || 25);
-  const dataHeight = Number(globals.dataRowHeight || 25);
-
-  // Format Header Row (Row 4)
-  template.getRange(HEADER_ROW, 1, 1, width)
-    .breakApart()
-    .setValues([headers])
-    .setFontWeight("bold")
-    .setFontSize(globals.standardFontSize || 10)
-    .setVerticalAlignment("top")
-    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP)
-    .setBackground(theme.level2)
-    .setFontColor(globals.standardFontColor || "#000000");
-
-  template.setRowHeight(HEADER_ROW, headerHeight);
-
-  // Format Data Grid Area (Row 5 Down)
-  const dataRows = Math.max(RFF_TEMPLATE_BASELINE_ROWS - DATA_START_ROW + 1, 1);
-  applyGovernedTextAndNumberFormats_(template, dashboard, headers, DATA_START_ROW, dataRows);
-  safeSetRowHeights_(template, DATA_START_ROW, dataRows, dataHeight, "Base template data grid");
-
-  template.setFrozenRows(HEADER_ROW);
-  hideSheetIfNeeded_(template);
-  clearSheetRuntimeCachesForSheet_(template);
-
-  return template;
-}
-
-/**
- * Rebuilds RFF_BASE_TEMPLATE and synchronizes all template canvases
- * with the active Format Dashboard configuration.
- */
-function syncBaseTemplateWithDashboard() {
-  return runFrameworkTimed_("Sync Base Templates With Dashboard", function(timing) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const dashboard = loadDashboardConfig_(true);
-    
-    ensureGoldenMasterTemplate_(dashboard, timing);
-    
-    const synced = sortSheetDefinitionsByProductionOrder_(dashboard.sheetDefinitions).map(function(sheetDef) {
-      const template = updateBaseTemplateCanvas_(ss, sheetDef.sheetType, dashboard);
-      markFrameworkStep_(timing, "Base template synchronized: " + sheetDef.templateName);
-      return template;
-    });
-
-    notify_("Base Template Sync complete. Templates updated: " + synced.length);
-    return synced;
-  });
-}
-
-function forceBaseTemplateHidden_() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(RFF_BASE_TEMPLATE_NAME);
-    if (sheet && !sheet.isSheetHidden()) sheet.hideSheet();
-  } catch (err) {
-    logBestEffortWarning_("RFF_BASE_TEMPLATE hide enforcement skipped: " + err.message);
-  }
-}
-
-// --- TEMPLATE BUILDER & STAMPING ENGINE -------------------------------------
-
-function createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(sheetDef.templateName);
-  const existed = !!sheet;
-  
-  if (!sheet) {
-    const base = ss.getSheetByName(RFF_BASE_TEMPLATE_NAME) || ensureGoldenMasterTemplate_(dashboard, timing);
-    sheet = base.copyTo(ss).setName(sheetDef.templateName);
-    placeCreatedSheetInConfiguredOrder_(sheet);
-  }
-  
-  const headers = getHeadersForSheetType_(dashboard, sheetDef.sheetType);
-  const behavior = getBehaviorForSheetType_(dashboard, sheetDef.sheetType);
-  const baselineRows = 100;
-  const columns = Math.max(headers.length, 4);
-  
-  buildTemplateFromDashboard_(sheet, dashboard, sheetDef, headers, baselineRows, columns, behavior, timing, existed);
-  
-  sheet.showColumns(1, sheet.getMaxColumns());
-  hideSheetIfNeeded_(sheet, timing, "Hide built template: " + sheetDef.templateName);
-  return sheet;
-}
-
-function buildTemplateFromDashboard_(sheet, dashboard, sheetDef, headers, rowCount, colCount, behavior, timing, templateExisted) {
-  markFrameworkStep_(timing, "Full template build required: " + sheetDef.templateName);
-
-  resizeSheetGrid_(sheet, rowCount, colCount);
-  clearTemplateForFullBuild_(sheet, sheetDef, timing, templateExisted);
-  
-  applyTemplateBaseFormatting_(sheet, dashboard, sheetDef, headers, rowCount, colCount, behavior, timing);
-  writeTemplateMetadata_(sheet, dashboard, sheetDef, colCount);
-  applyTemplateFreezeAndTabColor_(sheet, dashboard, sheetDef, colCount, timing);
-
-  markFrameworkStep_(timing, "Complete full template build: " + sheetDef.templateName);
-  return sheet;
-}
-
-function clearTemplateForFullBuild_(sheet, sheetDef, timing, templateExisted) {
-  if (!templateExisted) return;
-
-  try {
-    const clearRows = Math.max(sheet.getMaxRows(), 1);
-    const clearCols = Math.max(sheet.getMaxColumns(), 1);
-    sheet.getRange(1, 1, clearRows, clearCols).clearContent().clearFormat().breakApart();
-    sheet.setConditionalFormatRules([]);
-  } catch (err) {
-    try {
-      sheet.clearContents();
-      sheet.clearFormats();
-      sheet.setConditionalFormatRules([]);
-    } catch (fallbackErr) {}
-  }
-  markFrameworkStep_(timing, "Clear governed template range: " + sheetDef.templateName);
-}
-
-function applyTemplateBaseFormatting_(sheet, dashboard, sheetDef, headers, rowCount, colCount, behavior, timing) {
-  const globals = dashboard.globals;
-  const theme = getThemeColorsFromBase_(sheetDef.baseColor, globals);
-  const dataStartRow = globals.dataStartRow;
-
-  sheet.getRange(1, 1, rowCount, colCount)
-    .setFontFamily(globals.standardFont)
-    .setFontColor(globals.standardFontColor)
-    .setFontSize(globals.standardFontSize)
-    .setHorizontalAlignment(globals.defaultHorizontalAlignment || "left")
-    .setVerticalAlignment(globals.defaultVerticalAlignment || "middle")
-    .setWrapStrategy(toWrapStrategy_(globals.defaultDataWrap || "CLIP"))
-    .setBorder(true, true, true, true, true, true, globals.globalBorderColor || "#CCCCCC", getGlobalBorderStyle_(globals));
-
-  applyTitleRows_(sheet, dashboard, sheetDef, theme, colCount);
-  applyHeaderRow_(sheet, dashboard, sheetDef, headers, theme, colCount);
-  applyDataRows_(sheet, dashboard, sheetDef, headers, rowCount, colCount, behavior, timing);
-  applyColumnWidths_(sheet, dashboard, headers);
-  applyGovernedTextAndNumberFormats_(sheet, dashboard, headers, dataStartRow, rowCount - dataStartRow + 1);
-
-  sheet.showColumns(1, Math.max(sheet.getMaxColumns(), 1));
-
-  if (behavior.usesFilter) {
-    ensureTemplateFilter_(sheet, globals.headerRow, rowCount, colCount, sheetDef, timing);
-  }
-}
-
-function ensureTemplateFilter_(sheet, headerRow, rowCount, colCount, sheetDef, timing) {
-  const expectedRows = Math.max(rowCount - headerRow + 1, 1);
-  let existing = null;
-
-  try { existing = sheet.getFilter(); } catch (err) {}
-
-  if (existing) {
-    try {
-      const range = existing.getRange();
-      if (RFF_FAST_TEMPLATE_REFRESH && range.getRow() === headerRow && range.getColumn() === 1 && range.getNumRows() === expectedRows && range.getNumColumns() === colCount) {
-        if (timing) markFrameworkStep_(timing, "Filter already correct: " + sheetDef.templateName);
-        return;
+        if (syncDiscrepancyCount > 0) rows.push(["Banner Sync Verification", "FAIL", "Sync Discrepancies", `Detected ${syncDiscrepancyCount} cell mismatches between active Raw Data and the Banners import sheet.`]);
+        else if (mappedCheckCount === 0) rows.push(["Banner Sync Verification", "WARNING", "Zero Matching Profile Keys", "No participants could be cross-matched by PMR + Name keys."]);
+        else rows.push(["Banner Sync Verification", "PASS", "OK", `Banner synchronization verified clean across ${mappedCheckCount} active participant profiles.`]);
+      } else {
+        rows.push(["Banner Sync Verification", "WARNING", "No Banner Mapping Rows", "Banners tab exists but no composite PMR + Name keys were available to compare."]);
       }
-      existing.remove();
-    } catch (err) {}
+    }
   }
 
+  // --- Date Format Audit ---
   try {
-    sheet.getRange(headerRow, 1, expectedRows, colCount).createFilter();
-    if (timing) markFrameworkStep_(timing, "Create filter: " + sheetDef.templateName);
-  } catch (err) {}
-}
-
-function applyTemplateFreezeAndTabColor_(sheet, dashboard, sheetDef, colCount, timing) {
-  const globals = dashboard.globals;
-  const expectedFrozenRows = globals.freezeRows;
-  const expectedFrozenCols = Math.min(globals.freezeColumns, colCount);
-  const expectedTabColor = getThemeColorsFromBase_(sheetDef.baseColor, globals).level1;
-
-  try { if (sheet.getFrozenRows() !== expectedFrozenRows) sheet.setFrozenRows(expectedFrozenRows); } catch (err) {}
-  try { if (sheet.getFrozenColumns() !== expectedFrozenCols) sheet.setFrozenColumns(expectedFrozenCols); } catch (err) {}
-  try { if (String(sheet.getTabColor() || "").toUpperCase() !== expectedTabColor) sheet.setTabColor(expectedTabColor); } catch (err) {}
-}
-
-function writeTemplateMetadata_(sheet, dashboard, sheetDef, colCount) {
-  try {
-    const note = [
-      "Framework Version: " + RFF_VERSION,
-      "Template Version: " + dashboard.globals.templateVersion,
-      "Sheet Type: " + sheetDef.sheetType,
-      "Built: " + new Date(),
-      "Source: Format Dashboard"
-    ].join("\n");
-    sheet.getRange(1, Math.max(colCount, 1)).setNote(note);
-  } catch (err) {}
-}
-
-// --- BATCH BUILD, VISIBILITY & VALIDATION WORKFLOWS ------------------------
-
-function buildAllTemplatesAndValidate() {
-  const buildResult = runFrameworkTimed_("Build All Templates And Validate", function(timing) {
-    const dashboard = loadDashboardConfig_(true);
-    ensureGoldenMasterTemplate_(dashboard, timing);
-    const results = [];
-    
-    RFF_DEFER_TEMPLATE_HIDE_DURING_BATCH_ = true;
-    
-    sortSheetDefinitionsByProductionOrder_(dashboard.sheetDefinitions).forEach(function(sheetDef) {
-      try {
-        const template = createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing);
-        results.push({ templateName: sheetDef.templateName, status: "PASS" });
-      } catch (err) {
-        results.push({ templateName: sheetDef.templateName, status: "FAIL", issue: err.message });
-        logBestEffortWarning_("Template build failed for " + sheetDef.templateName + ": " + err.message);
-      }
-    });
-    
-    RFF_DEFER_TEMPLATE_HIDE_DURING_BATCH_ = false;
-    setReportTemplateVisibility_(dashboard, true, timing);
-    forceBaseTemplateHidden_();
-    
-    return results;
-  });
-  
-  runDashboardQualityValidateTemplates();
-  return buildResult;
-}
-
-function quickBuildAllTemplates() {
-  notify_("Quick Build All Templates: building hidden templates and validating...");
-  buildAllTemplatesAndValidate();
-  notify_("Quick Build All Templates complete.");
-}
-
-function setReportTemplateVisibility_(dashboard, hidden, timing) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetMap = {};
-  ss.getSheets().forEach(function(sheet) { sheetMap[sheet.getName()] = sheet; });
-
-  sortSheetDefinitionsByProductionOrder_(dashboard.sheetDefinitions).forEach(function(sheetDef) {
-    const sheet = sheetMap[sheetDef.templateName];
-    if (!sheet || sheetDef.templateName === RFF_BASE_TEMPLATE_NAME) return;
-    if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide template sheet: " + sheetDef.templateName);
-    else showSheetIfNeeded_(sheet, timing, "Show template sheet: " + sheetDef.templateName);
-  });
-
-  Object.keys(sheetMap).forEach(function(sheetName) {
-    if (sheetName === RFF_BASE_TEMPLATE_NAME || String(sheetName || "").indexOf("Template - ") !== 0) return;
-    const sheet = sheetMap[sheetName];
-    if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide orphan template sheet: " + sheetName);
-    else showSheetIfNeeded_(sheet, timing, "Show orphan template sheet: " + sheetName);
-  });
-  
-  forceBaseTemplateHidden_();
-}
-
-function hideTemplates() { return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(), true, null); }
-function showTemplates() { return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(), false, null); }
-
-function validateReportTemplates() {
-  return runFrameworkTimed_("Validate Templates", function(timing) {
     const dashboard = loadDashboardConfig_();
-    return validateTemplateFromDashboard_(dashboard, timing);
-  });
-}
+    const subReports = [
+      { type: "Raw Data", sheet: rawSheet },
+      { type: "Banners", sheet: bannerSheet },
+      { type: "CP Due Date", sheet: getCurrentCarePlanDueSheet_(monthParts) },
+      { type: "Unlock CP", sheet: getCurrentUnlockedCarePlanSheet_(monthParts) }
+    ];
 
-function validateTemplateFromDashboard_(dashboard, sheetDef) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetDef.templateName);
-  const issues = [];
-  const globals = dashboard.globals;
-  const expectedHeaders = getHeadersForSheetType_(dashboard, sheetDef.sheetType);
-  const behavior = getBehaviorForSheetType_(dashboard, sheetDef.sheetType);
+    subReports.forEach(report => {
+      if (!report.sheet) return;
+      const headers = getHeadersForSheetType_(dashboard, report.type);
+      const dataRows = Math.max(report.sheet.getLastRow() - DATA_START_ROW + 1, 0);
+      if (dataRows < 1) return; 
 
-  if (!sheet) return { templateName: sheetDef.templateName, sheetType: sheetDef.sheetType, status: "FAIL", issues: "Template missing" };
-  if (expectedHeaders.length === 0) issues.push("No headers defined in dashboard");
+      let formatMismatchCount = 0, checkedColumns = 0;
+      const formatRange = report.sheet.getRange(DATA_START_ROW, 1, Math.min(10, dataRows), Math.max(headers.length, 1));
+      const allFormats = formatRange.getNumberFormats();
 
-  try {
-    if (sheet.getFrozenRows() !== globals.freezeRows) issues.push("Frozen rows mismatch");
-    if (sheet.getFrozenColumns() > globals.freezeColumns) issues.push("Frozen columns mismatch");
-  } catch (err) { issues.push("Frozen check failed: " + err.message); }
+      headers.forEach((header, colIndex) => {
+        const def = dashboard.columnDefinitions[header] || {};
+        if (def.dateColumn || isDateLikeHeader_(header)) {
+          checkedColumns++;
+          let colHasMismatch = false;
+          for (let r = 0; r < allFormats.length; r++) {
+            const cellFormat = String(allFormats[r][colIndex] || "").toLowerCase().replace(/\s+/g, "");
+            if (cellFormat !== "m/d/yyyy" && cellFormat !== "mm/dd/yyyy" && cellFormat !== "m/d/yy") colHasMismatch = true;
+          }
+          if (colHasMismatch) formatMismatchCount++;
+        }
+      });
 
-  try {
-    const actualHeaders = sheet.getRange(globals.headerRow, 1, 1, Math.max(expectedHeaders.length, 1)).getValues()[0].map(normalizeHeader_);
-    expectedHeaders.forEach(function(expected, index) {
-      if (actualHeaders[index] !== expected) issues.push("Header mismatch col " + (index + 1) + ": expected " + expected + ", found " + actualHeaders[index]);
+      if (checkedColumns > 0) {
+        if (formatMismatchCount > 0) rows.push([`${report.type} Date Formats`, "FAIL", "Format Mismatch", `Found ${formatMismatchCount} date column(s) not formatted properly.`]);
+        else rows.push([`${report.type} Date Formats`, "PASS", "OK", `All ${checkedColumns} date column(s) correctly formatted.`]);
+      }
     });
-  } catch (err) { issues.push("Header check failed: " + err.message); }
+  } catch (e) {
+    rows.push(["Date Format Audit", "FAIL", "Audit Error", "Failed to run date format audit: " + e.message]);
+  }
 
-  try {
-    if (behavior.usesFilter && !sheet.getFilter()) issues.push("Filter missing");
-  } catch (err) { issues.push("Filter check failed: " + err.message); }
+  if (rows.length === 0) rows.push(["Raw Data checks", "PASS", "None", "No data to check."]);
+  writeDashboardQualitySection("SECTION C - RAW DATA VALIDATION", rows);
+}
 
-  return {
-    templateName: sheetDef.templateName,
-    sheetType: sheetDef.sheetType,
-    status: issues.length === 0 ? "PASS" : "FAIL",
-    issues: issues.length === 0 ? "OK" : issues.join("; ")
+/**
+ * SECTION D - DEMO P QUALITY VALIDATION
+ * Refactored to dynamically pull Banner fields from the Format Dashboard.
+ */
+function runDashboardQualityDemoPValidation_() {
+  const rows = [];
+  const demoSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Refined Data") || getLatestSheetByPrefix_("Refined Data");
+  const dashboard = loadDashboardConfig_();
+  
+  if (!demoSheet) {
+    rows.push(["Demo P Sheet", "FAIL", "Missing", "Demo P / Refined Data sheet not found. Build Demo P first."]);
+    writeDashboardQualitySection("SECTION D - DEMO P QUALITY VALIDATION", rows);
+    return;
+  }
+  
+  rows.push(["Demo P sheet present", "PASS", "None", demoSheet.getName() + " is available."]);
+  
+  const data = getDataValues_(demoSheet, HEADER_ROW, DATA_START_ROW);
+  if (!data.values.length) {
+    rows.push(["Demo P Data", "WARNING", "Empty Sheet", "Sheet exists but has no data rows."]);
+    writeDashboardQualitySection("SECTION D - DEMO P QUALITY VALIDATION", rows);
+    return;
+  }
+
+  let nameErrors = 0, addressErrors = 0, phoneErrors = 0, bannerErrors = 0, notesErrors = 0;
+  let languageErrors = 0, contactErrors = 0, metadataErrors = 0, sortErrors = 0;
+
+  const hMap = data.headerMap;
+  
+  // DYNAMIC: Pull governed Banner fields directly from the Format Dashboard
+  const bannerHeaders = getHeadersForSheetType_(dashboard, SHEET_TYPE.BANNER)
+    .filter(h => h !== "Last Name" && h !== "First Name" && h !== "Participant PMR#");
+
+  let previousSortKey = "";
+
+  data.values.forEach(row => {
+    const first = String(row[hMap["First Name"]] || "").trim();
+    const last = String(row[hMap["Last Name"]] || "").trim();
+
+    // Name Check
+    if (first !== "" || last !== "") {
+      if (hMap["Participant Name"] !== undefined && String(row[hMap["Participant Name"]] || "").trim() === "") nameErrors++;
+      if (hMap["Name"] !== undefined && String(row[hMap["Name"]] || "").trim() === "") nameErrors++;
+    }
+    
+    // Address Check
+    if (hMap["Address 1 - Street"] !== undefined && hMap["Address Line 1"] !== undefined) {
+      if (String(row[hMap["Address Line 1"]] || "").trim() !== "" && String(row[hMap["Address 1 - Street"]] || "").trim() === "") addressErrors++;
+    }
+    
+    // Phone Check
+    if (hMap["Phone 1 - Value"] !== undefined && hMap["Phone Number"] !== undefined) {
+      if (String(row[hMap["Phone Number"]] || "").trim() !== "" && String(row[hMap["Phone 1 - Value"]] || "").trim() === "") phoneErrors++;
+    }
+
+    // Banner Check (Dynamic)
+    if (hMap["Banner Summary"] !== undefined) {
+      const hasBanner = bannerHeaders.some(header => hMap[header] !== undefined && String(row[hMap[header]] || "").trim() !== "");
+      if (hasBanner && String(row[hMap["Banner Summary"]] || "").trim() === "") bannerErrors++;
+    }
+
+    // Contact Check
+    if (hMap["Contact - Summary"] !== undefined && hMap["Contact - Last Name"] !== undefined) {
+      if (String(row[hMap["Contact - Last Name"]] || "").trim() !== "" && String(row[hMap["Contact - Summary"]] || "").trim() === "") contactErrors++;
+    }
+
+    // Notes Check
+    if (hMap["Notes"] !== undefined) {
+      const hasContent = (hMap["Banner Summary"] !== undefined && String(row[hMap["Banner Summary"]] || "").trim() !== "") || 
+                         (hMap["Contact - Summary"] !== undefined && String(row[hMap["Contact - Summary"]] || "").trim() !== "");
+      if (hasContent && String(row[hMap["Notes"]] || "").trim() === "") notesErrors++;
+    }
+
+    // Language Check
+    if (hMap["Custom Field 1 - Label"] !== undefined && hMap["Primary Language"] !== undefined) {
+      const lang = String(row[hMap["Primary Language"]] || "").trim().toLowerCase();
+      if (lang && lang !== "english" && String(row[hMap["Custom Field 1 - Label"]] || "").trim() !== "Language") languageErrors++;
+    }
+
+    // Metadata Check
+    if (hMap["Source Hash"] !== undefined && hMap["Last Updated At"] !== undefined) {
+      if (String(row[hMap["Source Hash"]] || "").trim() === "" || String(row[hMap["Last Updated At"]] || "").trim() === "") metadataErrors++;
+    }
+
+    // Sort Check
+    const currentSortKey = (last + " " + first).toLowerCase();
+    if (previousSortKey !== "" && currentSortKey < previousSortKey) sortErrors++;
+    if (currentSortKey !== " ") previousSortKey = currentSortKey;
+  });
+
+  const check = (idx, label, errors, desc) => {
+    if (idx !== undefined) rows.push([label, errors === 0 ? "PASS" : "FAIL", errors === 0 ? "OK" : `${errors} issues found`, desc]);
   };
+
+  check(hMap["Participant Name"], "Name Generation", nameErrors, "Validates Participant Name & Name functions.");
+  check(hMap["Address 1 - Street"], "Address Combination", addressErrors, "Validates combineAddressesData_.");
+  check(hMap["Phone 1 - Value"], "Phone Splitting", phoneErrors, "Validates splitPhoneNumbersData_.");
+  check(hMap["Banner Summary"], "Banner Summary Generation", bannerErrors, "Validates updateBannerColumnData_ against dynamic Dashboard fields.");
+  check(hMap["Contact - Summary"], "Contact Summary Generation", contactErrors, "Validates contact compilation logic.");
+  check(hMap["Notes"], "Notes Summary Compilation", notesErrors, "Validates combineNotesSummaryData_.");
+  check(hMap["Custom Field 1 - Label"], "Language Processing", languageErrors, "Validates non-English language overrides.");
+  check(hMap["Source Hash"], "Metadata Generation", metadataErrors, "Validates Source Hash and Last Updated At timestamps.");
+  
+  rows.push(["Alphabetical Sort", sortErrors === 0 ? "PASS" : "FAIL", sortErrors === 0 ? "OK" : `${sortErrors} out-of-order records`, "Validates participant sorting."]);
+
+  writeDashboardQualitySection("SECTION D - DEMO P QUALITY VALIDATION", rows);
 }
 
-function ensureRequiredMasterListTemplate_(dashboard, timing) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (ss.getSheetByName("Template - Master List")) return ss.getSheetByName("Template - Master List");
-
-  const sheetDef = getSheetDefinitionByTypeOrNull_(dashboard, SHEET_TYPE.MASTER_LIST) || getDefaultSheetDefinitionByType_(SHEET_TYPE.MASTER_LIST);
-  const template = createOrRefreshTemplateFromDashboard_(dashboard, sheetDef, timing);
-  markFrameworkStep_(timing, "Required Master List template verified: " + sheetDef.templateName);
-  return template;
-}
-
-// --- CONVENIENCE WRAPPERS (OUTPUT & PRODUCTION PIPELINES) ------------------
-
-function createOrRefreshDemoPTemplate_(ss) {
-  const dashboard = loadDashboardConfig_();
-  return createOrRefreshTemplateFromDashboard_(dashboard, getSheetDefinitionByType_(dashboard, SHEET_TYPE.DEMO_P), null);
-}
-
-function createOrRefreshMasterListTemplate_(ss) {
-  const dashboard = loadDashboardConfig_();
-  return createOrRefreshTemplateFromDashboard_(dashboard, getSheetDefinitionByType_(dashboard, SHEET_TYPE.MASTER_LIST), null);
-}
-
-function createMasterListSheetFromTemplate_(ss, targetName, monthParts, timing, timingLabel) {
-  return createOutputSheetFromDashboardTemplate_(
-    SHEET_TYPE.MASTER_LIST, targetName, [], monthParts.firstDay, monthParts.lastDay, timing, timingLabel || "Master List template copy"
-  );
-}
+// ====================================
