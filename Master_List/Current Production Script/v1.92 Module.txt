@@ -1,7 +1,7 @@
-
 // ============================================================================
-// MODULE 1 v1.9: GLOBALS, MENU BUILDER, & SHARED HELPERS
+// MODULE 1 v1.92: GLOBALS, MENU BUILDER, & SHARED HELPERS
 // File: 01_Globals_Menu_Shared.gs
+// Includes Audit Corrections (IDs 1-6)
 // ============================================================================
 
 // ============================================================================
@@ -76,7 +76,7 @@ function onOpen(e) {
       .addItem("📜 Set up System Sheets", "createActiveSystemSheets")
       .addItem("🎨 Format Dashboard", "menuBuildDashboardTemplate")
       .addItem("💾 Save Active Layout as Rebuild Default", "saveActiveLayoutAsRebuildDefault")
-      .addItem("🖼 Create / Refresh All Templates", "createOrRefreshAllReportTemplates"))
+      .addItem("🖼 Create / Refresh All Templates", "createAllReportTemplates"))
     .addSubMenu(ui.createMenu("📇 Index")
       .addItem("📇 Build Index", "populateActiveIndex")
       .addItem("↩ Restore Selected Archive Row", "restoreSheetFromActiveIndexRow")
@@ -84,8 +84,6 @@ function onOpen(e) {
       .addItem("🔗 Configure Archive Spreadsheet ID", "configureArchiveSpreadsheetId"))
     .addToUi();
 }
-
-
 
 function menuFormatMonthlySheets() {
   if (typeof runFormatterPipeline_ === "function") {
@@ -95,22 +93,74 @@ function menuFormatMonthlySheets() {
   }
 }
 
-function dummyCreateMonthlyUpdate() { notifyPlaceholder_(); }
-function dummyCreateMonthlyStart() { notifyPlaceholder_(); }
-function dummyDashboardQualityStartUp() { notifyPlaceholder_("Quality suite partitioned."); }
-function dummyDashboardQualityWorkflow() { notifyPlaceholder_("Quality suite partitioned."); }
-function dummyFormatBanner() { notifyPlaceholder_(); }
-function dummyFormatCPDueDate() { notifyPlaceholder_(); }
-function dummyFormatUnlockedCP() { notifyPlaceholder_(); }
-function dummyFormatRawData() { notifyPlaceholder_(); }
+function menuBuildDashboardTemplate() {
+  if (typeof buildFormatDashboardTemplate_ === "function") buildFormatDashboardTemplate_();
+  SpreadsheetApp.getActiveSpreadsheet().toast("Format Dashboard Built!", "Dashboard Engine", 3);
+}
 
 function notifyPlaceholder_(msg) {
   SpreadsheetApp.getActiveSpreadsheet().toast(msg || "Module not yet implemented.", "Status", 3);
 }
 
-function menuBuildDashboardTemplate() {
-  if (typeof buildFormatDashboardTemplate_ === "function") buildFormatDashboardTemplate_();
-  SpreadsheetApp.getActiveSpreadsheet().toast("Format Dashboard Built!", "Dashboard Engine", 3);
+// ============================================================================
+// 3. QUICK START-UP FUNCTIONS
+// ============================================================================
+
+function quickSystemSetup() {
+  if (typeof initTimingClock_ === "function") initTimingClock_();
+  
+  notify_("Quick System Setup [Step 1/4]: Rebuilding Format Dashboard defaults...");
+  if (typeof menuBuildDashboardTemplate === "function") menuBuildDashboardTemplate();
+
+  notify_("Quick System Setup [Step 2/4]: Initializing system sheets...");
+  if (typeof createActiveSystemSheets === "function") createActiveSystemSheets();
+
+  notify_("Quick System Setup [Step 3/4]: Executing Dashboard Quality start-up verifications...");
+  if (typeof runDashboardQualityStartUp === "function") runDashboardQualityStartUp();
+
+  notify_("Quick System Setup [Step 4/4]: Building centralized Index...");
+  if (typeof populateActiveIndex === "function") populateActiveIndex();
+
+  if (typeof flushFrameworkTimingReport_ === "function") flushFrameworkTimingReport_();
+  notify_("Quick System Setup complete.");
+}
+
+function quickBuildAllTemplates() {
+  if (typeof initTimingClock_ === "function") initTimingClock_();
+
+  notify_("Quick Build All Templates: creating/refreshing templates in place...");
+  if (typeof createAllReportTemplates === "function") createAllReportTemplates();
+  
+  notify_("Quick Build All Templates: validating templates...");
+  if (typeof runDashboardQualityValidateTemplates === "function") runDashboardQualityValidateTemplates();
+  
+  if (typeof flushFrameworkTimingReport_ === "function") flushFrameworkTimingReport_();
+  notify_("Quick Build All Templates complete.");
+}
+
+// ============================================================================
+// 4. DYNAMIC DASHBOARD ON-EDIT TRIGGERS
+// ============================================================================
+
+function handleFormatDashboardValueHighlighting_(e) {
+  if (!e || !e.range) return;
+  const editedRange = e.range;
+  const sheet = editedRange.getSheet();
+  
+  const startRow = editedRange.getRow();
+  const endRow = editedRange.getLastRow();
+  const startCol = Math.max(editedRange.getColumn(), 1);
+  const endCol = Math.min(editedRange.getLastColumn(), 19); 
+  if (startRow > endRow || startCol > endCol) return;
+
+  const targetRange = sheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+  const values = targetRange.getValues();
+  const backgrounds = values.map(function(row) {
+    return row.map(function(value) {
+      return String(value === null || value === undefined ? "" : value).trim() === "" ? "#ffffff" : "#fff2cc";
+    });
+  });
+  targetRange.setBackgrounds(backgrounds);
 }
 
 function onEdit(e) {
@@ -119,13 +169,20 @@ function onEdit(e) {
     var sheet = e.range.getSheet();
     var sheetName = sheet.getName();
     if (sheetName === "Format Dashboard" || sheetName === "Default - Format Dashboard") {
-      if (typeof recalculateDashboardHexCodes_ === "function") recalculateDashboardHexCodes_(sheet);
+      
+      // 1. Recalculate Hex Codes for Template Base Colors
+      if (typeof recalculateDashboardHexCodes_ === "function") {
+        recalculateDashboardHexCodes_(sheet);
+      }
+      
+      // 2. Apply Visual Highlight to Edited Cells
+      handleFormatDashboardValueHighlighting_(e);
     }
   } catch (err) {}
 }
 
 // ============================================================================
-// 3. SHARED WRAPPERS, LOGGING & TIMING CORE
+// 5. SHARED WRAPPERS, LOGGING & TIMING CORE
 // ============================================================================
 
 var ML_TIMING_CACHE_ = { startTime: null, lastStepTime: null, logs: [] };
@@ -192,7 +249,7 @@ function runFrameworkTimed_(processName, func) {
 }
 
 // ============================================================================
-// 4. SHARED DASHBOARD LOADERS & CONFIG GATEWAY
+// 6. SHARED DASHBOARD LOADERS & CONFIG GATEWAY
 // ============================================================================
 
 function getFallbackDashboardConfig_() {
@@ -396,7 +453,7 @@ function getDashboardSetting_(key, defaultValue) {
 }
 
 // ============================================================================
-// 5. COLOR LOGIC & HSL HELPERS
+// 7. COLOR LOGIC & HSL HELPERS
 // ============================================================================
 
 function isValidHex_(hexStr) { return /^#[0-9A-F]{6}$/i.test(String(hexStr || "").trim()); }
@@ -519,7 +576,7 @@ function recalculateDashboardHexCodes_(dashboardSheet) {
 }
 
 // ============================================================================
-// 6. SHARED GLOBAL UI/LAYOUT HELPERS (To Prevent Duplicate Function Errors)
+// 8. SHARED GLOBAL UI/LAYOUT HELPERS (To Prevent Duplicate Function Errors)
 // ============================================================================
 
 function logBestEffortWarning_(msg) {
@@ -619,223 +676,6 @@ function extractFirstDateFromSheetName_(name) {
   }
   return new Date();
 }
-
-// ============================================================================
-// 7. UNIVERSAL DATA MAPPING & PARSING HELPERS (Hoisted for Global Access)
-// ============================================================================
-
-function getDataValues_(sheet, headerRow = 4, dataStartRow = 5) {
-  if (!sheet) return { headers: [], headerMap: {}, values: [] };
-  const lastRow = sheet.getLastRow(), lastCol = sheet.getLastColumn();
-  if (lastRow < headerRow || lastCol < 1) return { headers: [], headerMap: {}, values: [] };
-
-  const headers = sheet.getRange(headerRow, 1, 1, lastCol).getValues()[0].map(h => String(h || "").trim());
-  const headerMap = {};
-  headers.forEach((h, idx) => { if (h && headerMap[h] === undefined) headerMap[h] = idx; });
-
-  if (lastRow < dataStartRow) return { headers: headers, headerMap: headerMap, values: [] };
-  const values = sheet.getRange(dataStartRow, 1, lastRow - dataStartRow + 1, lastCol).getValues();
-  return { headers: headers, headerMap: headerMap, values: values };
-}
-
-function getPMRIndex_(headerMap) {
-  if (headerMap["Participant PMR#"] !== undefined) return headerMap["Participant PMR#"];
-  if (headerMap["PMR #"] !== undefined) return headerMap["PMR #"];
-  if (headerMap["PMR"] !== undefined) return headerMap["PMR"];
-  return -1;
-}
-
-function findHeaderIndex_(headerMap, possibleNames) {
-  for (let i = 0; i < possibleNames.length; i++) {
-    if (headerMap[possibleNames[i]] !== undefined) return headerMap[possibleNames[i]];
-  }
-  return -1;
-}
-
-function normalizePMR_(val) {
-  if (val === null || val === undefined) return "";
-  return String(val).trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function normalizeKeyPart_(val) {
-  if (val === null || val === undefined) return "";
-  return String(val).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function isPrimaryPMRRowValue_(val) {
-  const str = String(val || "").trim().toUpperCase();
-  return str === "YES" || str === "TRUE" || str === "Y" || str === "PRIMARY";
-}
-
-function normalizeCompareValue_(value) {
-  if (value === null || value === undefined || value === "") return "";
-  if (value instanceof Date) return isNaN(value.getTime()) ? "" : value.getTime();
-  return String(value).trim().toLowerCase();
-}
-
-function normalizeToDateObject_(val) {
-  if (!val) return null;
-  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-  const parsed = new Date(val);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function valuesAreEqual_(a, b) {
-  return normalizeCompareValue_(a) === normalizeCompareValue_(b);
-}
-
-function mapRowsToHeaders_(sourceRows, sourceHeaders, targetHeaders) {
-  if (!sourceRows || !sourceRows.length || !targetHeaders) return [];
-  const indexMap = targetHeaders.map(targetH => {
-    const cleanTarget = String(targetH || "").trim().toLowerCase();
-    return (sourceHeaders || []).findIndex(srcH => String(srcH || "").trim().toLowerCase() === cleanTarget);
-  });
-
-  return sourceRows.map(row => {
-    return indexMap.map(idx => (idx !== -1 && idx < row.length) ? row[idx] : "");
-  });
-}
-
-function buildHeaderIndexMap_(headers) {
-  const map = {};
-  (headers || []).forEach((header, idx) => {
-    const clean = String(header || "").trim();
-    if (clean && map[clean] === undefined) map[clean] = idx;
-  });
-  return map;
-}
-
-function getHeaders_(sheet, headerRow = 4) {
-  if (!sheet || sheet.getLastColumn() === 0) return [];
-  return sheet.getRange(headerRow, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h || "").trim());
-}
-
-function padRowToWidth_(row, targetWidth) {
-  const padded = Array.isArray(row) ? row.slice() : [row];
-  while (padded.length < targetWidth) padded.push("");
-  return padded.slice(0, targetWidth);
-}
-
-function normalizeRowsToWidth_(rows, width) {
-  return (rows || []).map(row => padRowToWidth_(row, width));
-}
-
-function formatReportDateLabel_(dateObj) {
-  return Utilities.formatDate(dateObj || new Date(), Session.getScriptTimeZone(), "MM.yy");
-}
-
-function buildMonthlySheetName_(prefix, firstDay, lastDay) {
-  const label = Utilities.formatDate(firstDay || new Date(), Session.getScriptTimeZone(), "MM.yy");
-  return `${prefix} ${label}`;
-}
-
-function getMonthDateParts_(dateObj) {
-  const d = dateObj || new Date();
-  const month = d.getMonth() + 1, year = d.getFullYear();
-  const mm = String(month).padStart(2, "0"), yy = String(year).slice(-2);
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  return { month: month, year: year, mm: mm, yy: yy, label: `${mm}.${yy}`, firstDay: firstDay, lastDay: lastDay };
-}
-
-function getLatestSheetByPrefix_(prefix) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheets = ss.getSheets();
-  let match = null;
-  for (let i = 0; i < sheets.length; i++) {
-    const name = sheets[i].getName();
-    if (name.indexOf(prefix) === 0 && name.indexOf("Template - ") === -1 && name.indexOf("Source - ") === -1) {
-      match = sheets[i];
-      break;
-    }
-  }
-  return match;
-}
-
-function getCurrentRawDataSheet_(monthParts) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(`Raw Data ${monthParts.mm}.${monthParts.yy}`) || ss.getSheetByName(`Source - Raw Data ${monthParts.mm}.${monthParts.yy}`) || getLatestSheetByPrefix_("Raw Data");
-}
-
-function getCurrentDemoPSheet_(monthParts) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName("Refined Data") || getLatestSheetByPrefix_("Refined Data");
-}
-
-function getCurrentCarePlanDueSheet_(monthParts) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(`CP Due ${monthParts.mm}.${monthParts.yy}`) || getLatestSheetByPrefix_("CP Due");
-}
-
-function getCurrentUnlockedCarePlanSheet_(monthParts) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(`Unlock CP ${monthParts.mm}.${monthParts.yy}`) || getLatestSheetByPrefix_("Unlock CP");
-}
-
-function safeSheetName_(value) {
-  return String(value || "").trim().replace(/[\\\/\?\*\[\]:]/g, "-").substring(0, 99);
-}
-
-function setRequiredSheetName_(sheet, targetName) {
-  if (!sheet) return;
-  const ss = sheet.getParent() || SpreadsheetApp.getActiveSpreadsheet();
-  deleteSheetIfExists_(ss, targetName, sheet.getName());
-  sheet.setName(targetName);
-}
-
-function deleteSheetIfExists_(ss, sheetName, preserveName) {
-  if (!sheetName || sheetName === preserveName) return;
-  const target = ss.getSheetByName(sheetName);
-  if (target && ss.getSheets().length > 1) {
-    ss.deleteSheet(target);
-  }
-}
-
-
-// ============================================================================
-// DYNAMIC DASHBOARD ON-EDIT TRIGGERS
-// ============================================================================
-
-function handleFormatDashboardValueHighlighting_(e) {
-  if (!e || !e.range) return;
-  const editedRange = e.range;
-  const sheet = editedRange.getSheet();
-  
-  const startRow = editedRange.getRow();
-  const endRow = editedRange.getLastRow();
-  const startCol = Math.max(editedRange.getColumn(), 1);
-  const endCol = Math.min(editedRange.getLastColumn(), 19); // Adjusted for new dashboard width
-  if (startRow > endRow || startCol > endCol) return;
-
-  const targetRange = sheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
-  const values = targetRange.getValues();
-  const backgrounds = values.map(function(row) {
-    return row.map(function(value) {
-      return String(value === null || value === undefined ? "" : value).trim() === "" ? "#ffffff" : "#fff2cc";
-    });
-  });
-  targetRange.setBackgrounds(backgrounds);
-}
-
-function onEdit(e) {
-  if (!e || !e.range) return;
-  try {
-    var sheet = e.range.getSheet();
-    var sheetName = sheet.getName();
-    if (sheetName === "Format Dashboard" || sheetName === "Default - Format Dashboard") {
-      
-      // 1. Recalculate Hex Codes for Template Base Colors
-      if (typeof recalculateDashboardHexCodes_ === "function") {
-        recalculateDashboardHexCodes_(sheet);
-      }
-      
-      // 2. Apply Visual Highlight to Edited Cells
-      handleFormatDashboardValueHighlighting_(e);
-      
-    }
-  } catch (err) {}
-}
-
 
 
 // ============================================================================
