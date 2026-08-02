@@ -44,6 +44,8 @@ If runtime overrides are required, load them into a separate object first, valid
 **Addresses:** RR-003.
 **Affected modules:** 5–7.
 
+The complete helper-to-caller, entry-point, and source-line mapping is maintained in `RC-002_Shared_Helper_Function_Map.md`.
+
 Restore the 23 required helpers as complete, tested implementations—not placeholders. Use the last approved production implementations only after comparing signatures and callers against v1.92:
 
 `getDataValues_`, `getPMRIndex_`, `findHeaderIndex_`, `normalizePMR_`, `isPrimaryPMRRowValue_`, `normalizeCompareValue_`, `normalizeToDateObject_`, `valuesAreEqual_`, `mapRowsToHeaders_`, `buildHeaderIndexMap_`, `getHeaders_`, `padRowToWidth_`, `normalizeRowsToWidth_`, `formatReportDateLabel_`, `buildMonthlySheetName_`, `getLatestSheetByPrefix_`, `getCurrentRawDataSheet_`, `getCurrentDemoPSheet_`, `getCurrentCarePlanDueSheet_`, `getCurrentUnlockedCarePlanSheet_`, `safeSheetName_`, `setRequiredSheetName_`, and `ensureOutputSheetHasFormattedRows_`.
