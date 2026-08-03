@@ -1,148 +1,150 @@
-# Critical Script Runtime Readiness Audit — v1.93
+# Critical Script Runtime Readiness Audit — Corrected v1.93
 
 **Authoritative source:** `Master_List/Current Production Script/v1.93`
-**Source fingerprint:** SHA-256 `a5fcaff0533c6e5094fea8c1d59593f9309badb9263ea0ac8986c89e2dcc012c`
-**Scope:** the 4,008-line combined production source, its seven labeled modules, and `Master_List/appsscript.json`, reviewed as one Apps Script project.
-**Method:** full-source parse, global-declaration comparison, menu/trigger reconciliation, unresolved-reference analysis after isolating the first parse defect, targeted entry-point tracing, and manifest/resource review. Live workbook contents, deployed triggers, permissions, properties, quotas, and web-app deployment were unavailable.
-**Overall result:** **FAIL**.
+**Current source SHA-256:** `536afc22a2e6a0fbcd6a8ca3b2210d44a1f848e8a0c59551357622c9ba03a15e`
+**Comparison source:** `Master_List/Current Production Script/v1.8_Prior`
+**Comparison SHA-256:** `0264e58b81bcde4f77a1d8319b0e91451d2e74f5da6d6b1adb6a420fe8cc0b89`
+**Scope:** corrected v1.93 as one Apps Script project, plus process parity against every v1.8 registered menu command and runtime entry point.
+**Method:** V8 parse, exact declaration/callback reconciliation, unresolved-reference linting, duplicate-global review, compact entry-point tracing, destructive-order review, and source-static v1.8 process mapping. Live spreadsheet state, properties, permissions, deployments, quotas, and trigger inventory were unavailable.
+**Overall result:** **PASS WITH WARNINGS**.
 
 ## 1. Project Load Readiness
 
 | Check | Reviewed | Pass | Warning | Fail | Not Verified |
 |---|---:|---:|---:|---:|---:|
-| Source files and modules | 1 combined source / 7 labeled modules | 7 present | 0 | 0 | 0 |
-| Syntax and parsing | 1 complete source | 0 | 0 | 1 | 0 |
-| Global function definitions | 174 declarations / 171 unique names | 168 | 0 | 3 conflicting names | 0 |
-| Menu callback definitions | 30 registrations / 29 unique names | 25 registrations | 0 | 5 registrations | 0 |
-| Project configuration | 1 manifest plus runtime resources | 1 manifest | 0 | 0 | 4 runtime groups |
+| Source files/modules | 1 combined source / 7 modules | 7 | 0 | 0 | 0 |
+| Syntax and parsing | 4,903 lines | 1 | 0 | 0 | 0 |
+| Global functions | 242 declarations | 242 unique | 0 | 0 | 0 |
+| Menu callbacks | 41 registrations / 40 unique names | 41 | 0 | 0 | 0 |
+| Runtime entry points | `onOpen`, `onEdit`, `doGet` | 3 | 0 | 0 | Deployed state |
+| Project configuration | Manifest plus runtime resources | Manifest | Runtime preflight | 0 | 5 resource groups |
 
-The source cannot parse. Module 1 declares `BANNER_PREFIX`, `CARE_PLAN_DUE_PREFIX`, and `UNLOCKED_PREFIX` at lines 31–33. Module 5 declares the same three lexical constants again at lines 2147–2149. V8 stops at line 2147 with `SyntaxError: Identifier 'BANNER_PREFIX' has already been declared`; no global initialization, menu, or trigger can run.
+The corrected v1.93 parses under V8 and has no unresolved identifier, missing registered callback, conflicting function definition, duplicate lexical constant, merge marker, or truncated function. Static initializer, menu, timing, archive, dashboard backup/restore, quality, Refined Data, Disenrollment, Master List, Monthly Change, and web restore paths are present.
 
-After commenting only the three Module 5 redeclarations in an audit copy, static analysis exposed 39 additional unresolved identifiers: two optional configuration symbols and 37 function names. Menu strings add three more function names not otherwise referenced as executable identifiers, producing **40 unique missing function/callback names** in the assembled project.
+The comparison definition of a **process** is intentionally bounded to the 40 v1.8 menu registrations and the three v1.8 runtime entry points. v1.8 contains 684 internal functions, many of which are implementation helpers rather than independent production processes. v1.93 consolidates helpers; this audit certifies entry-process coverage, not one-for-one private-helper retention.
 
-Three function names are behaviorally duplicated: `promptForLockedYearReportMonth_`, `buildPromptedMonthContext_`, and `saveActiveLayoutAsRebuildDefault`. The later declarations replace the corrected Module 1 implementations with incompatible or placeholder behavior.
+## 2. Current Menu and Trigger Readiness
 
-No merge marker, empty labeled module, truncated final function, or malformed string/comment was found before the duplicate-constant parser failure.
+| Category | Registered/Defined | Callback Resolution | Dependency Status | Result |
+|---|---:|---|---|---|
+| Data & Processing Engine | 3 | Complete | Static dependencies present | **PASS** |
+| Sheet & Layout Management | 8 | Complete | Archive resources runtime-dependent | **PASS WITH WARNING** |
+| Quick Start-up | 3 | Complete | Fail-closed quality dependencies present | **PASS** |
+| Maintenance Quality | 6 | Complete | Dashboard/report sheets runtime-dependent | **PASS WITH WARNING** |
+| Individual Format Sheets | 4 | Complete | Source/templates/archive runtime-dependent | **PASS WITH WARNING** |
+| Data Processing | 5 | Complete | Source sheets/headers runtime-dependent | **PASS WITH WARNING** |
+| System Maintenance | 3 | Complete | Timing property defaults safely | **PASS** |
+| Start-up | 6 | Complete | Saved dashboard property may not exist initially | **PASS WITH WARNING** |
+| Index | 4 | Complete | Archive ID/web deployment runtime-dependent | **PASS WITH WARNING** |
+| Simple/web entry points | 3 | Complete | Deployment/event state not source-verifiable | **NOT VERIFIED** |
 
-## 2. Menu and Trigger Readiness
+All menu callback strings resolve exactly. Quick Start-up throws when required quality functions are absent. Timed workflows acquire a document lock after user prompting and release it in `finally`. The formatter deletes imported source sheets only after explicit archive verification. Dashboard backup and restore callbacks are both registered.
 
-Every entry below is currently blocked by CRR93-001. The status column records the first additional entry-local defect that remains after removing the duplicate Module 5 constants.
+## 3. v1.8 Process-to-v1.93 Comparison
 
-| Menu/Trigger | Callback or Handler | Wrapper/Implementation | Dependencies Present | Blocking Issue | Status |
-|---|---|---|---|---|---|
-| Format Monthly Sheets | `menuFormatMonthlySheets` | `runFormatterPipeline_` | No | CRR93-003, CRR93-007 | **FAIL** |
-| Hide Monthly Sub-Reports | `hideMonthlyImportSheets` | `hideMonthlySheetsBySpecs_` | No | `runFrameworkTimed_` missing | **FAIL** |
-| Archive Monthly Sub-Reports | `archiveMonthlyImportSheets` | `archiveMonthlySheetsBySpecs_` | No/runtime | Timing/logging missing; archive access unverified | **FAIL** |
-| Hide Monthly Active Sheets | `hideMonthlyActiveSheets` | `hideMonthlySheetsBySpecs_` | No | `runFrameworkTimed_` missing | **FAIL** |
-| Archive Monthly Active Sheets | `archiveMonthlyActiveSheets` | `archiveMonthlySheetsBySpecs_` | No/runtime | Timing/logging missing; archive access unverified | **FAIL** |
-| Hide Templates | `hideTemplates_` | `hideReportTemplates` | No | Config/timing/logging dependencies missing | **FAIL** |
-| Show Templates | `showTemplates_` | `showReportTemplates` | No | Config/timing/logging dependencies missing | **FAIL** |
-| Hide System Sheets | `hideSystemSheets_` | `hideSystemSheetsNow` | No | `runFrameworkTimed_` missing | **FAIL** |
-| Show System Sheets | `showSystemSheets_` | `showSystemSheetsNow` | No | `runFrameworkTimed_` missing | **FAIL** |
-| System Set up | `quickSystemSetup` | Four-step fail-closed wrapper | No | Quality start-up/timing/config dependencies missing | **FAIL** |
-| Build Templates + Validate | `quickBuildAllTemplates` | Build/validate wrapper | No | Validation and template dependencies missing | **FAIL** |
-| Dashboard Quality Workflow (Quick) | `runDashboardQualityWorkflow` | Missing | No | Registered callback absent | **FAIL** |
-| Dashboard Quality Start up | `runDashboardQualityStartUp` | Missing | No | Registered callback absent | **FAIL** |
-| Dashboard Quality Workflow (Maintenance) | `runDashboardQualityWorkflow` | Missing | No | Registered callback absent | **FAIL** |
-| Update Refined Data | `updateRefinedDataMonthlySync` | Refined-data workflow | No | Runtime/config/logging/normalization dependencies missing | **FAIL** |
-| Build Refined Data | `buildRefinedDataFromScratch` | Refined-data workflow | No | Runtime/config/logging/normalization dependencies missing | **FAIL** |
-| Create / Update Disenrolled List | `createDisenrolledList` | Disenrollment workflow | No | Runtime/config/logging/normalization dependencies missing | **FAIL** |
-| Monthly Change Report | `buildMonthlyChangeReport` | Monthly-change workflow | No | Runtime/config/normalization dependencies missing | **FAIL** |
-| Create Master List | `createMasterList` | Master-list workflow | No | Runtime/config/normalization dependencies missing | **FAIL** |
-| Clear Timing Log | `clearDiagnosticsAndTimingLogs` | Missing | No | Registered callback absent | **FAIL** |
-| Framework Timing on/off | `toggleFrameworkTiming` | Missing | No | Registered callback absent | **FAIL** |
-| Organize Tabs | `organizeTabs` | Section-F rules | Yes locally | Global CRR93-001 | Blocked by project load |
-| Set up System Sheets | `createActiveSystemSheets` | Template promotion | Runtime-dependent | Required templates and builders unresolved | **NOT VERIFIED** |
-| Format Dashboard | `menuBuildDashboardTemplate` | `buildFormatDashboardTemplate_` | No | CRR93-004 | **FAIL** |
-| Save Active Layout as Rebuild Default | `saveActiveLayoutAsRebuildDefault` | Later toast-only declaration | No | CRR93-006 | **FAIL** |
-| Create / Refresh All Templates | `createAllReportTemplates` | Operational builders | No | CRR93-004 | **FAIL** |
-| Build Index | `populateActiveIndex` | `populateIndexData` | Partial | Theme/grid/banding/width dependencies missing | **WARNING** |
-| Restore Selected Archive Row | `restoreSheetFromActiveIndexRow` | Local navigation | Yes locally | Archive restore not implemented by callback | **WARNING** |
-| Configure Restore Web App URL | `configureIndexRestoreWebAppUrl` | Property setter | Runtime-dependent | URL/deployment not validated | **NOT VERIFIED** |
-| Configure Archive Spreadsheet ID | `configureArchiveSpreadsheetId` | Property setter/access check | Runtime-dependent | Target identity and production access unverified | **NOT VERIFIED** |
-| Simple open trigger | `onOpen` | Menu builder | No | Parser failure prevents handler load | **FAIL** |
-| Simple edit trigger | `onEdit` | Dashboard recalc/highlight | No | Parser failure; optional recalc helper absent | **FAIL** |
+| # | v1.8 Process/Menu | v1.8 Function | Included in v1.93 | v1.93 Function | Mapping Note |
+|---:|---|---|---|---|---|
+| 1 | Format Monthly Sheets | `formatMonthlySheets` | Yes | `formatMonthlySheets` → `menuFormatMonthlySheets` → `runFormatterPipeline_` | Full multi-route formatter retained |
+| 2 | Create Monthly Update | `runMonthlyUpdate` | Yes | `runMonthlyUpdate` | Restored orchestration: Monthly Change, Refined sync, Disenrollment, Master List, Index |
+| 3 | Create Monthly Start | `runMonthlyStart` | Yes | `runMonthlyStart` | Restored orchestration: Refined build, Disenrollment, Master List, Index |
+| 4 | Hide Monthly Sub-Reports | `hideMonthlyImportSheets` | Yes | `hideMonthlyImportSheets` | Exact callback |
+| 5 | Archive Monthly Sub-Reports | `archiveMonthlyImportSheets` | Yes | `archiveMonthlyImportSheets` | Exact callback; configured archive required |
+| 6 | Hide Monthly Active Sheets | `hideMonthlyActiveSheets` | Yes | `hideMonthlyActiveSheets` | v1.8 registered this name without a declaration; corrected in v1.93 |
+| 7 | Archive Monthly Active Sheets | `archiveMonthlyActiveSheets` | Yes | `archiveMonthlyActiveSheets` | Exact callback |
+| 8 | Hide Templates | `hideTemplates` | Yes | `hideTemplates` → `hideTemplates_` | Compatibility wrapper plus current callback |
+| 9 | Show Templates | `showTemplates` | Yes | `showTemplates` → `showTemplates_` | Compatibility wrapper plus current callback |
+| 10 | Hide System Sheets | `hideSystemSheets_` | Yes | `hideSystemSheets_` | Exact callback |
+| 11 | Show System Sheets | `showSystemSheets_` | Yes | `showSystemSheets_` | Exact callback |
+| 12 | System Set up | `quickSystemSetup` | Yes | `quickSystemSetup` | Fail-closed replacement |
+| 13 | Build Templates + Validate | `quickBuildAllTemplates` | Yes | `quickBuildAllTemplates` | Fail-closed replacement |
+| 14 | Dashboard Quality Workflow (Quick) | `runDashboardQualityWorkflow` | Yes | `runDashboardQualityWorkflow` | Exact callback |
+| 15 | Dashboard Quality Start up | `runDashboardQualityStartUp` | Yes | `runDashboardQualityStartUp` | Exact callback |
+| 16 | Dashboard Quality Validate Templates | `runDashboardQualityValidateTemplates` | Yes | `runDashboardQualityValidateTemplates` | Exact callback |
+| 17 | Dashboard Quality Workflow (Maintenance) | `runDashboardQualityWorkflow` | Yes | `runDashboardQualityWorkflow` | Intentional shared callback |
+| 18 | Framework Smoke Validation | `runFrameworkSmokeValidation` | Yes | `runFrameworkSmokeValidation` | Restored static/runtime smoke process |
+| 19 | Full Quality Check | `runFullQualityCheck` | Yes | `runFullQualityCheck` | Smoke plus Dashboard Quality workflow |
+| 20 | Format Dashboard Updates | `runFormatDashboardUpdates` | Yes | `runFormatDashboardUpdates` | Dynamic Section B–H validation |
+| 21 | Format Banner | `formatBannerReport` | Yes | `formatBannerReport` | Single-route formatter wrapper |
+| 22 | Format CP Due Date | `formatCarePlanDueReport` | Yes | `formatCarePlanDueReport` | Single-route formatter wrapper |
+| 23 | Format Unlocked CP | `formatUnlockedCarePlanReport` | Yes | `formatUnlockedCarePlanReport` | Single-route formatter wrapper |
+| 24 | Format Raw Data | `formatRawData` | Yes | `formatRawData` | Single-route formatter wrapper |
+| 25 | Update Demo P Monthly Sync | `updateDemoPMonthlySync` | Yes | `updateDemoPMonthlySync` → `updateRefinedDataMonthlySync` | Demo P renamed Refined Data; compatibility wrapper retained |
+| 26 | Build Demo P From Scratch | `buildDemoPFromScratch` | Yes | `buildDemoPFromScratch` → `buildRefinedDataFromScratch` | Demo P renamed Refined Data; compatibility wrapper retained |
+| 27 | Create / Update Disenrolled List | `createDisenrolledList` | Yes | `createDisenrolledList` | Exact callback and full month engine |
+| 28 | Monthly Change Report | `buildMonthlyChangeReport` | Yes | `buildMonthlyChangeReport` | Exact callback and full comparison engine |
+| 29 | Create Master List | `createMasterList` | Yes | `createMasterList` | Exact callback and full synthesis engine |
+| 30 | Clear Timing Log | `clearDiagnosticsAndTimingLogs` | Yes | `clearDiagnosticsAndTimingLogs` | Exact callback |
+| 31 | Framework Timing On/Off | `toggleFrameworkTiming` | Yes | `toggleFrameworkTiming` | Exact callback with persistent property |
+| 32 | Organize Tabs | `enforceGlobalSheetSortOrder` | Yes | `enforceGlobalSheetSortOrder` → `organizeTabs` | Compatibility wrapper over v1.93 ordering |
+| 33 | Set up System Sheets | `setupSystemSheets` | Yes | `setupSystemSheets` → `createActiveSystemSheets` | Compatibility wrapper |
+| 34 | Format Dashboard | `rebuildFormatDashboardDefaults` | Yes | `rebuildFormatDashboardDefaults` → `menuBuildDashboardTemplate` | Compatibility wrapper |
+| 35 | Save Active Layout | `saveActiveLayoutToDashboardSettings` | Yes, governed replacement | `saveActiveLayoutToDashboardSettings` → `saveActiveLayoutAsRebuildDefault` | Approved v1.93 behavior backs up Format Dashboard JSON/backgrounds |
+| 36 | Create / Refresh All Templates | `createOrRefreshAllReportTemplates` | Yes | `createOrRefreshAllReportTemplates` → `createAllReportTemplates` | Compatibility wrapper |
+| 37 | Build Index | `createIndexSheet` | Yes | `createIndexSheet` → `populateActiveIndex` | Compatibility wrapper |
+| 38 | Restore Selected Archive Row | `restoreSheetFromActiveIndexRow` | Yes | `restoreSheetFromActiveIndexRow`; `restoreSheetFromArchiveWorkbook` | Local navigation plus archive/web restore path |
+| 39 | Configure Restore Web App URL | `configureIndexRestoreWebAppUrl` | Yes | `configureIndexRestoreWebAppUrl` | Exact callback |
+| 40 | Configure Archive Spreadsheet ID | `configureArchiveSpreadsheetId` | Yes | `configureArchiveSpreadsheetId` | Exact callback |
+| 41 | Spreadsheet open | `onOpen` | Yes | `onOpen` | Exact simple trigger |
+| 42 | Dashboard edit highlighting | `onEdit` | Yes | `onEdit` | Exact simple trigger |
+| 43 | Archive restore web request | `doGet` | Yes | `doGet` → `restoreSheetFromArchiveWorkbook` | Restored web entry and locking |
 
-There are 30 menu registrations, 29 unique menu callback names, and two source-defined simple triggers. Four callback names are absent: `runDashboardQualityWorkflow` (registered twice), `runDashboardQualityStartUp`, `clearDiagnosticsAndTimingLogs`, and `toggleFrameworkTiming`. No installable-trigger builder/reset/removal path, web handler, or time-driven handler appears in source. Deployed trigger state is **NOT VERIFIED**.
+**Process parity result:** 43 of 43 compared v1.8 processes/runtime entry points have a v1.93 implementation or explicit compatibility mapping. Thirty-two use the direct v1.93 implementation; eleven route through a compatibility wrapper or governed replacement while retaining the v1.8 public name. No v1.8 registered process is omitted.
 
-Failed callback paths stop at:
+## 4. Required Code Dependencies
 
-- Dashboard Quality menu → missing `runDashboardQualityWorkflow` / `runDashboardQualityStartUp`.
-- Clear/toggle timing menu → missing `clearDiagnosticsAndTimingLogs` / `toggleFrameworkTiming`.
-- Template entry → builder → missing dashboard config/theme/metadata dependency.
-- Data entry → timed wrapper/config loader → missing runtime infrastructure or normalization helper.
+| Dependency Group | Current Status | Evidence/Limit |
+|---|---|---|
+| Timing/logging/locks | Present | Persistent toggle, init/flush, document lock, guaranteed release |
+| Dashboard loaders/config | Present | Section A–G loading; dynamic quality review covers B–H |
+| Template/grid/widths | Present | Section C defaults and Section F operational overrides |
+| Data/header mapping | Present | Batched reads, header maps, PMR index, row mapping, width normalization |
+| Month context/sheet finders | Present | Validated 2026 context; exact prompted-month CP/Unlocked resolution |
+| Archive copy/delete/restore | Present | Configured archive required; verified copy gates delete; web restore restored |
+| Refined/Disenrolled/Master/Change engines | Present | Complete internal month engines retained from v1.92 baseline |
+| Runtime resources | Not verified | Live sheets, properties, archive access, deployment, authorizations, quotas |
 
-## 3. Required Code Dependencies
-
-| Severity | Caller Group | Required Component | Type | Module(s) | Problem | Runtime Impact |
-|---|---|---|---|---|---|---|
-| **Critical** | Five menu registrations | Four exact callback names | Public callbacks | Module 1 menu | Callback strings do not resolve globally | Five menu items cannot start after parsing is repaired |
-| **High** | Most menu workflows | `runFrameworkTimed_`, timing init/flush/log/step helpers | Runtime/timing infrastructure | Modules 1, 2, 5–7 | Core timing wrapper and supporting functions are absent | Hide/show, archive, formatting, Refined, Disenrollment, Master List, and Monthly Change paths stop |
-| **High** | Template, index, and data workflows | `loadDashboardConfig_`, `getDashboardSetting_`, `getTemplateTheme_`, `getHeadersForSheetType_` | Configuration resolvers | Modules 2–7 | Governed configuration APIs are absent | Template creation and data mapping cannot obtain required settings or headers |
-| **High** | Template builders | `getTemplateConfigFromDashboard_`, `writeTemplateMetadata_` | Template helpers | Module 3 | Unguarded required helpers are absent | Dashboard, system, and operational template builds halt or remain partial |
-| **High** | Refined, Disenrollment, Master List, Monthly Change | `normalizePMR_`, `normalizeCompareValue_`, `normalizeToDateObject_`, `safeSheetName_` | Data-integrity helpers | Modules 6–7 | Restored workflows call normalization functions that are not present | Participant matching, change detection, date handling, and staged naming halt |
-| **High** | Quick workflows | Quality start-up and template validation implementations | Validators/workflows | Module 1 | Fail-closed wrappers correctly throw because required modules are missing | Setup and template validation cannot complete |
-| **Medium** | Formatting/index/template surfaces | Grid, banding, widths, placement, output-visibility, recalculation helpers | Optional/conditional helpers | Modules 1, 3–6 | Several missing calls are guarded, allowing execution to continue without governed behavior | Outputs can be incomplete while appearing successful |
-
-Static reconciliation found **37 unresolved function identifiers** after isolating the parser defect. Three additional menu-only callback names bring the project total to **40 missing function/callback names**. A `typeof` guard prevents a `ReferenceError` only on that branch; it does not prove that the governed behavior is optional or that the workflow is complete.
-
-## 4. Constants, Configuration, and Required Resources
-
-| Required Item | Type | Required By | Problem | Fallback Available | Status |
-|---|---|---|---|---|---|
-| Formatter prefix constants | Global constants | `FORMATTER_ROUTES` | Declared twice; second declarations are also self-referential | No | **INVALID** |
-| `GLOBAL_DEFAULTS`, row constants, version, workflow enums | Global configuration | All modules | Initial definitions are present before parser failure | N/A | Confirmed present statically |
-| Timing and dashboard runtime APIs | Configuration/runtime functions | Most workflows | Required functions are absent | No reliable fallback | **MISSING** |
-| `RFF_ARCHIVE_SPREADSHEET_ID` | Document property | Monthly archives and formatter archive | Live value/access unavailable; hard-coded fallback remains in monthly archive | Partial | **NOT VERIFIED** |
-| `INDEX_RESTORE_WEB_APP_URL` | Document property/deployment | Restore configuration | Setter exists; deployment and consuming restore path are not proven | No | **NOT VERIFIED** |
-| Format Dashboard and definitions | Worksheet/configuration | Templates/data mapping | Live content unknown; loader is missing | No | **NOT VERIFIED** |
-| Base, system, and operational templates | Worksheets | Setup and format workflows | Live sheets unknown; template builders have missing dependencies | Partial | **NOT VERIFIED** |
-| Source sheets, governed headers, and column definitions | Worksheets/schema | Monthly and roster workflows | Runtime contents unavailable | Partial | **NOT VERIFIED** |
-| Apps Script services/scopes | Manifest | Spreadsheet/UI/property operations | Required base scopes are declared; no advanced service is referenced | N/A | Confirmed present statically |
-| Locks | Concurrency control | Archive/delete, template replacement, staged promotion | No `LockService` use appears | No | **WARNING** |
+No global `normalizePMR_`, `normalizeCompareValue_`, `normalizeToDateObject_`, or `safeSheetName_` function was reintroduced; approved direct workflow-local normalization remains in place.
 
 ## 5. Initialization, Halt, and Failure Risks
 
-| ID | Severity | Entry Point | Function/Module | Halt or Corruption Risk | Evidence | Required Correction |
-|---|---|---|---|---|---|---|
-| CRR93-001 | **Critical** | Entire project | Module 1 lines 31–33; Module 5 lines 2147–2149 | Source does not parse | Duplicate lexical constants; Node/V8 stops at line 2147 | Delete Module 5 redeclarations and use the single Module 1 constants |
-| CRR93-002 | **Critical** | Five menu registrations | Module 1 menu | Entry points cannot start | Four exact callback names are absent | Restore approved global callbacks or update every registration to exact implemented names |
-| CRR93-003 | **High** | Most production workflows | Shared runtime/config/logging infrastructure | Workflows halt on missing wrappers/resolvers/loggers | `runFrameworkTimed_`, dashboard loaders, timing/logging helpers, and governed header resolvers are absent | Restore one governed shared infrastructure module with signature-compatible implementations |
-| CRR93-004 | **High** | Dashboard and template workflows | Module 3 | Builds halt or leave partial templates | Template config, theme, metadata, resizing, and related helpers are missing | Restore required template contracts and transactional replacement/cleanup |
-| CRR93-005 | **High** | Month-driven workflows | Duplicate month APIs at lines 195–236 and 738–765 | Selected month fields become incompatible | Later prompt returns raw text; later context omits `label`, `mm`, and `yy` | Retain the Module 1 object contract and remove later duplicates after caller verification |
-| CRR93-006 | **High** | Save Active Layout | Duplicate definitions at lines 380–390 and 817–819 | Working persistence is silently replaced by toast-only behavior | Later declaration wins globally | Remove the placeholder duplicate and add read-back verification to the persisting implementation |
-| CRR93-007 | **High** | Format Monthly Sheets | Module 5 archive/output path | Workflow skips required archive/format/governance behaviors | Archive connection/copy, output visibility, governed insert, raw sync, and delete helpers are absent or guarded | Define required policy; fail closed when required behavior is unavailable; never report full success for skipped governed steps |
-| CRR93-008 | **High** | Refined, Disenrollment, Master List, Monthly Change | Modules 6–7 | Matching and comparison halt or can be invalid | PMR/value/date/name normalization helpers are absent | Restore approved non-lossy normalization contracts and test duplicate/blank/date cases |
-| CRR93-009 | **Medium** | Destructive shared-sheet workflows | Modules 2, 3, 5–7 | Concurrent runs can race during copy, delete, rename, and promotion | No document lock and guaranteed release path | Add bounded document locks outside prompts and release them in `finally` |
-| CRR93-010 | **Not Verified** | Resource-dependent workflows | Workbook/properties/deployment | IDs, sheets, schemas, permissions, triggers, and deployments may block execution | Runtime environment unavailable | Run a read-only production preflight and capture evidence before release |
+| ID | Severity | Area | Current Assessment | Required Verification |
+|---|---|---|---|---|
+| V193-R01 | **Not Verified** | Archive workbook | ID, access, destination collisions, and quotas require live execution | Exercise success and all archive failure modes; confirm local source preservation |
+| V193-R02 | **Not Verified** | Workbook schemas | Format Dashboard, templates, headers, and source tabs are runtime data | Run read-only preflight in production-configured test copy |
+| V193-R03 | **Medium** | Process equivalence | Compatibility wrappers preserve entry access but some v1.8 internals are consolidated | Execute result-based regression fixtures, not function-count comparison |
+| V193-R04 | **Medium** | Monthly orchestration | Restored Start/Update chains mutate several sheets under one lock | Inject failure at each stage and verify rollback/preserved prior outputs |
+| V193-R05 | **Not Verified** | Web restore | `doGet` exists; deployment URL, execute-as identity, and permissions are external | Deploy test version and restore a controlled archive sheet |
+| V193-R06 | **Not Verified** | Triggers | Source handlers exist; deployed trigger inventory is unavailable | Inspect Apps Script trigger list and exercise `onOpen`/`onEdit` events |
+
+No source-confirmed Critical or High blocking defect remains. The warnings are conditional or require behavior-level parity testing in the Google Apps Script container.
 
 ## 6. Final Readiness Certification
 
 | Category | Pass | Warning | Fail | Not Verified |
 |---|---:|---:|---:|---:|
-| Project files and syntax | 7 modules present | 0 | 1 parser failure | 0 |
-| Menus and callbacks | 25 registrations resolve | 0 | 5 registrations | 0 |
-| Triggers and handlers | 0 runnable | 0 | 2 blocked | Deployed inventory |
-| Functions and dependencies | 171 unique declared | Conditional missing group | 40 missing names | 0 |
-| Wrappers and helpers | Restored data primitives | Optional guarded group | 5 required groups | 0 |
-| Constants and configuration | Initial globals present | 0 | Duplicate formatter constants | 4 runtime groups |
-| Worksheets and templates | 0 live-verified | 0 | Build paths unresolved | 3 resource groups |
-| Services and permissions | Manifest present | 0 | 0 | Effective grants/access |
-| Initialization and cleanup | 0 | No-lock risk | 3 root causes | 0 |
-| Error and halt handling | Fail-closed quick wrappers | Guarded-skip risk | 8 Critical/High causes | 1 runtime group |
+| Project files/syntax | 1 | 0 | 0 | 0 |
+| Menus/callbacks | 41 | 0 | 0 | 0 |
+| v1.8 process parity | 43 | 11 compatibility mappings | 0 | 0 |
+| Triggers/web entry | 3 source-defined | 0 | 0 | Deployment state |
+| Functions/dependencies | 242 | 0 | 0 | Runtime services |
+| Constants/configuration | Static/source config present | 0 | 0 | Live properties |
+| Worksheets/templates | Builders/resolvers present | 0 | 0 | Live workbook |
+| Archive/restore | Guarded implementations present | 0 | 0 | Access/deployment |
+| Initialization/cleanup | Locks and `finally` cleanup present | Multi-stage rollback testing | 0 | 0 |
+| Error/halt handling | Fail-closed source paths present | Runtime failure injection | 0 | 0 |
 
-- **Total menu items reviewed:** 30
-- **Total triggers reviewed:** 2 source-defined simple triggers; deployed inventory not verified
-- **Total production entry points reviewed:** 32
-- **Missing functions/callbacks:** 40 unique names
-- **Missing registered callback names:** 4 names affecting 5 menu registrations
-- **Conflicting global function names:** 3
-- **Duplicate invalid global constants:** 3
-- **Broken required dependency groups:** timing/runtime/logging, dashboard configuration, template construction, data normalization, and formatter governance
-- **Confirmed blocking defects:** 8 consolidated Critical/High root causes
-- **Conditional runtime risks:** sheets/templates/schema, properties/IDs, access, deployment, trigger state, locks, quotas, and skipped guarded behavior
-- **Items not verifiable from source:** live workbook resources, property values, archive identity/access, web-app deployment, deployed triggers, effective grants, and production quotas
+- **v1.8 menu processes reviewed:** 40 registrations / 39 unique callback names
+- **v1.8 source defect noted:** `hideMonthlyActiveSheets` was registered but not declared
+- **v1.8 runtime entry points reviewed:** 3
+- **v1.93 menu registrations:** 41 / 40 unique callback names
+- **v1.93 unique functions:** 242
+- **Missing v1.93 registered callbacks:** 0
+- **Unresolved v1.93 identifiers:** 0
+- **Conflicting v1.93 globals:** 0
+- **v1.8 process mappings included in v1.93:** 43 of 43
+- **Source-confirmed blocking defects:** 0
+- **Runtime-dependent risks:** archive, workbook schemas, deployment, permissions, triggers, quotas, and multi-stage rollback behavior
 
-### Certification: **FAIL**
+### Certification: **PASS WITH WARNINGS**
 
-v1.93 is not runtime-ready. The duplicate formatter constants prevent parsing, so no menu or trigger can load. Removing only that parser defect is insufficient: five menu registrations remain unresolved, shared timing/configuration/template infrastructure is missing, three corrected functions are overwritten by later conflicting declarations, and core data workflows still lack normalization/governance dependencies. Correct CRR93-001 through CRR93-008, rerun full-source parse and exact reference reconciliation on a new versioned candidate, then complete live workbook/deployment preflight before release.
+Corrected v1.93 is source-statically loadable and contains every registered v1.8 process through an exact function, compatibility wrapper, or approved governed replacement. Final production certification still requires result-based regression testing in a Google Apps Script test workbook, archive failure injection, trigger/deployment inspection, and comparison of workflow outputs—not merely callback presence.

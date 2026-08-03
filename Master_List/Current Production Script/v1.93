@@ -40,7 +40,9 @@ function onOpen(e) {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu("Master List")
     .addSubMenu(ui.createMenu("📊 Data & Processing Engine")
-      .addItem("📚 Format Monthly Sheets", "menuFormatMonthlySheets"))
+      .addItem("📚 Format Monthly Sheets", "formatMonthlySheets")
+      .addItem("🔁 Create Monthly Update", "runMonthlyUpdate")
+      .addItem("🏁 Create Monthly Start", "runMonthlyStart"))
     .addSubMenu(ui.createMenu("⚙ Sheet & Layout Management")
       .addSubMenu(ui.createMenu("🗄 Monthly Sub-Reports")
         .addItem("🗂 Hide Monthly Sub-Reports", "hideMonthlyImportSheets")
@@ -61,7 +63,16 @@ function onOpen(e) {
     .addSubMenu(ui.createMenu("🛠 Maintenance/Rebuild")
       .addSubMenu(ui.createMenu("👌 Quality")
         .addItem("Dashboard Quality Start up", "runDashboardQualityStartUp")
-        .addItem("Dashboard Quality Workflow", "runDashboardQualityWorkflow"))
+        .addItem("Dashboard Quality Validate Templates", "runDashboardQualityValidateTemplates")
+        .addItem("Dashboard Quality Workflow", "runDashboardQualityWorkflow")
+        .addItem("Framework Smoke Validation", "runFrameworkSmokeValidation")
+        .addItem("Full Quality Check", "runFullQualityCheck")
+        .addItem("Format Dashboard Updates", "runFormatDashboardUpdates"))
+      .addSubMenu(ui.createMenu("📝 Format Sheets")
+        .addItem("Banner", "formatBannerReport")
+        .addItem("CP Due Date", "formatCarePlanDueReport")
+        .addItem("Unlocked CP", "formatUnlockedCarePlanReport")
+        .addItem("Raw Data", "formatRawData"))
       .addSubMenu(ui.createMenu("📊 Data Processing")
         .addSubMenu(ui.createMenu("📁 Refined Data")
           .addItem("🔄 Update Refined Data", "updateRefinedDataMonthlySync")
@@ -93,6 +104,106 @@ function menuFormatMonthlySheets() {
   } else {
     throw new Error("Formatter pipeline is required but was not found.");
   }
+}
+
+function formatMonthlySheets() {
+  return menuFormatMonthlySheets();
+}
+
+function formatBannerReport() {
+  return runFormatterPipeline_(["B"], "Format Banner Report");
+}
+
+function formatCarePlanDueReport() {
+  return runFormatterPipeline_(["CD"], "Format CP Due Date Report");
+}
+
+function formatUnlockedCarePlanReport() {
+  return runFormatterPipeline_(["UC"], "Format Unlocked CP Report");
+}
+
+function formatRawData() {
+  return runFormatterPipeline_(["RD"], "Format Raw Data");
+}
+
+function hideTemplates() {
+  return hideTemplates_();
+}
+
+function showTemplates() {
+  return showTemplates_();
+}
+
+function updateDemoPMonthlySync() {
+  return updateRefinedDataMonthlySync();
+}
+
+function buildDemoPFromScratch() {
+  return buildRefinedDataFromScratch();
+}
+
+function enforceGlobalSheetSortOrder() {
+  return organizeTabs();
+}
+
+function setupSystemSheets() {
+  return createActiveSystemSheets();
+}
+
+function rebuildFormatDashboardDefaults() {
+  return menuBuildDashboardTemplate();
+}
+
+function saveActiveLayoutToDashboardSettings() {
+  return saveActiveLayoutAsRebuildDefault();
+}
+
+function createOrRefreshAllReportTemplates() {
+  return createAllReportTemplates();
+}
+
+function createIndexSheet() {
+  return populateActiveIndex();
+}
+
+function runMonthlyStart() {
+  const monthParts = promptForLockedYearReportMonth_("Create Monthly Start");
+  if (!monthParts) return null;
+  return runFrameworkTimed_("Create Monthly Start " + monthParts.label, function(timing) {
+    const rawSheet = getValidatedRawDataSheetForDemoPBuild_(monthParts, timing);
+    const buildResult = createActiveDemoPFromRawData_(rawSheet, DEMO_P_PREFIX, monthParts, timing);
+    const demoSheet = buildResult.sheet;
+    enforceDemoPPostFlattenFormatting_(demoSheet);
+    const disenrolledResult = createDisenrolledListForMonth_(monthParts, timing, {
+      timingPrefix: "Create Monthly Start - ",
+      refreshIndex: false,
+      notify: false,
+      workflowName: "Create Monthly Start"
+    });
+    const masterSheet = createMasterListForMonth_(monthParts, timing, null);
+    populateActiveIndex();
+    notify_("Create Monthly Start complete.\nRefined Data: " + demoSheet.getName() + "\nDisenrolled added: " + disenrolledResult.rowsCopied + "\nMaster List: " + (masterSheet ? masterSheet.getName() : "Not created"));
+    return { demoSheet: demoSheet, disenrolledResult: disenrolledResult, masterSheet: masterSheet };
+  });
+}
+
+function runMonthlyUpdate() {
+  const monthParts = promptForLockedYearReportMonth_("Create Monthly Update");
+  if (!monthParts) return null;
+  return runFrameworkTimed_("Create Monthly Update " + monthParts.label, function(timing) {
+    const reportSheet = buildMonthlyChangeReportForMonth_(monthParts, timing, { notify: false });
+    const demoSheet = updateDemoPMonthlySyncForMonth_(monthParts, timing, { timingPrefix: "Create Monthly Update - " });
+    const disenrolledResult = createDisenrolledListForMonth_(monthParts, timing, {
+      timingPrefix: "Create Monthly Update - ",
+      refreshIndex: false,
+      notify: false,
+      workflowName: "Create Monthly Update"
+    });
+    const masterSheet = createMasterListForMonth_(monthParts, timing, null);
+    populateActiveIndex();
+    notify_("Create Monthly Update complete.\nMonthly Change: " + (reportSheet ? reportSheet.getName() : "Not created") + "\nRefined Data: " + (demoSheet ? demoSheet.getName() : "Not updated") + "\nDisenrolled added: " + disenrolledResult.rowsCopied + "\nMaster List: " + (masterSheet ? masterSheet.getName() : "Not created"));
+    return { reportSheet: reportSheet, demoSheet: demoSheet, disenrolledResult: disenrolledResult, masterSheet: masterSheet };
+  });
 }
 
 function menuBuildDashboardTemplate() {
@@ -995,6 +1106,47 @@ function runDashboardQualityWorkflow() {
   if (failed.length) throw new Error("Dashboard Quality Workflow failed " + failed.length + " validation item(s).");
   notify_("Dashboard Quality Workflow complete.");
   return { configResults: configResults, templateResults: templateResults };
+}
+
+function runFrameworkSmokeValidation() {
+  const requiredFunctions = [
+    ["formatMonthlySheets", typeof formatMonthlySheets],
+    ["runMonthlyUpdate", typeof runMonthlyUpdate],
+    ["runMonthlyStart", typeof runMonthlyStart],
+    ["updateRefinedDataMonthlySync", typeof updateRefinedDataMonthlySync],
+    ["buildRefinedDataFromScratch", typeof buildRefinedDataFromScratch],
+    ["createDisenrolledList", typeof createDisenrolledList],
+    ["buildMonthlyChangeReport", typeof buildMonthlyChangeReport],
+    ["createMasterList", typeof createMasterList],
+    ["runDashboardQualityWorkflow", typeof runDashboardQualityWorkflow],
+    ["createAllReportTemplates", typeof createAllReportTemplates],
+    ["populateActiveIndex", typeof populateActiveIndex]
+  ];
+  const missingFunctions = requiredFunctions.filter(function(item) { return item[1] !== "function"; }).map(function(item) { return item[0]; });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const requiredSheets = ["Format Dashboard", "Dashboard Quality Report", "Index"];
+  const missingSheets = requiredSheets.filter(function(name) { return !ss.getSheetByName(name); });
+  if (missingFunctions.length || missingSheets.length) {
+    throw new Error("Framework smoke validation failed. Missing functions: " + (missingFunctions.join(", ") || "None") + "; Missing sheets: " + (missingSheets.join(", ") || "None"));
+  }
+  notify_("Framework smoke validation passed.");
+  return { functionsChecked: requiredFunctions.length, sheetsChecked: requiredSheets.length };
+}
+
+function runFullQualityCheck() {
+  const smoke = runFrameworkSmokeValidation();
+  const quality = runDashboardQualityWorkflow();
+  notify_("Full Quality Check complete.");
+  return { smoke: smoke, quality: quality };
+}
+
+function runFormatDashboardUpdates() {
+  const results = runDashboardQualityConfigVerificationSections_();
+  writeDashboardQualitySection_("SECTION A - FORMAT DASHBOARD VALIDATION", ["Section", "Status", "Details"], results);
+  const failed = results.filter(function(row) { return row[1] === "FAIL"; });
+  if (failed.length) throw new Error("Format Dashboard Updates found " + failed.length + " missing required section(s).");
+  notify_("Format Dashboard Updates validation complete.");
+  return results;
 }
 
 // ============================================================================
@@ -2785,6 +2937,47 @@ function restoreSheetFromActiveIndexRow() {
       ? `Sheet "${sheetName}" was not found locally. It may be in central archive cold storage. Please use the Restore Tool: ${restoreUrl}`
       : `Sheet "${sheetName}" was not found locally. It may be in central archive cold storage. Configure the Restore Web App URL to use the Restore Tool.`;
     SpreadsheetApp.getUi().alert("Sheet Not Found", message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+function restoreSheetFromArchiveWorkbook(targetSheetName) {
+  const mainSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const name = String(targetSheetName || "").trim();
+  if (!name) throw new Error("Missing archive sheet name to restore.");
+  if (mainSpreadsheet.getSheetByName(name)) throw new Error('Sheet "' + name + '" already exists locally.');
+  const archiveSpreadsheet = openArchiveSpreadsheetOnce_();
+  const archiveSheet = archiveSpreadsheet.getSheetByName(name);
+  if (!archiveSheet) throw new Error('Sheet "' + name + '" was not found in the archive workbook.');
+  const restoredSheet = archiveSheet.copyTo(mainSpreadsheet);
+  restoredSheet.setName(name);
+  placeCreatedSheetInConfiguredOrder_(restoredSheet);
+  restoredSheet.showSheet();
+  populateActiveIndex();
+  mainSpreadsheet.setActiveSheet(restoredSheet);
+  return restoredSheet;
+}
+
+function escapeHtml_(text) {
+  return String(text == null ? "" : text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function doGet(e) {
+  const targetSheetName = e && e.parameter ? String(e.parameter.restoreTarget || "").trim() : "";
+  if (!targetSheetName) return HtmlService.createHtmlOutput("<p>Missing recovery sheet routing token.</p>");
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(15000)) return HtmlService.createHtmlOutput("<p>Server busy. Try the restore link again.</p>");
+  try {
+    restoreSheetFromArchiveWorkbook(targetSheetName);
+    return HtmlService.createHtmlOutput("<h3>Restoration Complete</h3><p>Restored <b>" + escapeHtml_(targetSheetName) + "</b>.</p>");
+  } catch (err) {
+    return HtmlService.createHtmlOutput("<h3>Restore Failed</h3><p>" + escapeHtml_(err && err.message ? err.message : err) + "</p>");
+  } finally {
+    lock.releaseLock();
   }
 }
 
