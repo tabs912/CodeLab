@@ -1,0 +1,325 @@
+Critical Script Runtime Readiness Audit
+Maximum Report Length: 5–7 Pages
+
+Perform a focused, project-wide audit of the complete current script to determine whether everything required for the project to load, initialize, and execute is present and correctly connected.
+
+Review all current script files and modules together as one executable project.
+
+Treat the current source code as authoritative. Completed audit reports may be used as supporting references, but independently verify all potentially blocking findings against the current code.
+
+Hard Output Limit
+
+The final report must:
+
+Be no longer than 7 pages
+Target approximately 5–7 pages
+Not exceed 3,500 words
+Contain no appendices
+Contain no separate cross-reference reports
+Contain no complete function inventory
+Contain no complete call graph
+Contain no separate execution trace for every passing menu item or trigger
+Contain no repeated descriptions of shared functions, helpers, wrappers, or constants
+
+Audit the complete project, but report detailed information only for:
+
+Critical failures
+High-risk failures
+Missing components
+Broken connections
+Conflicting definitions
+Unresolved dependencies
+Conditions that could halt or corrupt execution
+Items that cannot be verified
+
+Summarize passing components using totals and status counts.
+
+AUDIT OBJECTIVE
+
+Verify that nothing required for execution is missing, inaccessible, conflicting, or incorrectly connected, including:
+
+Script files and modules
+Menu registration
+Trigger registration
+Callbacks
+Functions
+Wrappers
+Helpers
+Validators
+Global definitions
+Constants
+Configuration objects
+Object properties
+Script properties
+Worksheet definitions
+Template definitions
+Required resources
+Google Apps Script services
+Initialization order
+Error and cleanup handling
+
+Focus only on issues that could:
+
+Prevent the script from loading
+Prevent menus from opening
+Prevent triggers from firing
+Prevent callbacks from resolving
+Stop a workflow
+Cause an undefined reference
+Cause invalid initialization
+Cause a required resource to be unavailable
+Cause partial or corrupt processing
+Leave locks or runtime state unresolved
+SECTION 1 — PROJECT LOAD READINESS
+
+Verify:
+
+Every required production module is present.
+No required source file is empty or truncated.
+No unresolved merge markers remain.
+No syntax error prevents parsing.
+No malformed function, object, array, comment, or string remains.
+No duplicate global definition creates a conflict.
+No required project or manifest file is missing.
+Modular and combined files do not omit required components.
+
+Report only failures and warnings.
+
+Provide summary counts:
+
+Check	Reviewed	Pass	Warning	Fail	Not Verified
+Source files and modules					
+Syntax and parsing					
+Global definitions					
+Project configuration					
+SECTION 2 — MENU AND TRIGGER READINESS
+
+Verify every menu item and trigger, but use one compact table.
+
+Menu/Trigger	Callback or Handler	Wrapper/Implementation	Dependencies Present	Blocking Issue	Status
+
+Confirm:
+
+Every registered callback exists.
+Callback names match exactly.
+Required callbacks are globally accessible.
+Every trigger handler exists.
+Trigger installers reference the correct handler.
+Trigger types and event parameters are compatible.
+No obsolete callback or trigger-handler name remains.
+No duplicate or conflicting registration exists.
+Each entry point reaches a valid implementation.
+No required wrapper, helper, or validator is missing.
+
+For passing entry points, one table row is sufficient.
+
+For a failed or unresolved entry point, show only the path to the first blocking component:
+
+Menu or Trigger
+→ Callback or Handler
+→ Wrapper
+→ Implementation
+→ Missing or blocking component
+
+Do not reproduce complete descendant execution traces.
+
+SECTION 3 — REQUIRED CODE DEPENDENCIES
+
+Verify all functions directly or indirectly required by a menu, trigger, public entry point, or production workflow.
+
+Include:
+
+Functions
+Wrappers
+Helpers
+Validators
+Loggers
+Timing functions
+Cache functions
+Configuration resolvers
+Worksheet resolvers
+Template resolvers
+Error handlers
+
+Verify:
+
+Every referenced function exists.
+Every wrapper reaches the correct implementation.
+Every helper and validator exists.
+Cross-module references resolve.
+Arguments are compatible.
+Required return values are handled.
+No renamed or deleted function remains referenced.
+No duplicate global function changes the intended call target.
+No accidental recursion or circular dependency can halt execution.
+No required function is incorrectly scoped.
+
+Do not list every passing function.
+
+Report only exceptions:
+
+Severity	Caller	Required Component	Type	Module	Problem	Runtime Impact
+SECTION 4 — CONSTANTS, CONFIGURATION, AND REQUIRED RESOURCES
+
+Verify every value or resource required for execution, including:
+
+Global constants
+Configuration objects
+Required object properties
+Enumerations
+Script properties
+User or document properties
+Worksheet names
+Required worksheets
+Dashboard and Format Dashboard definitions
+Template names
+Required templates
+Headers and column definitions
+Folder or file IDs
+Named ranges
+Locks
+Caches
+Advanced services
+Authorization scopes
+
+Check for:
+
+Undefined constants
+Missing configuration properties
+Blank required values
+Invalid or missing IDs
+Configuration used before initialization
+Required worksheets or templates not created before use
+Invalid worksheet, header, or column references
+Missing property initialization
+Missing advanced-service setup
+Service calls incompatible with a simple trigger
+Missing authorization requirements
+
+Report exceptions only:
+
+Required Item	Type	Required By	Problem	Fallback Available	Status
+
+Clearly distinguish:
+
+Confirmed present
+Created automatically
+Runtime dependent
+Missing
+Not verifiable from source
+SECTION 5 — INITIALIZATION, HALT, AND FAILURE RISKS
+
+Review startup and execution order for primary entry points.
+
+Verify that:
+
+Validation occurs before destructive processing.
+Configuration is initialized before use.
+Worksheets and templates are resolved before access.
+Locks are acquired before protected operations.
+Locks are released on success and failure.
+Caches are initialized before use.
+Required values are assigned on every branch.
+Early returns do not leave partial processing.
+Errors are not swallowed while processing continues incorrectly.
+Success notifications occur only after completion.
+Timing start and completion calls are balanced.
+Cleanup occurs after dependent work is finished.
+
+Identify realistic halt conditions such as:
+
+Syntax or reference errors
+Null or undefined access
+Invalid sheet or range access
+Missing templates
+Missing headers
+Invalid indexes
+Missing returns
+Unexpected return types
+Uncaught exceptions
+Permission failures
+Lock failures
+Quota or time-limit risks
+Partial writes
+Cleanup failures
+
+Use one consolidated register:
+
+ID	Severity	Entry Point	Function/Module	Halt or Corruption Risk	Evidence	Required Correction
+
+Severity:
+
+Critical: Project cannot load or an entry point cannot start.
+High: Workflow will stop, corrupt data, or perform an invalid destructive action.
+Medium: Workflow may fail under a realistic condition.
+Low: Nonblocking issue that increases future failure risk.
+
+List all Critical and High findings.
+
+Limit Medium and Low findings to the most important items needed to understand readiness.
+
+When multiple findings have the same root cause, consolidate them into one finding and list the affected components.
+
+SECTION 6 — FINAL READINESS CERTIFICATION
+
+Provide this summary:
+
+Category	Pass	Warning	Fail	Not Verified
+Project files and syntax				
+Menus and callbacks				
+Triggers and handlers				
+Functions and dependencies				
+Wrappers and helpers				
+Constants and configuration				
+Worksheets and templates				
+Services and permissions				
+Initialization and cleanup				
+Error and halt handling				
+
+Report:
+
+Total menu items reviewed
+Total triggers reviewed
+Total production entry points reviewed
+Missing functions
+Missing wrappers
+Missing helpers
+Missing constants or configuration values
+Broken cross-module references
+Conflicting global definitions
+Confirmed blocking defects
+Conditional runtime risks
+Items not verifiable from source
+
+Assign one overall result:
+
+PASS
+
+No missing, inaccessible, conflicting, or invalid component was found that could prevent loading, initialization, callback resolution, trigger execution, or workflow completion.
+
+PASS WITH WARNINGS
+
+No confirmed blocking defect was found, but conditional or runtime-dependent risks remain.
+
+FAIL
+
+At least one confirmed defect can prevent the project or a production entry point from executing successfully.
+
+NOT VERIFIED
+
+Required source files, configuration, resources, or runtime evidence were unavailable.
+
+REPORT COMPRESSION RULES
+Audit every current module, but do not list every passing function.
+Summarize passing functions and dependencies by count.
+List every Critical and High finding.
+Combine repetitive Medium and Low findings by root cause.
+Document shared components once.
+Use one menu-and-trigger table rather than separate reports.
+Use one consolidated defect register.
+Do not create full call graphs.
+Do not create full read/write matrices.
+Do not create full helper, wrapper, constant, or function catalogs.
+Do not reproduce completed audit reports.
+Cross-reference prior audit reports only when necessary to explain a discrepancy.
+Expand execution paths only to the first missing, conflicting, or blocking component.
