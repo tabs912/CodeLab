@@ -207,6 +207,22 @@ Before reporting missing files:
 
 Never infer or fabricate unseen file contents.
 
+Before creating a branch, committing, pushing, or creating a pull request:
+
+1. Fetch and synchronize with origin.
+2. Compare the current branch to origin/main.
+3. Verify that at least one commit exists in:
+
+git log origin/main..HEAD
+
+If no commits exist:
+
+- Do not create a PR.
+- Report that the branch contains no changes relative to main.
+- Recommend closing the task or re-evaluating the requested implementation.
+
+Never create a pull request whose only purpose would be to duplicate commits already present in main.
+
 ## Branch Awareness
 
 Common branches include:
