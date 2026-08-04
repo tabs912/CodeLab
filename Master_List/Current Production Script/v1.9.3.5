@@ -1,0 +1,581 @@
+/**v1.9.3.5
+ */
+
+const SYSTEM_SHEETS = {
+  INDEX: "Index",
+  TEMPLATE: "Index Template"
+};
+
+const ARCHIVE_INDEX_SHEET_NAME = SYSTEM_SHEETS.INDEX;
+const ARCHIVE_INDEX_HEADER_ROW = 4;
+const ARCHIVE_INDEX_FIRST_DATA_ROW = 5;
+
+/**
+ * Creates the operational menu layout inside the Archive Workbook UI.
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu("📦 Archive Workbook")
+    .addItem("🔄 Update Archive Index Now", "createArchiveWorkbookIndexSheet")
+    .addSeparator()
+    .addSubMenu(ui.createMenu("🛠️ Sheet Management")
+      .addItem("🏗️ Build Index Template", "buildArchiveIndexTemplate")
+      .addItem("📇 Build Index Sheet", "createArchiveWorkbookIndexSheet")
+    )
+    .addItem("🙈 Hide Historical Archive Sheets", "hideHistoricalArchiveSheetsByPrompt")
+    .addItem("🙈 Hide Selected Index Row Sheet", "hideArchiveSheetFromActiveIndexRow")
+    .addToUi();
+}
+
+/**
+ * AUTOMATIC TRIGGER: Fires on structural sheet changes.
+ * MUST be registered as an Installable Trigger (Triggers ⏰ -> Add Trigger -> On change).
+ */
+function onChange(e) {
+  if (!e) return;
+  
+  const changeType = e.changeType;
+  if (changeType === 'INSERT_GRID' || 
+      changeType === 'REMOVE_GRID' || 
+      changeType === 'RENAME_GRID' || 
+      changeType === 'OTHER') {
+    
+    const lock = LockService.getScriptLock();
+    if (lock.tryLock(5000)) {
+      try {
+        createArchiveWorkbookIndexSheet();
+      } finally {
+        lock.releaseLock();
+      }
+    }
+  }
+}
+
+/**
+ * WEB APP ENDPOINT: Allows external sending files/scripts to trigger an instant index refresh.
+ */
+function doGet(e) {
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(10000)) {
+    try {
+      createArchiveWorkbookIndexSheet();
+      return ContentService.createTextOutput("SUCCESS: Archive Index refreshed.");
+    } catch(err) {
+      return ContentService.createTextOutput("ERROR: " + err.message);
+    } finally {
+      lock.releaseLock();
+    }
+  } else {
+    return ContentService.createTextOutput("BUSY: Lock could not be acquired.");
+  }
+}
+
+/**
+ * Legacy trigger handler to suppress errors from old installable triggers.
+ */
+function handleArchiveSpreadsheetChangeForIndex(e) {
+  console.log("Legacy trigger fired for handleArchiveSpreadsheetChangeForIndex.");
+}
+
+/**
+ * Builds the standalone Archive Index template directly in the Archive Spreadsheet.
+ * Run manually via "Build Index Template" to update structural styles.
+ */
+function buildArchiveIndexTemplate(archiveSs) {
+  const ss = archiveSs || SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SYSTEM_SHEETS.TEMPLATE);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SYSTEM_SHEETS.TEMPLATE);
+  }
+
+  // Exact color palette (All text set to #000000)
+  const theme = {
+    level1: "#527fe0", // Row 3 Thin Accent Separator
+    level2: "#93afec", // Header Row Fill & Month Section Divider
+    level3: "#becff3", // Title Block Fill
+    level4: "#d4dff7", // Banding Primary
+    level5: "#f2f5fd", // Banding Secondary
+    fontColor: "#000000",
+    fontFamily: "Arial"
+  };
+
+  // 1. Reset Grid Dimensions & Environment Controls
+  sheet.clear();
+  sheet.clearConditionalFormatRules();
+  sheet.setHiddenGridlines(false);
+
+  const existingBandings = sheet.getBandings();
+  existingBandings.forEach(b => b.remove());
+
+  if (sheet.getMaxColumns() > 5) {
+    sheet.deleteColumns(6, sheet.getMaxColumns() - 5);
+  } else if (sheet.getMaxColumns() < 5) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 5 - sheet.getMaxColumns());
+  }
+
+  if (sheet.getMaxRows() < 100) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), 100 - sheet.getMaxRows());
+  }
+
+  sheet.setFrozenRows(4);
+  sheet.setFrozenColumns(1);
+
+  // 2. Set Default Column Widths
+  const colWidths = [100, 185, 185, 110, 75];
+  colWidths.forEach((width, index) => {
+    sheet.setColumnWidth(index + 1, width);
+  });
+
+  // 3. Set Structural Row Heights
+  const maxRows = sheet.getMaxRows();
+  sheet.setRowHeights(1, maxRows, 25);
+  sheet.setRowHeight(3, 10);
+  sheet.setRowHeight(4, 30);
+
+  // 4. Global Font Application
+  const fullGrid = sheet.getRange(1, 1, maxRows, 5);
+  fullGrid.setFontFamily(theme.fontFamily)
+          .setFontColor(theme.fontColor)
+          .setVerticalAlignment("middle");
+
+  // 5. Title Block (Rows 1–2)
+  sheet.getRange("A1").setValue("Archive Index")
+    .setFontSize(14)
+    .setFontWeight("bold")
+    .setFontColor(theme.fontColor)
+    .setHorizontalAlignment("left")
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+
+  sheet.getRange("A2").setValue("Last Updated")
+    .setFontSize(10)
+    .setFontWeight("normal")
+    .setFontColor(theme.fontColor)
+    .setHorizontalAlignment("left");
+
+  sheet.getRange("B2").setValue("")
+    .setFontSize(10)
+    .setFontWeight("normal")
+    .setFontColor(theme.fontColor)
+    .setHorizontalAlignment("left");
+
+  sheet.getRange("A1:E2").setBackground(theme.level3);
+
+  // 6. Accent Row (Row 3)
+  sheet.getRange("A3:E3").setBackground(theme.level1);
+
+  // 7. Header Row (Row 4)
+  const headers = [["Month", "Archive Type", "Sheet Name", "Link", "Visibility"]];
+  const headerRange = sheet.getRange(4, 1, 1, 5);
+  headerRange.setValues(headers)
+    .setFontWeight("bold")
+    .setFontSize(10)
+    .setFontColor(theme.fontColor)
+    .setBackground(theme.level2)
+    .setHorizontalAlignment("left")
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+
+  headerRange.setBorder(true, true, true, true, true, true, "#B7B7B7", SpreadsheetApp.BorderStyle.SOLID);
+
+  // 8. Base Data Area & Native Zebra Banding
+  const dataRange = sheet.getRange(5, 1, maxRows - 4, 5);
+  dataRange.setFontSize(10)
+    .setFontWeight("normal")
+    .setFontColor(theme.fontColor)
+    .setHorizontalAlignment("left")
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP)
+    .setNumberFormat("@");
+
+  dataRange.applyRowBanding()
+    .setFirstRowColor(theme.level4)
+    .setSecondRowColor(theme.level5)
+    .setHeaderRowColor(null)
+    .setFooterRowColor(null);
+
+  // 9. Native Conditional Formatting for Month Rows
+  const rules = sheet.getConditionalFormatRules();
+
+  const monthFormula = '=REGEXMATCH($A5, "^(January|February|March|April|May|June|July|August|September|October|November|December)")';
+  const monthRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied(monthFormula)
+    .setBackground(theme.level2)
+    .setFontColor(theme.fontColor)
+    .setBold(true)
+    .setRanges([sheet.getRange("A5:E" + maxRows)])
+    .build();
+
+  rules.push(monthRule);
+  sheet.setConditionalFormatRules(rules);
+
+  sheet.hideSheet();
+
+  try {
+    ss.toast("Index Template built successfully.", "Archive Workbook", 3);
+  } catch(e) {}
+
+  return sheet;
+}
+
+/**
+ * Main execution to update the Index sheet values without altering formatting.
+ */
+function createArchiveWorkbookIndexSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  const indexSheet = getOrCreateArchiveIndexSheet_(ss);
+  const groups = buildArchiveWorkbookSheetGroups_(ss);
+  
+  sortPhysicalArchiveTabs_(ss, groups, indexSheet);
+  writeArchiveWorkbookIndex_(indexSheet, groups);
+  
+  try {
+    ss.toast("Archive Index refreshed & tabs sorted. Month groups: " + groups.length + ".", "Archive Workbook", 5);
+  } catch(e) {}
+  
+  return indexSheet;
+}
+
+/**
+ * Retains existing Index sheet if present. Only copies from Index Template on initial creation.
+ */
+function getOrCreateArchiveIndexSheet_(ss) {
+  let indexSheet = ss.getSheetByName(SYSTEM_SHEETS.INDEX);
+  
+  // If Index doesn't exist yet, copy from Index Template
+  if (!indexSheet) {
+    let templateSheet = ss.getSheetByName(SYSTEM_SHEETS.TEMPLATE);
+    if (!templateSheet) {
+      templateSheet = buildArchiveIndexTemplate(ss);
+    }
+    indexSheet = templateSheet.copyTo(ss).setName(SYSTEM_SHEETS.INDEX);
+  }
+
+  indexSheet.showSheet();
+  return indexSheet;
+}
+
+/**
+ * Clears ONLY content values starting at Row 5 (.clearContent()) and writes updated rows.
+ * Applies ZERO formatting or reformatting API calls.
+ */
+function writeArchiveWorkbookIndex_(sheet, groups) {
+  const ss = sheet.getParent();
+  
+  // 1. Update timestamp in cell B2 (Values only)
+  sheet.getRange("B2").setValue(Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "MM/dd/yyyy HH:mm:ss"));
+
+  // 2. Clear ONLY data values from Row 5 down (preserves formats, banding, heights, and rules)
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= ARCHIVE_INDEX_FIRST_DATA_ROW) {
+    sheet.getRange(ARCHIVE_INDEX_FIRST_DATA_ROW, 1, lastRow - ARCHIVE_INDEX_FIRST_DATA_ROW + 1, 5).clearContent();
+  }
+
+  // 3. Build data rows matrix
+  const rows = [];
+  groups.forEach(function(group) {
+    rows.push([group.monthDisplay, "", "", "", ""]);
+    group.sheets.forEach(function(info) {
+      rows.push([
+        "",
+        info.typeLabel,
+        info.sheetName,
+        '=HYPERLINK("#gid=' + info.sheetId + '","Open")',
+        info.hidden ? "Hidden" : "Visible"
+      ]);
+    });
+  });
+
+  // 4. Write data values directly to the grid
+  if (rows.length > 0) {
+    ensureSheetRows_(sheet, rows.length + 4);
+    sheet.getRange(ARCHIVE_INDEX_FIRST_DATA_ROW, 1, rows.length, 5).setValues(rows);
+  }
+}
+
+function ensureSheetRows_(sheet, targetRows) {
+  const currentRows = sheet.getMaxRows();
+  if (currentRows < targetRows) {
+    sheet.insertRowsAfter(currentRows, targetRows - currentRows);
+  }
+}
+
+function sortPhysicalArchiveTabs_(ss, groups, indexSheet) {
+  const desiredOrder = [SYSTEM_SHEETS.INDEX];
+  
+  groups.forEach(function(group) {
+    group.sheets.forEach(function(info) {
+      desiredOrder.push(info.sheetName);
+    });
+  });
+  
+  const sheets = ss.getSheets();
+  sheets.forEach(function(sheet) {
+    if (desiredOrder.indexOf(sheet.getName()) === -1) {
+      desiredOrder.push(sheet.getName());
+    }
+  });
+  
+  let position = 1;
+  desiredOrder.forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (sheet && sheet.getIndex() !== position) {
+      ss.setActiveSheet(sheet);
+      ss.moveActiveSheet(position);
+    }
+    position++;
+  });
+  
+  if (indexSheet) ss.setActiveSheet(indexSheet);
+}
+
+function hideHistoricalArchiveSheetsByPrompt() {
+  const monthParts = promptForArchiveMonthOnly_("Hide Historical Archive Sheets");
+  if (!monthParts) return null;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let hidden = 0;
+  let skipped = 0;
+
+  ss.getSheets().forEach(function(sheet) {
+    const name = sheet.getName().trim();
+    if (name === SYSTEM_SHEETS.INDEX || name === SYSTEM_SHEETS.TEMPLATE || /^sheet/i.test(name)) return;
+
+    const info = getArchiveSheetInfo_(sheet);
+    if (!info.monthKey) {
+      skipped++;
+      return;
+    }
+
+    if (info.monthKey < monthParts.monthKey) {
+      try {
+        if (!sheet.isSheetHidden()) {
+          sheet.hideSheet();
+          hidden++;
+        } else {
+          skipped++;
+        }
+      } catch (err) {
+        skipped++;
+        console.warn("Archive historical hide skipped for " + name + ": " + err.message);
+      }
+    } else {
+      skipped++;
+    }
+  });
+
+  createArchiveWorkbookIndexSheet();
+  SpreadsheetApp.getUi().alert(
+    "Historical archive hide complete.\n\n" +
+    "Cutoff month: " + monthParts.monthLabel + "\n" +
+    "Hidden: " + hidden + "\n" +
+    "Skipped: " + skipped
+  );
+  return { hidden: hidden, skipped: skipped, cutoffMonth: monthParts.monthLabel };
+}
+
+function hideArchiveSheetFromActiveIndexRow() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const indexSheet = ss.getSheetByName(SYSTEM_SHEETS.INDEX);
+  const activeRange = ss.getActiveRange();
+
+  if (!indexSheet || !activeRange || activeRange.getSheet().getSheetId() !== indexSheet.getSheetId()) {
+    SpreadsheetApp.getUi().alert("Select a sheet row on the Archive Index before running Hide Selected Index Row Sheet.");
+    return null;
+  }
+
+  const row = activeRange.getRow();
+  if (row < ARCHIVE_INDEX_FIRST_DATA_ROW) {
+    SpreadsheetApp.getUi().alert("Select a data row on the Archive Index, not a header row.");
+    return null;
+  }
+
+  const sheetName = String(indexSheet.getRange(row, 3).getValue() || "").trim();
+  if (!sheetName || sheetName === SYSTEM_SHEETS.INDEX) {
+    SpreadsheetApp.getUi().alert("Selected Archive Index row does not contain a hideable sheet name.");
+    return null;
+  }
+
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("Archive sheet not found: " + sheetName);
+    return null;
+  }
+
+  sheet.hideSheet();
+  createArchiveWorkbookIndexSheet();
+  SpreadsheetApp.getActive().toast("Archive sheet hidden: " + sheetName, "Archive Workbook", 5);
+  return sheetName;
+}
+
+function buildArchiveWorkbookSheetGroups_(ss) {
+  const monthMap = new Map();
+
+  ss.getSheets().forEach(function(sheet) {
+    const sheetName = sheet.getName().trim();
+
+    if (/^sheet/i.test(sheetName) || sheetName === SYSTEM_SHEETS.INDEX || sheetName === SYSTEM_SHEETS.TEMPLATE) return;
+
+    const info = getArchiveSheetInfo_(sheet);
+    if (!info.monthKey) return;
+
+    if (!monthMap.has(info.monthKey)) {
+      monthMap.set(info.monthKey, {
+        monthKey: info.monthKey,
+        monthLabel: info.monthLabel, 
+        monthDisplay: info.monthDisplay, 
+        sheets: []
+      });
+    }
+    monthMap.get(info.monthKey).sheets.push(info);
+  });
+
+  return Array.from(monthMap.values())
+    .sort(function(a, b) { return b.monthKey - a.monthKey; })
+    .map(function(group) {
+      group.sheets.sort(function(a, b) {
+        if (a.typeOrder !== b.typeOrder) return a.typeOrder - b.typeOrder;
+        return a.sheetName.localeCompare(b.sheetName);
+      });
+      return group;
+    });
+}
+
+function getArchiveSheetInfo_(sheet) {
+  const sheetName = sheet.getName();
+  const month = parseArchiveMonthFromSheetName_(sheetName);
+  const typeInfo = classifyArchiveSheetType_(sheetName);
+
+  return {
+    sheetName: sheetName,
+    sheetId: sheet.getSheetId(),
+    hidden: sheet.isSheetHidden(),
+    monthKey: month ? month.monthKey : 0,
+    monthLabel: month ? month.monthLabel : "No Month",
+    monthDisplay: month ? month.monthDisplay : "Unassigned Month",
+    typeLabel: typeInfo.label,
+    typeOrder: typeInfo.order
+  };
+}
+
+function classifyArchiveSheetType_(sheetName) {
+  const name = String(sheetName || "").trim();
+
+  if (/^Master List\b/i.test(name)) return { label: "Master List", order: 10 };
+  if (/^Monthly Change\b/i.test(name)) return { label: "Monthly Change", order: 20 };
+  if (/^(Source - )?Disenrolled\b/i.test(name) || /^Disenrolled Exclusion\b/i.test(name)) return { label: "Disenrolled Exclusion", order: 30 };
+  if (/^(Source - )?Raw Data\b/i.test(name) && !/Raw Data\s*-\s*/i.test(name)) return { label: "Raw Data", order: 40 };
+  if (/^(Source - )?(Banners?|Banner Report)\b/i.test(name)) return { label: "Banner", order: 50 };
+  if (/^(Source - )?(CP Due|Care Plan Due|CP Due Date)\b/i.test(name)) return { label: "CP Due Date", order: 60 };
+  if (/^(Source - )?(Unlock CP|Unlocked CP|Unlocked Care Plan)\b/i.test(name)) return { label: "Unlocked CP", order: 70 };
+  
+  if (/^Raw Data\s*-\s*Banners?\b/i.test(name)) return { label: "Raw Data - Banners", order: 80 };
+  if (/^Raw Data\s*-\s*(CP Due|Care Plan Due|CP Due Date)\b/i.test(name)) return { label: "Raw Data - CP Due Date", order: 90 };
+  if (/^Raw Data\s*-\s*(Unlock CP|Unlocked CP|Unlocked Care Plan)\b/i.test(name)) return { label: "Raw Data - Unlocked CP", order: 100 };
+
+  return { label: "Other", order: 999 };
+}
+
+function parseArchiveMonthFromSheetName_(sheetName) {
+  const text = String(sheetName || "").trim();
+
+  let match = text.match(/(?:^|[^0-9])(\d{1,2})\.(\d{2})(?:[^0-9]|$)/);
+  if (match) return buildArchiveMonthInfo_(Number(match[2]) + 2000, Number(match[1]));
+
+  match = text.match(/(?:^|[^0-9])(\d{1,2})[\/-](\d{2}|\d{4})(?:[^0-9]|$)/);
+  if (match) {
+    let year = Number(match[2]);
+    if (year < 100) year += 2000;
+    return buildArchiveMonthInfo_(year, Number(match[1]));
+  }
+
+  match = text.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b[^0-9]*(\d{2}|\d{4})?/i);
+  if (match) {
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const month = monthNames.indexOf(match[1].slice(0, 3).toLowerCase()) + 1;
+    let year = match[2] ? Number(match[2]) : new Date().getFullYear();
+    if (year < 100) year += 2000;
+    return buildArchiveMonthInfo_(year, month);
+  }
+
+  match = text.match(/(?:^|[^0-9])(0[1-9]|1[0-2]|[1-9])(?:[^0-9]|$)/);
+  if (match) {
+    return buildArchiveMonthInfo_(new Date().getFullYear(), Number(match[1]));
+  }
+
+  return null;
+}
+
+function promptForArchiveMonthOnly_(title) {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.prompt(
+    title || "Archive Month",
+    "Enter the month to keep visible. Examples: 5, 05, 05.26, 5/2026, May 2026. Sheets before the entered month will be hidden.",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (response.getSelectedButton() !== ui.Button.OK) return null;
+
+  const parsed = parseArchiveMonthPrompt_(response.getResponseText());
+  if (!parsed) {
+    ui.alert("Enter a valid archive month selection format such as 5, 05, 05.26, or May 2026.");
+    return null;
+  }
+  return parsed;
+}
+
+function parseArchiveMonthPrompt_(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+
+  let match = text.match(/^(0[1-9]|1[0-2]|[1-9])$/);
+  if (match) {
+    return buildArchiveMonthPromptParts_(new Date().getFullYear(), Number(match[1]));
+  }
+
+  match = text.match(/^(\d{1,2})(?:[.\/\-])(\d{2}|\d{4})$/);
+  if (match) {
+    let year = Number(match[2]);
+    if (year < 100) year += 2000;
+    return buildArchiveMonthPromptParts_(year, Number(match[1]));
+  }
+
+  match = text.match(/^(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{2}|\d{4})$/i);
+  if (match) {
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const month = monthNames.indexOf(match[1].slice(0, 3).toLowerCase()) + 1;
+    let year = Number(match[2]);
+    if (year < 100) year += 2000;
+    return buildArchiveMonthPromptParts_(year, month);
+  }
+
+  const parsedFromName = parseArchiveMonthFromSheetName_(text);
+  if (!parsedFromName) return null;
+  return buildArchiveMonthPromptParts_(Math.floor(parsedFromName.monthKey / 100), parsedFromName.monthKey % 100);
+}
+
+function buildArchiveMonthPromptParts_(year, month) {
+  const info = buildArchiveMonthInfo_(year, month);
+  if (!info) return null;
+
+  return {
+    firstDay: new Date(year, month - 1, 1, 12, 0, 0, 0),
+    lastDay: new Date(year, month, 0, 12, 0, 0, 0),
+    monthLabel: info.monthDisplay, 
+    monthKey: info.monthKey
+  };
+}
+
+function buildArchiveMonthInfo_(year, month) {
+  const fullYear = Number(year || 0);
+  const monthNumber = Number(month || 0);
+  if (!fullYear || monthNumber < 1 || monthNumber > 12) return null;
+
+  const sampleDate = new Date(fullYear, monthNumber - 1, 1, 12, 0, 0, 0);
+  const dynamicDisplay = Utilities.formatDate(sampleDate, Session.getScriptTimeZone(), "MMMM yyyy");
+
+  return {
+    monthKey: fullYear * 100 + monthNumber,
+    monthLabel: String(monthNumber).padStart(2, "0") + "." + String(fullYear).slice(-2),
+    monthDisplay: dynamicDisplay
+  };
+}
