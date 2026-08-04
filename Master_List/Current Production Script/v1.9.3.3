@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 1 v1.9.3.5.4: GLOBALS, MENU BUILDER, MASTER DEFAULTS & SHARED HELPERS
+// MODULE 1 v1.9.3.3: GLOBALS, MENU BUILDER, MASTER DEFAULTS & SHARED HELPERS
 // File: 01_Globals_Menu_Shared.gs
 // Includes Audit Corrections: FIND-001 through FIND-006 & Section 9/10 Restorations
 // ============================================================================
@@ -96,7 +96,7 @@ var MASTER_FORMAT_DEFAULTS = {
 
 const HEADER_ROW = 4;
 const DATA_START_ROW = 5;
-const MASTER_LIST_MERGE_ML_VERSION = "v1.9.3.5.4";
+const MASTER_LIST_MERGE_ML_VERSION = "v1.9.3.3";
 
 const SYSTEM_SHEETS = Object.freeze({
   DASHBOARD: "Format Dashboard",
@@ -2611,7 +2611,7 @@ function applyOperationalFormatting_(templateSheet, systemSheetName) {
 function writeTemplateMetadata_(sheet, config, targetColumns) {
   if (!sheet || !config) throw new Error("Template metadata requires a sheet and configuration.");
   const column = Math.max(Math.min(Number(targetColumns) || 1, sheet.getMaxColumns()), 1);
-  const version = typeof MASTER_LIST_MERGE_ML_VERSION !== "undefined" ? MASTER_LIST_MERGE_ML_VERSION : "v1.9.3.5.4";
+  const version = typeof MASTER_LIST_MERGE_ML_VERSION !== "undefined" ? MASTER_LIST_MERGE_ML_VERSION : "v1.9.3.3";
   sheet.getRange(1, column).setNote("Template Mold: " + config.systemSheetName + "\nVersion: " + version + "\nUpdated: " + new Date().toISOString());
 }
 
