@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 2 v2.8: DATA PROCESSING & OUTPUT ENGINE (TRACKING COLUMNS & FORMATS)
+// MODULE 2 v2.9: DATA PROCESSING & OUTPUT ENGINE (DASHBOARD-GOVERNED NUMBER FORMATS)
 // File: 02_Data_Processing_Engine.gs
 // ============================================================================
 
@@ -84,9 +84,9 @@ function createGovernedSheet_(sheetType, monthParts, options) {
     if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Write data matrix", options.dataRows.length + " row(s) x " + options.headers.length + " column(s)");
     sheet.getRange(DATA_START_ROW, 1, options.dataRows.length, options.headers.length).setValues(options.dataRows);
 
-    if (typeof applyGovernedDateFormatsFromDashboard_ === "function") {
-      if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Apply date formats", "Reading governed formats");
-      applyGovernedDateFormatsFromDashboard_(sheet, dashboard, options.headers, options.dataRows.length);
+    if (typeof applyGovernedNumberFormatsFromDashboard_ === "function") {
+      if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Apply number formats", "Reading Format Dashboard Section G");
+      applyGovernedNumberFormatsFromDashboard_(sheet, dashboard, options.headers, options.dataRows.length);
     }
   }
 
@@ -116,24 +116,19 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   return sheet;
 }
 
-function applyGovernedDateFormatsFromDashboard_(sheet, dashboard, headers, rowCount) {
-  if (!sheet || !headers || rowCount < 1) return;
+function applyGovernedNumberFormatsFromDashboard_(sheet, dashboard, headers, rowCount) {
+  if (!sheet || !dashboard || !headers || rowCount < 1) return;
   const colDefs = dashboard.columnDefinitions || {};
-  const defaultDateFmt = dashboard.globals["Default Date Format"] || "mm/dd/yyyy";
 
-  headers.forEach((header, index) => {
-    const def = colDefs[header] || colDefs[header.toLowerCase()];
-    if (def && (def.format || def.dateColumn)) {
-      let format = def.format || defaultDateFmt;
+  headers.forEach(function(header, index) {
+    const normalizedHeader = String(header || "").trim();
+    if (!normalizedHeader) return;
 
-      // EXPLICIT FORMAT OVERRIDE: Ensure tracking columns are exactly MM.yy
-      if (header === "Demo P Update Month" || header === "Added to Disenrolled Exclusion") {
-          format = "MM.yy";
-      }
+    const def = colDefs[normalizedHeader] || colDefs[normalizedHeader.toLowerCase()];
+    const numberFormat = def ? String(def.format || "").trim() : "";
+    if (!numberFormat) return;
 
-      const colIdx = index + 1;
-      sheet.getRange(DATA_START_ROW, colIdx, rowCount, 1).setNumberFormat(format);
-    }
+    sheet.getRange(DATA_START_ROW, index + 1, rowCount, 1).setNumberFormat(numberFormat);
   });
 }
 
