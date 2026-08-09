@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 1 v1.94.1: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES
+// MODULE 1 v1.94.3: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES
 // File: 01_Core_Globals_Utilities.gs
 // ============================================================================
 
@@ -61,6 +61,7 @@ const ML_MENU_CALLBACKS = Object.freeze({
   maintenanceRebuild: Object.freeze([
     "runDashboardQualityWorkflow",
     "runFrameworkSmokeValidation",
+    "runTemplateDateFormatValidation_",
     "formatBannerReport",
     "formatCarePlanDueReport",
     "formatUnlockedCarePlanReport",
@@ -126,7 +127,8 @@ function onOpen(e) {
 
   const qualityMenu = ui.createMenu("👌 Quality")
     .addItem("✅ Dashboard Quality Workflow", "runDashboardQualityWorkflow")
-    .addItem("💨 Framework Smoke Validation", "runFrameworkSmokeValidation");
+    .addItem("💨 Framework Smoke Validation", "runFrameworkSmokeValidation")
+    .addItem("📅 Validate Template Date Formats", "runTemplateDateFormatValidation_");
 
   const formatSheetsMenu = ui.createMenu("📝 Format Sheets")
     .addItem("Banner", "formatBannerReport")
@@ -388,7 +390,7 @@ function quickBuildAllTemplates() {
   notify_("Quick Build All Templates started...");
   runFrameworkTimed_("Quick Build Templates [Phase 1]", function(timing) {
     markFrameworkStep_(timing, "Create Templates", "Creating/refreshing all report templates in place");
-    if (typeof createAllReportTemplates === "function") createAllReportTemplates();
+    if (typeof createAllReportTemplates === "function") createAllReportTemplates(timing);
     return true;
   });
   notify_("Validating templates...");
@@ -535,7 +537,7 @@ function writeRuntimeTimingReport_(timing) {
   try {
     const sheet = ensureFrameworkTimingReport_();
 
-    // Map output to strictly 6 columns
+    // Emit named timing fields; the section writer resolves their current header positions.
     const rows = timing.steps.map(function(step) {
       let timeStr = "";
       try {
@@ -547,16 +549,17 @@ function writeRuntimeTimingReport_(timing) {
       const details = "Step " + (step.stepNumber || "") + (step.details ? " | " + step.details : "");
 
       return [
-        step.severity || "OK",                   // Col 1: Severity
-        step.processName || "",                  // Col 2: Process
-        step.stepName || "",                     // Col 3: Step
-        Number(step.stepSeconds || 0),           // Col 4: Step Sec
-        Number(step.totalSeconds || 0),          // Col 5: Total Sec
-        "[" + timeStr + "] " + details           // Col 6: Timestamp & Details (Wide)
+        timeStr,
+        step.processName || "",
+        step.stepName || "",
+        Number(step.stepSeconds || 0),
+        Number(step.totalSeconds || 0),
+        step.severity || "OK",
+        details
       ];
     });
 
-    appendDataToSubheaderSection_(sheet, "SECTION D - DETAILED TIMING LOG", rows);
+    appendDataToSubheaderSection_(sheet, "SECTION D - DETAILED TIMING LOG", rows, ["Timestamp", "Process", "Step", "Step Seconds", "Total Seconds", "Severity", "Details"]);
     refreshFrameworkTimingSummarySections_(sheet);
     return true;
   } catch (err) {
@@ -589,8 +592,70 @@ function markFrameworkStep_(timing, stepName, details) {
   }
 }
 
-function appendDataToSubheaderSection_(sheet, sectionTitle, rows) {
+function normalizeSubheaderColumnName_(header) {
+  const normalized = String(header == null ? "" : header).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const aliases = {
+    section: "subject", dashboardsection: "subject", template: "subject", templatesheetname: "subject",
+    process: "process", validationitem: "subject", checkitem: "subject", audititem: "subject",
+    layoutitem: "subject", workflow: "subject", metricaction: "subject",
+    result: "status", details: "notes", qualitynotes: "notes", signoffdetails: "notes",
+    stepsec: "stepseconds", runtimesec: "runtimeseconds"
+  };
+  return aliases[normalized] || normalized;
+}
+
+function getSubheaderSectionHeaders_(sheet, sectionTitle) {
+  const bounds = getSubheaderSectionBounds_(sheet, sectionTitle);
+  if (!bounds) throw new Error('Template subheader section "' + sectionTitle + '" is missing.');
+  const headerRow = bounds.titleRow + 2;
+  return sheet.getRange(headerRow, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].map(function(header) {
+    return String(header || "").trim();
+  });
+}
+
+function mapRowsToSubheaderColumns_(sheet, sectionTitle, sourceHeaders, rows) {
+  if (!sourceHeaders || !sourceHeaders.length) return rows;
+  const targetHeaders = getSubheaderSectionHeaders_(sheet, sectionTitle);
+  const sourceIndex = {};
+  sourceHeaders.forEach(function(header, index) {
+    sourceIndex[normalizeSubheaderColumnName_(header)] = index;
+  });
+  const meaningfulWidth = targetHeaders.reduce(function(width, header, index) {
+    return header ? index + 1 : width;
+  }, 0);
+  if (!meaningfulWidth) throw new Error('Template subheader section "' + sectionTitle + '" has no column headers.');
+  return rows.map(function(row) {
+    return targetHeaders.slice(0, meaningfulWidth).map(function(header) {
+      const index = sourceIndex[normalizeSubheaderColumnName_(header)];
+      return index === undefined ? "" : row[index];
+    });
+  });
+}
+
+function getSubheaderSectionRecords_(sheet, sectionTitle) {
+  const bounds = getSubheaderSectionBounds_(sheet, sectionTitle);
+  if (!bounds) return [];
+  const headers = getSubheaderSectionHeaders_(sheet, sectionTitle);
+  const width = headers.reduce(function(last, header, index) { return header ? index + 1 : last; }, 0);
+  const endRow = bounds.nextSectionRow > 0 ? bounds.nextSectionRow - 2 : sheet.getLastRow();
+  if (!width || endRow < bounds.dataRow) return [];
+  return sheet.getRange(bounds.dataRow, 1, endRow - bounds.dataRow + 1, width).getValues().map(function(row) {
+    const record = {};
+    headers.slice(0, width).forEach(function(header, index) {
+      record[normalizeSubheaderColumnName_(header)] = row[index];
+    });
+    return record;
+  }).filter(function(record) {
+    return Object.keys(record).some(function(key) {
+      const value = String(record[key] == null ? "" : record[key]).trim().toLowerCase();
+      return value && value !== "insert new data here" && value !== "enter data here";
+    });
+  });
+}
+
+function appendDataToSubheaderSection_(sheet, sectionTitle, rows, sourceHeaders) {
   if (!sheet || !rows || !rows.length) return null;
+  rows = mapRowsToSubheaderColumns_(sheet, sectionTitle, sourceHeaders, rows);
   const bounds = getSubheaderSectionBounds_(sheet, sectionTitle);
   if (!bounds) throw new Error('Template subheader section "' + sectionTitle + '" is missing.');
 
@@ -599,10 +664,22 @@ function appendDataToSubheaderSection_(sheet, sectionTitle, rows) {
   let appendRow = firstDataRow;
   let nextSectionRow = bounds.nextSectionRow;
   let nextSectionBufferRow = nextSectionRow > 0 ? nextSectionRow - 1 : 0;
-  const marker = String(sheet.getRange(firstDataRow, 1).getValue() || "").trim().toLowerCase();
-  if (marker === "insert new data here" || marker.indexOf("enter data here") === 0) sheet.getRange(firstDataRow, 1).clearContent();
+  const sectionWidth = Math.max(rows[0].length, 1);
+  const firstDataValues = sheet.getRange(firstDataRow, 1, 1, sectionWidth).getDisplayValues()[0];
+  firstDataValues.forEach(function(value, index) {
+    const marker = String(value || "").trim().toLowerCase();
+    if (marker === "insert new data here" || marker.indexOf("enter data here") === 0) {
+      sheet.getRange(firstDataRow, index + 1).clearContent();
+    }
+  });
 
-  while ((!nextSectionBufferRow || appendRow < nextSectionBufferRow) && String(sheet.getRange(appendRow, 1).getValue() || "").trim() !== "") appendRow++;
+  while (!nextSectionBufferRow || appendRow < nextSectionBufferRow) {
+    const occupied = sheet.getRange(appendRow, 1, 1, sectionWidth).getDisplayValues()[0].some(function(value) {
+      return String(value || "").trim() !== "";
+    });
+    if (!occupied) break;
+    appendRow++;
+  }
   if (nextSectionBufferRow && appendRow + rows.length > nextSectionBufferRow) {
     const rowsNeeded = appendRow + rows.length - nextSectionBufferRow;
     sheet.insertRowsBefore(nextSectionBufferRow, rowsNeeded);
@@ -673,13 +750,12 @@ function getSubheaderSectionBounds_(sheet, sectionTitle) {
   };
 }
 
-// Updated to the exact 6-column grid specification
 function getFrameworkTimingSectionRegistry_() {
   return [
-    { id: "A", title: "SECTION A - PROCESS SUMMARY", headers: ["Status", "Process", "Runtime (Sec)", "Benchmark", "Variance", "Notes"] },
-    { id: "B", title: "SECTION B - PERFORMANCE ISSUES", headers: ["Priority", "Status", "Process", "Runtime (Sec)", "Threshold", "Issue & Recommendation"] },
-    { id: "C", title: "SECTION C - OPTIMIZATION RECOMMENDATIONS", headers: ["Priority", "Status", "Process", "Finding", "Impact", "Recommendation"] },
-    { id: "D", title: "SECTION D - DETAILED TIMING LOG", headers: ["Severity", "Process", "Step", "Step Sec", "Total Sec", "Timestamp & Details"] }
+    { id: "A", title: "SECTION A - PROCESS SUMMARY", headers: ["Process", "Runtime (Sec)", "Status", "Benchmark", "Variance", "Notes"] },
+    { id: "B", title: "SECTION B - PERFORMANCE ISSUES", headers: ["Priority", "Process", "Runtime (Sec)", "Threshold", "Issue", "Recommendation"] },
+    { id: "C", title: "SECTION C - OPTIMIZATION RECOMMENDATIONS", headers: ["Process", "Finding", "Impact", "Recommendation", "Priority", "Status"] },
+    { id: "D", title: "SECTION D - DETAILED TIMING LOG", headers: ["Timestamp", "Process", "Step", "Step Seconds", "Total Seconds", "Severity", "Details"] }
   ];
 }
 
@@ -706,19 +782,11 @@ function hasFrameworkTimingSections_(sheet) {
 }
 
 function getFrameworkTimingDetailRows_(sheet) {
-  const bounds = getSubheaderSectionBounds_(sheet, "SECTION D - DETAILED TIMING LOG");
-  if (!bounds) return [];
-  const endRow = sheet.getLastRow();
-  if (endRow < bounds.dataRow) return [];
-
-  // Adjusted from 7 to 6 columns to match new format
-  return sheet.getRange(bounds.dataRow, 1, endRow - bounds.dataRow + 1, 6).getValues().filter(function(row) {
-    const first = String(row[0] || "").trim().toLowerCase();
-    return first && first !== "insert new data here" && first !== "enter data here";
-  });
+  return getSubheaderSectionRecords_(sheet, "SECTION D - DETAILED TIMING LOG");
 }
 
-function replaceSubheaderSectionData_(sheet, sectionTitle, rows) {
+function replaceSubheaderSectionData_(sheet, sectionTitle, rows, sourceHeaders) {
+  rows = mapRowsToSubheaderColumns_(sheet, sectionTitle, sourceHeaders, rows || []);
   const bounds = getSubheaderSectionBounds_(sheet, sectionTitle);
   if (!bounds) throw new Error('Framework Timing section is missing: "' + sectionTitle + '".');
   const normalized = rows && rows.length ? rows : [["Insert new data here"]];
@@ -744,12 +812,10 @@ function refreshFrameworkTimingSummarySections_(sheet) {
   const currentByProcess = {};
 
   detailRows.forEach(function(row) {
-    // Realigned mapping based on new Section D headers:
-    // [0] Severity, [1] Process, [2] Step, [3] Step Sec, [4] Total Sec, [5] Time & Details
-    const severity = String(row[0] || "OK").toUpperCase();
-    const process = String(row[1] || "Workflow");
-    const stepName = String(row[2] || "Step");
-    const seconds = Number(row[3]) || 0;
+    const severity = String(row.severity || "OK").toUpperCase();
+    const process = String(row.process || "Workflow");
+    const stepName = String(row.step || "Step");
+    const seconds = Number(row.stepseconds || row.stepsec) || 0;
 
     if (/^Start Process$/i.test(stepName) || !currentByProcess[process]) {
       const run = { process: process, runtime: 0, worst: "OK", slowSteps: 0, error: false, steps: 0 };
@@ -783,28 +849,28 @@ function refreshFrameworkTimingSummarySections_(sheet) {
 
   // Map SECTION B: [Priority, Status, Process, Runtime (Sec), Threshold, Issue & Recommendation]
   const issueRows = detailRows.filter(function(row) {
-    return ["SLOW", "BOTTLENECK", "CRITICAL"].indexOf(String(row[0] || "").toUpperCase()) !== -1;
+    return ["SLOW", "BOTTLENECK", "CRITICAL"].indexOf(String(row.severity || "").toUpperCase()) !== -1;
   }).slice(-200).map(function(row) {
-    const severity = String(row[0] || "").toUpperCase();
-    const process = row[1];
-    const stepSec = row[3];
-    const stepName = row[2];
+    const severity = String(row.severity || "").toUpperCase();
+    const process = row.process;
+    const stepSec = Number(row.stepseconds || row.stepsec) || 0;
+    const stepName = row.step;
     const priority = severity === "CRITICAL" ? "HIGH" : (severity === "BOTTLENECK" ? "MEDIUM" : "LOW");
     const recommendation = getRuntimeTimingRecommendation_(process, stepName, severity);
     return [
       priority,
-      severity,
       process,
       stepSec,
       getRuntimeTimingThreshold_(severity),
-      "Step: " + stepName + " | " + recommendation
+      "Step: " + stepName + " (" + severity + ")",
+      recommendation
     ];
   });
 
   // Map SECTION C: [Priority, Status, Process, Finding, Impact, Recommendation]
   const recommendationRows = issueRows.map(function(row) {
     const priority = row[0];
-    const process = row[2];
+    const process = row[1];
     const recommendation = row[5];
     return [
       priority,
@@ -816,9 +882,9 @@ function refreshFrameworkTimingSummarySections_(sheet) {
     ];
   });
 
-  replaceSubheaderSectionData_(sheet, "SECTION A - PROCESS SUMMARY", summaryRows);
-  replaceSubheaderSectionData_(sheet, "SECTION B - PERFORMANCE ISSUES", issueRows);
-  replaceSubheaderSectionData_(sheet, "SECTION C - OPTIMIZATION RECOMMENDATIONS", recommendationRows);
+  replaceSubheaderSectionData_(sheet, "SECTION A - PROCESS SUMMARY", summaryRows, ["Status", "Process", "Runtime (Sec)", "Benchmark", "Variance", "Notes"]);
+  replaceSubheaderSectionData_(sheet, "SECTION B - PERFORMANCE ISSUES", issueRows, ["Priority", "Process", "Runtime (Sec)", "Threshold", "Issue", "Recommendation"]);
+  replaceSubheaderSectionData_(sheet, "SECTION C - OPTIMIZATION RECOMMENDATIONS", recommendationRows, ["Priority", "Status", "Process", "Finding", "Impact", "Recommendation"]);
 }
 
 function worseRuntimeTimingSeverity_(current, next) {
