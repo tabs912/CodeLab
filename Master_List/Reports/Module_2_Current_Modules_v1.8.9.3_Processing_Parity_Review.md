@@ -22,7 +22,7 @@ This is a static source comparison. Workbook runtime and visual parity were not 
 | Banners | Yes | Mostly | Header mapping, archive, output, visibility, and timing are present. |
 | CP Due | Yes | Partial | Source report dates are replaced by prompted-month dates. |
 | Unlock CP | Yes | Partial | Source report dates are replaced by prompted-month dates. |
-| Raw Data | Yes | No | A new output is created; the RD import is renamed and hidden instead of formatted in place. |
+| Raw Data | Yes | Partial | Source-only columns are preserved, but a new output is created instead of formatting RD in place. |
 | Create Monthly Start | Yes | Partial | No Master List replacement preflight or staged replacement. |
 | Demo P / Refined Data build | Yes | Partial | Most transformations exist, but some phone, contact, and notes logic differs. |
 | Disenrolled Exclusion | Yes | No | Rebuilding from current Refined Data can remove historical exclusion rows. |
@@ -60,7 +60,7 @@ The modular set includes:
 3. Rename the original import `Source - Raw Data mm.yy`.
 4. Hide the preserved source.
 
-This can omit imported columns that are not listed in Dashboard Section H.
+Module 2 v2.8.1 preserves imported columns that are not listed in Dashboard Section H by appending them after the governed columns. The source/output lifecycle still differs from `v1.8.9.3`.
 
 ### 2. CP Due and Unlock CP dates
 
@@ -148,8 +148,7 @@ Deploying every file in the directory can create duplicate global function decla
 ### Cleanup
 
 13. Decide whether the new Raw Data source/output lifecycle is approved.
-14. Preserve valid CP Due and Unlock CP source dates.
-15. Update `Current_Modules/README.md` and remove older module versions from the deployable directory.
+14. Update `Current_Modules/README.md` and remove older module versions from the deployable directory.
 
 ## Final determination
 
