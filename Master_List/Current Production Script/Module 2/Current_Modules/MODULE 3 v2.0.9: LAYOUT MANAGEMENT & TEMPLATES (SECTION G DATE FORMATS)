@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 3 v2.0.5: LAYOUT MANAGEMENT & TEMPLATES
+// MODULE 3 v2.0.9: LAYOUT MANAGEMENT & TEMPLATES
 // File: 03_Layout_Archiving_Templates.gs
 // ============================================================================
 
@@ -789,20 +789,36 @@ function applyExistingSectionFormatting_(sheet, config, theme) {
   }
 
   var specs = config.subheaderRowSpecs || [];
-  var bannerSpec = specs.filter(function(spec) { return Number(spec.row) === 2; })[0];
-  var headerSpec = specs.filter(function(spec) { return Number(spec.row) === 4; })[0];
-  if (!bannerSpec || !headerSpec) throw new Error("Format Dashboard must define subheader formatting rows 2 and 4.");
-
-  sectionRows.forEach(function(sectionRow) {
-    applyDashboardRowFormattingSpec_(sheet, sheet.getRange(sectionRow, 1, 1, width), bannerSpec, theme, "section banner");
-
-    for (var headerIndex = sectionRow; headerIndex < Math.min(sectionRow + 4, values.length); headerIndex++) {
-      if (values[headerIndex].some(function(value) { return String(value || "").trim() !== ""; })) {
-        applyDashboardRowFormattingSpec_(sheet, sheet.getRange(headerIndex + 1, 1, 1, width), headerSpec, theme, "section header");
-        break;
-      }
+  var requiredSteps = [1, 2, 3, 4, 5, 6];
+  requiredSteps.forEach(function(stepNum) {
+    if (!getDashboardRowFormattingSpec_(specs, stepNum)) {
+      throw new Error("Format Dashboard must define subheader formatting row " + stepNum + ".");
     }
   });
+
+  sectionRows.forEach(function(sectionRow) {
+    requiredSteps.forEach(function(stepNum) {
+      var targetRow = sectionRow + stepNum - 2;
+      if (targetRow < 1 || targetRow > sheet.getMaxRows()) return;
+
+      var spec = getDashboardRowFormattingSpec_(specs, stepNum);
+      applyDashboardRowFormattingSpec_(
+        sheet,
+        sheet.getRange(targetRow, 1, 1, width),
+        spec,
+        theme,
+        "subheader row " + stepNum
+      );
+    });
+  });
+}
+
+function getDashboardRowFormattingSpec_(specs, rowNumber) {
+  var matchingSpec = null;
+  (specs || []).forEach(function(spec) {
+    if (Number(spec.row) === Number(rowNumber)) matchingSpec = spec;
+  });
+  return matchingSpec;
 }
 
 function applyDashboardRowFormattingSpec_(sheet, range, spec, theme, context) {
@@ -850,8 +866,7 @@ function applySubheaderBlocks_(sheet, subheaders, theme, sysName, subheaderRowSp
   subheaders.forEach(function(block) {
     var steps = [1, 2, 3, 4, 5, 6];
     steps.forEach(function(stepNum) {
-      var stepSpecs = b2Specs.filter(function(s) { return Number(s.row) === stepNum; });
-      var primarySpec = stepSpecs.length > 0 ? stepSpecs[0] : null;
+      var primarySpec = getDashboardRowFormattingSpec_(b2Specs, stepNum);
       if (!primarySpec) throw new Error("Format Dashboard is missing subheader formatting row " + stepNum + " for " + sysName + ".");
 
       currentRow++;
@@ -899,14 +914,19 @@ function applyColumnWidthsEngine_(sheet, config) {
   var widthSpec = String(config.columnWidths || "").trim();
 
   if (widthSpec && widthSpec.toUpperCase() !== "FIT_TO_DATA") {
-    var parsedWidths = widthSpec.split(/[,/]/).map(function(item) { return parseInt(item.trim(), 10); });
-    if (parsedWidths.some(w => !isNaN(w) && w > 0)) {
-      if (parsedWidths.length === 1 && !isNaN(parsedWidths[0]) && parsedWidths[0] > 0) {
+    var widthParts = widthSpec.split('/');
+    var parsedWidths = widthParts.map(function(item) {
+      var token = item.trim();
+      return token === "" ? null : parseInt(token, 10);
+    });
+    if (parsedWidths.some(function(width) { return width !== null && !isNaN(width) && width > 0; })) {
+      if (widthParts.length === 1 && parsedWidths[0] > 0) {
         for (var col = 1; col <= targetCols; col++) { sheet.setColumnWidth(col, parsedWidths[0]); }
       } else {
-        for (var i = 0; i < targetCols; i++) {
-          var colWidth = (i < parsedWidths.length && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) ? parsedWidths[i] : defaultColWidth;
-          sheet.setColumnWidth(i + 1, colWidth);
+        for (var i = 0; i < targetCols && i < parsedWidths.length; i++) {
+          if (parsedWidths[i] !== null && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) {
+            sheet.setColumnWidth(i + 1, parsedWidths[i]);
+          }
         }
       }
       return;
@@ -930,7 +950,6 @@ function applyOperationalFormatting_(templateSheet, systemSheetName, dashboardCo
 
   const colDefs = config.columnDefinitions || {};
   const defaultWidth = Number(requireDashboardFormattingValue_(config.globals, "Default Column Width", "operational column formatting"));
-  const defaultDateFormat = requireDashboardFormattingValue_(config.globals, "Default Date Format", "operational date formatting");
   const defaultWrap = requireDashboardFormattingValue_(config.globals, "Default Data Wrap", "operational wrap formatting");
   const defaultHAlign = requireDashboardFormattingValue_(config.globals, "Default Horizontal Alignment", "operational horizontal alignment");
   const defaultVAlign = requireDashboardFormattingValue_(config.globals, "Default Vertical Alignment", "operational vertical alignment");
@@ -955,10 +974,15 @@ function applyOperationalFormatting_(templateSheet, systemSheetName, dashboardCo
     if (maxRows >= dataStartRow) {
       const dataColRange = templateSheet.getRange(dataStartRow, colIdx, maxRows - dataStartRow + 1, 1);
 
-      if (colDef.format) {
-        dataColRange.setNumberFormat(colDef.format);
-      } else if (colDef.dateColumn) {
-        dataColRange.setNumberFormat(defaultDateFormat);
+      if (colDef.dateColumn) {
+        const dateNumberFormat = requireDashboardFormattingValue_(
+          colDef,
+          "format",
+          "Format Dashboard Section G date column " + headerName
+        );
+        dataColRange.setNumberFormat(String(dateNumberFormat).trim());
+      } else if (colDef.format) {
+        dataColRange.setNumberFormat(String(colDef.format).trim());
       }
 
       const hAlign = colDef.align || defaultHAlign;
@@ -1032,18 +1056,20 @@ function buildOperationalReportTemplate_(systemSheetName) {
   const templateConfig = getTemplateConfigFromDashboard_(systemSheetName);
   const templateSheet = buildGeneralTemplate_(templateConfig);
   applyOperationalFormatting_(templateSheet, systemSheetName, templateConfig.dashboard);
-  applyOperationalTemplateSort_(templateSheet, templateConfig.globals);
+  applyOperationalTemplateSort_(templateSheet);
   return templateSheet;
 }
 
-function applyOperationalTemplateSort_(sheet, globals) {
+function applyOperationalTemplateSort_(sheet) {
   if (!sheet) return;
   const existingFilter = sheet.getFilter();
   if (existingFilter) existingFilter.remove();
-  const headerRow = Number(requireDashboardFormattingValue_(globals, "Header Row", "operational filter placement"));
-  const columnCount = Math.max(sheet.getLastColumn() - 1, 1);
-  const rowCount = Math.max(sheet.getMaxRows() - headerRow + 1, 2);
-  sheet.getRange(headerRow, 1, rowCount, columnCount).createFilter();
+
+  // Extend the filter to the absolute edge of the sheet to hide the vertical boundary line.
+  const columnCount = sheet.getMaxColumns();
+  const rowCount = Math.max(sheet.getMaxRows() - HEADER_ROW + 1, 2);
+
+  sheet.getRange(HEADER_ROW, 1, rowCount, columnCount).createFilter();
 }
 
 function buildTemplateArchiveRefinedData() {
@@ -1057,7 +1083,7 @@ function buildTemplateArchiveRefinedData() {
   }
   const templateSheet = buildGeneralTemplate_(config);
   applyOperationalFormatting_(templateSheet, "Refined Data", config.dashboard);
-  applyOperationalTemplateSort_(templateSheet, config.globals);
+  applyOperationalTemplateSort_(templateSheet);
   return templateSheet;
 }
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 5 v3.17: FORMAT DASHBOARD & CONFIGURATION LOGIC (DASHBOARD ONLY TEMPLATE FORMATTING)
+// MODULE 5 v3.19: FORMAT DASHBOARD & CONFIGURATION LOGIC (UPDATED DASHBOARD DEFAULTS)
 // File: 05_Format_Dashboard_Config.gs
 // ============================================================================
 
@@ -10,14 +10,14 @@
 var MASTER_FORMAT_DEFAULTS = {
   sectionA_Globals: [
     ["Setting", "Value", "Base Template", "Options / Format Description"],
-    ["Header Row", "4", "TRUE", "Numeric row number (e.g., 4)"],
-    ["Data Start Row", "5", "TRUE", "Numeric row number (e.g., 5)"],
+    ["Header Row", "4", "FALSE", "Numeric row number (e.g., 4)"],
+    ["Data Start Row", "5", "FALSE", "Numeric row number (e.g., 5)"],
     ["Freeze Rows", "4", "TRUE", "Numeric count of frozen rows"],
     ["Freeze Columns", "2", "TRUE", "Numeric count of frozen columns"],
     ["Row 1 (Title)Height", "25", "TRUE", "Numeric pixel height"],
     ["Row 2 Height", "25", "TRUE", "Numeric pixel height"],
     ["Row 3 Height", "10", "TRUE", "Numeric pixel height"],
-    ["Row 4 (Header) Height", "40", "TRUE", "Numeric pixel height"],
+    ["Row 4 (Header) Height", "40", "FALSE", "Numeric pixel height"],
     ["A1 (Title) Font Size", "14", "TRUE", "Numeric point size"],
     ["A1 (Title) Font Style", "Bold", "TRUE", "Bold, Italic, or Normal"],
     ["C1 (Title) Font Size", "5", "TRUE", "Numeric point size"],
@@ -28,11 +28,11 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Standard Font Size", "10", "TRUE", "Numeric point size"],
     ["Standard Font Color", "#000000", "TRUE", "Hex color (e.g., #000000)"],
     ["Standard Font Weight", "Normal", "TRUE", "Normal or Bold"],
-    ["Default Background Color", "#FFFFFF", "TRUE", "Hex color (e.g., #FFFFFF)"],
+    ["Default Background Color", "#FFFFFF", "FALSE", "Hex color (e.g., #FFFFFF)"],
     ["Default Data Row Height", "25", "TRUE", "Numeric pixel height"],
     ["Default Column Width", "105", "TRUE", "Numeric pixel width"],
-    ["Default Date Format", "mm/dd/yyyy", "TRUE", "Google Sheets number format (e.g., m/d/yy)"],
-    ["Default Number Format", "General", "TRUE", "Google Sheets number format or General"],
+    ["Default Date Format", "mm/dd/yyyy", "FALSE", "Google Sheets number format (e.g., m/d/yy)"],
+    ["Default Number Format", "General", "FALSE", "Google Sheets number format or General"],
     ["Default Text Format", "@", "TRUE", "Google Sheets number format (e.g., @)"],
     ["Default Data Wrap", "Clip", "TRUE", "CLIP, WRAP, or OVERFLOW"],
     ["Default Horizontal Alignment", "left", "TRUE", "left, center, or right"],
@@ -43,9 +43,9 @@ var MASTER_FORMAT_DEFAULTS = {
     ["HSL Level 4 Lightness %", "90", "FALSE", "Numeric percent for alternating color 1"],
     ["HSL Level 5 Lightness %", "97", "FALSE", "Numeric percent for alternating color 2"],
     ["Global Border Color", "#CCCCCC", "TRUE", "Hex color (e.g., #CCCCCC)"],
-    ["Global Border Style", "SOLID", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
+    ["Global Border Style", "DOTTED", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
     ["Global Borders Enabled", "TRUE", "TRUE", "TRUE or FALSE"],
-    ["Template Version", "3.17", "FALSE", "Master release version"]
+    ["Template Version", "3.19", "FALSE", "Master release version"]
   ],
   sectionB_Creation: [
     ["System Sheet Name", "Output Naming Pattern", "Template Tab Rank", "Active Tab Rank", "Group", "Visibility", "Collision Policy", "Data Row Trimming", "Index Reg.", "Notes"],
@@ -82,19 +82,19 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionC_Structural: [
     ["System Sheet Name", "Report Title", "Title Date Format", "Base Color", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Title Font Color", "Column Count", "Default Column Widths", "Row Mode", "Minimum Rows", "Buffer Rows", "Uses Alternating Colors", "Uses Subheaders", "Notes"],
-    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#F4FBF7", "#FBFEFC", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#F4FBFB", "#FBFEFE", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#FBF4F8", "#FEFBFD", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#F5F4FB", "#FCFBFE", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#F8F4FB", "#FDFBFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "7", "250/250/500/350/250/250/500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
-    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "4", "250/250/350/300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "19", "220/150/215/165/130/120/120/120/140/120/120/306/144/100/100/110/100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "10", "160/185/160/160/30/160/185/160/160/160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
+    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#D9F2E6", "#F4FBF7", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#D9F2F0", "#F4FBFB", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#F2D9E8", "#FBF4F8", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#DDD9F2", "#F5F4FB", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#E8D9F2", "#F8F4FB", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "7", "250/250/500/350/250/250/500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
+    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "4", "250/250/350/300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "19", "220/150/215/165/130/120/120/120/140/120/120/306/144/100/100/110/100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "10", "160/185/160/160/30/160/185/160/160/160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
   ],
   sectionD_OutputGov: [
     ["System Sheet Name", "Output Naming Pattern", "Group", "End Date Source", "Remove / Archive", "Row Height Enforcement"],
@@ -118,15 +118,15 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionE_TitleRows: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
-    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14/ /5", "Bold/ /Normal", "Left/ /Left", "Overflow/ /Wrap", "A and C title cells; blank slash positions make no change"],
-    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10/ /10", "Normal/ /Normal", "Left/ /Left", "Overflow/ /Overflow", "A and C date-label cells; blank slash positions make no change"],
+    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14/ /5/ / /14", "Bold/ /Normal/ / /Bold/", "Left/ /Left", "Overflow/ /Wrap/ / /Overflow", "A and C title cells; blank slash positions make no change"],
+    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10/ /10", "Normal/ /Normal", "Left/ /Left", "Overflow/ /Overflow/ / /Overflow", "A and C date-label cells; blank slash positions make no change"],
     ["GLOBAL", "3", "Spacer", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row"],
-    ["GLOBAL", "4", "Header Row", "40", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
+    ["GLOBAL", "4", "Header Row", "30", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
   ],
   sectionF_Subheaders: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
     ["GLOBAL", "1", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer above section title"],
-    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14/ /10", "Bold/ /Normal", "Left/ /Left", "Overflow/ /Overflow", "A section title and C last-updated label"],
+    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14/ /10", "Bold/ /Italic", "Left/ /Left", "Overflow/ /Overflow", "A section title and C last-updated label"],
     ["GLOBAL", "3", "Visual Spacer Row", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row below section title"],
     ["GLOBAL", "4", "Governed Header Row", "25", "Level 2", "8", "Bold", "Left", "Wrap", "Governed column headers"],
     ["GLOBAL", "5", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer right below headers"],
@@ -628,29 +628,38 @@ function BuildDefaultFormatDashboard() {
   }
 
   const dashRows = [];
+  const emptyDashboardRow = new Array(dashWidth).fill("");
   dashRows.push(["Format Dashboard"]);
   dashRows.push(["Date Created", Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss")]);
+  // Rows 3-5 remain the governed title spacer, header row, and pre-section
+  // buffer. The first six-row subheader block therefore begins on row 6.
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
 
   function appendDefaultDashboardSection_(rows, sectionName, headers, dataRows, width) {
     const emptyRow = new Array(width).fill("");
-    rows.push(emptyRow.slice()); // One blank row above the section header.
+    rows.push(emptyRow.slice()); // Subheader step 1: blank row above title.
 
     const sectionRow = emptyRow.slice();
     sectionRow[0] = sectionName;
-    rows.push(sectionRow);
+    rows.push(sectionRow); // Subheader step 2: section title.
+
+    rows.push(emptyRow.slice()); // Subheader step 3: visual spacer.
 
     const headerRow = emptyRow.slice();
     for (let i = 0; i < headers.length; i++) headerRow[i] = headers[i];
-    rows.push(headerRow);
+    rows.push(headerRow); // Subheader step 4: governed headers.
 
+    rows.push(emptyRow.slice()); // Subheader step 5: data buffer.
+
+    // Data begins in subheader step 6. Unlike the previous writer, no four-row
+    // tail is added; the next section's step-1 row supplies the sole separator.
     (dataRows || []).forEach(function(row) {
       const paddedRow = row.slice(0, width);
       while (paddedRow.length < width) paddedRow.push("");
       rows.push(paddedRow);
     });
-
-    // Preserve four blank rows after every completed section.
-    for (let blank = 0; blank < 4; blank++) rows.push(emptyRow.slice());
   }
 
   FORMAT_DASHBOARD_SECTION_REGISTRY.forEach(function(section) {
