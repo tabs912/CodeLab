@@ -4,11 +4,11 @@ The `Current_Modules/` directory contains only the single current deployable ver
 
 ## Deployment set
 
-1. `MODULE 1 v1.94.1: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES`
+1. `MODULE 1 v1.94.2: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES`
 2. `MODULE 2 v2.8: DATA PROCESSING & OUTPUT ENGINE (TRACKING COLUMNS & FORMATS)`
-3. `MODULE 3 v2.0.5: LAYOUT MANAGEMENT & TEMPLATES`
-4. `MODULE 4 v2.1.1: SYSTEM INDEX & QUALITY ASSURANCE (Fuzzy Validator Hotfix)`
-5. `MODULE 5 v3.16: FORMAT DASHBOARD & CONFIGURATION LOGIC (DASHBOARD ONLY TEMPLATE FORMATTING)`
+3. `MODULE 3 v2.0.6: LAYOUT MANAGEMENT & TEMPLATES (SLASH COLUMN FORMATTING)`
+4. `MODULE 4 v2.1.2: SYSTEM INDEX & QUALITY ASSURANCE (HEADER-MAPPED RESULTS)`
+5. `MODULE 5 v3.17: FORMAT DASHBOARD & CONFIGURATION LOGIC (SLASH COLUMN DEFAULTS)`
 
 Deploy only the five scripts in `Current_Modules/` together. Older files in the parent `Module 2/` directory are retained release snapshots and must not be loaded into the same Apps Script project with this set.
 
