@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 5 v3.17: FORMAT DASHBOARD & CONFIGURATION LOGIC (DASHBOARD ONLY TEMPLATE FORMATTING)
+// MODULE 5 v3.18: FORMAT DASHBOARD & CONFIGURATION LOGIC (DASHBOARD ONLY TEMPLATE FORMATTING)
 // File: 05_Format_Dashboard_Config.gs
 // ============================================================================
 
@@ -45,7 +45,7 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Global Border Color", "#CCCCCC", "TRUE", "Hex color (e.g., #CCCCCC)"],
     ["Global Border Style", "SOLID", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
     ["Global Borders Enabled", "TRUE", "TRUE", "TRUE or FALSE"],
-    ["Template Version", "3.17", "FALSE", "Master release version"]
+    ["Template Version", "3.18", "FALSE", "Master release version"]
   ],
   sectionB_Creation: [
     ["System Sheet Name", "Output Naming Pattern", "Template Tab Rank", "Active Tab Rank", "Group", "Visibility", "Collision Policy", "Data Row Trimming", "Index Reg.", "Notes"],
@@ -628,29 +628,38 @@ function BuildDefaultFormatDashboard() {
   }
 
   const dashRows = [];
+  const emptyDashboardRow = new Array(dashWidth).fill("");
   dashRows.push(["Format Dashboard"]);
   dashRows.push(["Date Created", Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss")]);
+  // Rows 3-5 remain the governed title spacer, header row, and pre-section
+  // buffer. The first six-row subheader block therefore begins on row 6.
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
 
   function appendDefaultDashboardSection_(rows, sectionName, headers, dataRows, width) {
     const emptyRow = new Array(width).fill("");
-    rows.push(emptyRow.slice()); // One blank row above the section header.
+    rows.push(emptyRow.slice()); // Subheader step 1: blank row above title.
 
     const sectionRow = emptyRow.slice();
     sectionRow[0] = sectionName;
-    rows.push(sectionRow);
+    rows.push(sectionRow); // Subheader step 2: section title.
+
+    rows.push(emptyRow.slice()); // Subheader step 3: visual spacer.
 
     const headerRow = emptyRow.slice();
     for (let i = 0; i < headers.length; i++) headerRow[i] = headers[i];
-    rows.push(headerRow);
+    rows.push(headerRow); // Subheader step 4: governed headers.
 
+    rows.push(emptyRow.slice()); // Subheader step 5: data buffer.
+
+    // Data begins in subheader step 6. Unlike the previous writer, no four-row
+    // tail is added; the next section's step-1 row supplies the sole separator.
     (dataRows || []).forEach(function(row) {
       const paddedRow = row.slice(0, width);
       while (paddedRow.length < width) paddedRow.push("");
       rows.push(paddedRow);
     });
-
-    // Preserve four blank rows after every completed section.
-    for (let blank = 0; blank < 4; blank++) rows.push(emptyRow.slice());
   }
 
   FORMAT_DASHBOARD_SECTION_REGISTRY.forEach(function(section) {
