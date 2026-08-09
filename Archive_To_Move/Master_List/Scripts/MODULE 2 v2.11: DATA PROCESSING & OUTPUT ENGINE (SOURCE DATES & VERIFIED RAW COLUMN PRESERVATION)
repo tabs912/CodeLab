@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 2 v2.8: DATA PROCESSING & OUTPUT ENGINE (TRACKING COLUMNS & FORMATS)
+// MODULE 2 v2.11: DATA PROCESSING & OUTPUT ENGINE (SOURCE DATES & VERIFIED RAW COLUMN PRESERVATION)
 // File: 02_Data_Processing_Engine.gs
 // ============================================================================
 
@@ -81,12 +81,16 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   }
 
   if (options.dataRows && options.dataRows.length && options.headers) {
+    if (sheet.getMaxColumns() < options.headers.length) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), options.headers.length - sheet.getMaxColumns());
+    }
+    sheet.getRange(HEADER_ROW, 1, 1, options.headers.length).setValues([options.headers]);
     if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Write data matrix", options.dataRows.length + " row(s) x " + options.headers.length + " column(s)");
     sheet.getRange(DATA_START_ROW, 1, options.dataRows.length, options.headers.length).setValues(options.dataRows);
 
-    if (typeof applyGovernedDateFormatsFromDashboard_ === "function") {
-      if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Apply date formats", "Reading governed formats");
-      applyGovernedDateFormatsFromDashboard_(sheet, dashboard, options.headers, options.dataRows.length);
+    if (typeof applyGovernedNumberFormatsFromDashboard_ === "function") {
+      if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Apply number formats", "Reading Format Dashboard Section G");
+      applyGovernedNumberFormatsFromDashboard_(sheet, dashboard, options.headers, options.dataRows.length);
     }
   }
 
@@ -116,24 +120,19 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   return sheet;
 }
 
-function applyGovernedDateFormatsFromDashboard_(sheet, dashboard, headers, rowCount) {
-  if (!sheet || !headers || rowCount < 1) return;
+function applyGovernedNumberFormatsFromDashboard_(sheet, dashboard, headers, rowCount) {
+  if (!sheet || !dashboard || !headers || rowCount < 1) return;
   const colDefs = dashboard.columnDefinitions || {};
-  const defaultDateFmt = dashboard.globals["Default Date Format"] || "mm/dd/yyyy";
 
-  headers.forEach((header, index) => {
-    const def = colDefs[header] || colDefs[header.toLowerCase()];
-    if (def && (def.format || def.dateColumn)) {
-      let format = def.format || defaultDateFmt;
+  headers.forEach(function(header, index) {
+    const normalizedHeader = String(header || "").trim();
+    if (!normalizedHeader) return;
 
-      // EXPLICIT FORMAT OVERRIDE: Ensure tracking columns are exactly MM.yy
-      if (header === "Demo P Update Month" || header === "Added to Disenrolled Exclusion") {
-          format = "MM.yy";
-      }
+    const def = colDefs[normalizedHeader] || colDefs[normalizedHeader.toLowerCase()];
+    const numberFormat = def ? String(def.format || "").trim() : "";
+    if (!numberFormat) return;
 
-      const colIdx = index + 1;
-      sheet.getRange(DATA_START_ROW, colIdx, rowCount, 1).setNumberFormat(format);
-    }
+    sheet.getRange(DATA_START_ROW, index + 1, rowCount, 1).setNumberFormat(numberFormat);
   });
 }
 
@@ -184,6 +183,95 @@ function collectMovedTitleInfoCells_(sheet, systemSheetName) {
   });
 
   return parts.join(" ");
+}
+
+function appendSourceOnlyHeaders_(governedHeaders, sourceHeaders) {
+  const output = (governedHeaders || []).slice();
+  const seen = new Set(output.map(function(header) { return normalizeHeader_(header); }).filter(Boolean));
+
+  (sourceHeaders || []).forEach(function(header) {
+    const original = String(header == null ? "" : header).trim();
+    const normalized = normalizeHeader_(original);
+    if (!normalized || seen.has(normalized)) return;
+    output.push(original);
+    seen.add(normalized);
+  });
+
+  return output;
+}
+
+function getSourceOnlyHeaders_(governedHeaders, sourceHeaders) {
+  const governed = new Set((governedHeaders || []).map(function(header) { return normalizeHeader_(header); }).filter(Boolean));
+  const found = new Set();
+  return (sourceHeaders || []).map(function(header) { return String(header == null ? "" : header).trim(); }).filter(function(header) {
+    const normalized = normalizeHeader_(header);
+    if (!normalized || governed.has(normalized) || found.has(normalized)) return false;
+    found.add(normalized);
+    return true;
+  });
+}
+
+function readValidSourceDate_(sourceSheet, a1) {
+  const range = sourceSheet.getRange(a1);
+  const value = range.getValue();
+  if (value instanceof Date && !isNaN(value.getTime())) return new Date(value.getTime());
+
+  const displayValue = String(range.getDisplayValue() || "").trim();
+  if (!displayValue) return null;
+  const parsed = new Date(displayValue);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function stampMonthlySubReportSourceDates_(outputSheet, sourceSheet, key, monthParts, timing, sheetName) {
+  const dateCells = key === "CD" ? { start: "C3", end: "E3" } : { start: "E2", end: "G2" };
+  const sourceStart = readValidSourceDate_(sourceSheet, dateCells.start);
+  const sourceEnd = readValidSourceDate_(sourceSheet, dateCells.end);
+  const startDate = sourceStart || monthParts.firstDay;
+  const endDate = sourceEnd || monthParts.lastDay;
+
+  if (!sourceStart || !sourceEnd) {
+    logBestEffortWarning_(sheetName + " contained an invalid source date in " + dateCells.start + " or " + dateCells.end + "; the prompted month fallback was used for the invalid value.");
+  }
+
+  outputSheet.getRange("B2").setValue(startDate).setNumberFormat("MM/dd/yyyy");
+  outputSheet.getRange("D2").setValue(endDate).setNumberFormat("MM/dd/yyyy");
+  markFrameworkStep_(timing, sheetName + " - Stamp source report dates", dateCells.start + " to " + dateCells.end);
+}
+
+function normalizePreservedValue_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) return "DATE:" + value.getTime();
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function verifyRawDataSourceOnlyColumns_(outputSheet, rawData, targetHeaders, sourceOnlyHeaders, timing) {
+  if (!sourceOnlyHeaders.length) {
+    markFrameworkStep_(timing, "Raw Data - Verify source-only columns", "No source-only columns required preservation");
+    return;
+  }
+
+  const expectedRows = rawData.values.filter(function(row) {
+    return row.some(function(value) { return String(value == null ? "" : value).trim() !== ""; });
+  });
+  const outputRows = outputSheet.getRange(DATA_START_ROW, 1, expectedRows.length, targetHeaders.length).getValues();
+  const sourceMap = buildHeaderIndexMap_(rawData.headers);
+  const targetMap = buildHeaderIndexMap_(targetHeaders);
+
+  sourceOnlyHeaders.forEach(function(header) {
+    const sourceIndex = findHeaderIndex_(sourceMap, [header]);
+    const targetIndex = findHeaderIndex_(targetMap, [header]);
+    if (sourceIndex < 0 || targetIndex < 0) throw new Error("Raw Data preservation verification could not map source-only column: " + header);
+
+    expectedRows.forEach(function(sourceRow, rowIndex) {
+      const expected = normalizePreservedValue_(sourceRow[sourceIndex]);
+      const actual = normalizePreservedValue_(outputRows[rowIndex][targetIndex]);
+      if (expected !== actual) {
+        throw new Error("Raw Data preservation verification failed for column '" + header + "' at output row " + (DATA_START_ROW + rowIndex) + ".");
+      }
+    });
+  });
+
+  markFrameworkStep_(timing, "Raw Data - Verify source-only columns", sourceOnlyHeaders.length + " column(s) and " + expectedRows.length + " row(s) verified against the formatted output");
 }
 
 function runFormatterPipeline_(reportKeys, processName) {
@@ -252,8 +340,20 @@ function processSingleSubReport_(key, monthParts, dashboard, timing, archiveStat
   const rawData = getDataValues_(sourceSheet, sourceHeaderRow, sourceHeaderRow + 1);
   if (!rawData.values.length) throw new Error("Source sheet is empty below header row " + sourceHeaderRow + ".");
 
-  const targetHeaders = getHeadersForSheetType_(dashboard, systemSheetName);
+  let targetHeaders = getHeadersForSheetType_(dashboard, systemSheetName);
   if (!targetHeaders.length) throw new Error("No Dashboard Section H headers for " + systemSheetName + ".");
+
+  let sourceOnlyHeaders = [];
+  if (key === "RD") {
+    const governedHeaderCount = targetHeaders.length;
+    sourceOnlyHeaders = getSourceOnlyHeaders_(targetHeaders, rawData.headers);
+    targetHeaders = appendSourceOnlyHeaders_(targetHeaders, rawData.headers);
+    markFrameworkStep_(
+      timing,
+      "Raw Data - Preserve imported columns",
+      (targetHeaders.length - governedHeaderCount) + " source-only column(s) appended after governed Dashboard Section H columns"
+    );
+  }
 
   let filteredRows = mapRowsToHeaders_(rawData.values, rawData.headers, targetHeaders).filter(function(row) {
     return row.some(function(value) { return String(value == null ? "" : value).trim() !== ""; });
@@ -289,6 +389,14 @@ function processSingleSubReport_(key, monthParts, dashboard, timing, archiveStat
 
   const sourceSheetId = sourceSheet.getSheetId();
   const finalSheet = createGovernedSheet_(systemSheetName, monthParts, { dataRows: filteredRows, headers: targetHeaders, timing: timing });
+
+  if (key === "CD" || key === "UC") {
+    stampMonthlySubReportSourceDates_(finalSheet, sourceSheet, key, monthParts, timing, systemSheetName);
+  }
+
+  if (key === "RD") {
+    verifyRawDataSourceOnlyColumns_(finalSheet, rawData, targetHeaders, sourceOnlyHeaders, timing);
+  }
 
   if ((systemSheetName === "CP Due Date" || systemSheetName === "Unlock CP") && titleInfo) {
     const titleRange = finalSheet.getRange("C1:D1");

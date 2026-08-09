@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 5 v3.13.1: FORMAT DASHBOARD & CONFIGURATION LOGIC (GENERAL TEMPLATE FORMATTED)
+// MODULE 5 v3.20: FORMAT DASHBOARD & CONFIGURATION LOGIC (NON-BANDED DASHBOARDS)
 // File: 05_Format_Dashboard_Config.gs
 // ============================================================================
 
@@ -9,40 +9,43 @@
 
 var MASTER_FORMAT_DEFAULTS = {
   sectionA_Globals: [
-    ["Setting", "Value", "Options / Format Description"],
-    ["Header Row", "4", "Numeric row number (e.g., 4)"],
-    ["Data Start Row", "5", "Numeric row number (e.g., 5)"],
-    ["Freeze Rows", "4", "Numeric count of frozen rows"],
-    ["Freeze Columns", "2", "Numeric count of frozen columns"],
-    ["Row 1 (Title)Height", "25", "Numeric pixel height"],
-    ["Row 2 Height", "25", "Numeric pixel height"],
-    ["Row 3 Height", "10", "Numeric pixel height"],
-    ["Row 4 (Header) Height", "40", "Numeric pixel height"],
-    ["A1 (Title) Font Size", "14", "Numeric point size"],
-    ["A1 (Title) Font Style", "Bold", "Bold, Italic, or Normal"],
-    ["C1 (Title) Font Size", "5", "Numeric point size"],
-    ["A1 (Title) Wrap", "Overflow", "CLIP, WRAP, or OVERFLOW"],
-    ["C1 (Title) Wrap", "Wrap", "CLIP, WRAP, or OVERFLOW"],
-    ["Row 4 (Header) Wrap", "Wrap", "CLIP, WRAP, or OVERFLOW"],
-    ["Standard Font", "Arial", "Installed font family name"],
-    ["Standard Font Size", "10", "Numeric point size"],
-    ["Standard Font Color", "#000000", "Hex color (e.g., #000000)"],
-    ["Default Data Row Height", "25", "Numeric pixel height"],
-    ["Default Column Width", "105", "Numeric pixel width"],
-    ["Default Date Format", "mm/dd/yyyy", "Google Sheets number format (e.g., m/d/yy)"],
-    ["Default Number Format", "General", "Google Sheets number format or General"],
-    ["Default Text Format", "@", "Google Sheets number format (e.g., @)"],
-    ["Default Data Wrap", "Clip", "CLIP, WRAP, or OVERFLOW"],
-    ["Default Horizontal Alignment", "left", "left, center, or right"],
-    ["Default Vertical Alignment", "middle", "top, middle, or bottom"],
-    ["HSL Level 1 Lightness %", "60", "Numeric percent for tab accents / visual spacers"],
-    ["HSL Level 2 Lightness %", "75", "Numeric percent for header rows"],
-    ["HSL Level 3 Lightness %", "85", "Numeric percent for title rows / current tab"],
-    ["HSL Level 4 Lightness %", "90", "Numeric percent for alternating color 1"],
-    ["HSL Level 5 Lightness %", "97", "Numeric percent for alternating color 2"],
-    ["Global Border Color", "#CCCCCC", "Hex color (e.g., #CCCCCC)"],
-    ["Global Border Style", "SOLID", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
-    ["Template Version", "3.13.1", "Master release version"]
+    ["Setting", "Value", "Base Template", "Options / Format Description"],
+    ["Header Row", "4", "FALSE", "Numeric row number (e.g., 4)"],
+    ["Data Start Row", "5", "FALSE", "Numeric row number (e.g., 5)"],
+    ["Freeze Rows", "4", "TRUE", "Numeric count of frozen rows"],
+    ["Freeze Columns", "2", "TRUE", "Numeric count of frozen columns"],
+    ["Row 1 (Title)Height", "25", "TRUE", "Numeric pixel height"],
+    ["Row 2 Height", "25", "TRUE", "Numeric pixel height"],
+    ["Row 3 Height", "10", "TRUE", "Numeric pixel height"],
+    ["Row 4 (Header) Height", "40", "FALSE", "Numeric pixel height"],
+    ["A1 (Title) Font Size", "14", "TRUE", "Numeric point size"],
+    ["A1 (Title) Font Style", "Bold", "TRUE", "Bold, Italic, or Normal"],
+    ["C1 (Title) Font Size", "5", "TRUE", "Numeric point size"],
+    ["A1 (Title) Wrap", "Overflow", "TRUE", "CLIP, WRAP, or OVERFLOW"],
+    ["C1 (Title) Wrap", "Wrap", "TRUE", "CLIP, WRAP, or OVERFLOW"],
+    ["Row 4 (Header) Wrap", "Wrap", "TRUE", "CLIP, WRAP, or OVERFLOW"],
+    ["Standard Font", "Arial", "TRUE", "Installed font family name"],
+    ["Standard Font Size", "10", "TRUE", "Numeric point size"],
+    ["Standard Font Color", "#000000", "TRUE", "Hex color (e.g., #000000)"],
+    ["Standard Font Weight", "Normal", "TRUE", "Normal or Bold"],
+    ["Default Background Color", "#FFFFFF", "FALSE", "Hex color (e.g., #FFFFFF)"],
+    ["Default Data Row Height", "25", "TRUE", "Numeric pixel height"],
+    ["Default Column Width", "105", "TRUE", "Numeric pixel width"],
+    ["Default Date Format", "mm/dd/yyyy", "FALSE", "Google Sheets number format (e.g., m/d/yy)"],
+    ["Default Number Format", "General", "FALSE", "Google Sheets number format or General"],
+    ["Default Text Format", "@", "TRUE", "Google Sheets number format (e.g., @)"],
+    ["Default Data Wrap", "Clip", "TRUE", "CLIP, WRAP, or OVERFLOW"],
+    ["Default Horizontal Alignment", "left", "TRUE", "left, center, or right"],
+    ["Default Vertical Alignment", "middle", "TRUE", "top, middle, or bottom"],
+    ["HSL Level 1 Lightness %", "60", "FALSE", "Numeric percent for tab accents / visual spacers"],
+    ["HSL Level 2 Lightness %", "75", "FALSE", "Numeric percent for header rows"],
+    ["HSL Level 3 Lightness %", "85", "FALSE", "Numeric percent for title rows / current tab"],
+    ["HSL Level 4 Lightness %", "90", "FALSE", "Numeric percent for alternating color 1"],
+    ["HSL Level 5 Lightness %", "97", "FALSE", "Numeric percent for alternating color 2"],
+    ["Global Border Color", "#CCCCCC", "TRUE", "Hex color (e.g., #CCCCCC)"],
+    ["Global Border Style", "DOTTED", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
+    ["Global Borders Enabled", "TRUE", "TRUE", "TRUE or FALSE"],
+    ["Template Version", "3.20", "FALSE", "Master release version"]
   ],
   sectionB_Creation: [
     ["System Sheet Name", "Output Naming Pattern", "Template Tab Rank", "Active Tab Rank", "Group", "Visibility", "Collision Policy", "Data Row Trimming", "Index Reg.", "Notes"],
@@ -79,19 +82,19 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionC_Structural: [
     ["System Sheet Name", "Report Title", "Title Date Format", "Base Color", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Title Font Color", "Column Count", "Default Column Widths", "Row Mode", "Minimum Rows", "Buffer Rows", "Uses Alternating Colors", "Uses Subheaders", "Notes"],
-    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#F4FBF7", "#FBFEFC", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#F4FBFB", "#FBFEFE", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#FBF4F8", "#FEFBFD", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#F5F4FB", "#FCFBFE", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#F8F4FB", "#FDFBFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "7", "250, 250, 500, 350, 250, 250, 500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
-    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "4", "250, 250, 350, 300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "19", "220, 150, 215, 165, 130, 120, 120, 120, 140, 120, 120, 306, 144, 100, 100, 110, 100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "10", "160, 185, 160, 160, 30, 160, 185, 160, 160, 160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
+    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#D9F2E6", "#F4FBF7", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#D9F2F0", "#F4FBFB", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#F2D9E8", "#FBF4F8", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#DDD9F2", "#F5F4FB", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#E8D9F2", "#F8F4FB", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "7", "250/250/500/350/250/250/500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
+    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "4", "250/250/350/300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "19", "220/150/215/165/130/120/120/120/140/120/120/306/144/100/100/110/100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "10", "160/185/160/160/30/160/185/160/160/160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
   ],
   sectionD_OutputGov: [
     ["System Sheet Name", "Output Naming Pattern", "Group", "End Date Source", "Remove / Archive", "Row Height Enforcement"],
@@ -115,19 +118,19 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionE_TitleRows: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
-    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14", "Bold", "Left", "Overflow", "Default title row"],
-    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10", "Normal", "Left", "Overflow", "Date labels and formatting"],
+    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14/ /5/ / /14", "Bold/ /Normal/ / /Bold/", "Left/ /Left", "Overflow/ /Wrap/ / /Overflow", "A and C title cells; blank slash positions make no change"],
+    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10/ /10", "Normal/ /Normal", "Left/ /Left", "Overflow/ /Overflow/ / /Overflow", "A and C date-label cells; blank slash positions make no change"],
     ["GLOBAL", "3", "Spacer", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row"],
-    ["GLOBAL", "4", "Header Row", "40", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
+    ["GLOBAL", "4", "Header Row", "30", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
   ],
   sectionF_Subheaders: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
     ["GLOBAL", "1", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer above section title"],
-    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14", "Bold", "Left", "Overflow", "Section title banner"],
+    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14/ /10", "Bold/ /Italic", "Left/ /Left", "Overflow/ /Overflow", "A section title and C last-updated label"],
     ["GLOBAL", "3", "Visual Spacer Row", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row below section title"],
     ["GLOBAL", "4", "Governed Header Row", "25", "Level 2", "8", "Bold", "Left", "Wrap", "Governed column headers"],
     ["GLOBAL", "5", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer right below headers"],
-    ["GLOBAL", "6", "Data Anchor", "25", "Level 4", "10", "Normal", "Left", "Clip", "First data entry point"]
+    ["GLOBAL", "6", "Data Anchor", "25", "None", "10", "Normal", "Left", "Clip", "First data entry point"]
   ],
   sectionG_Columns: [
     ["Header", "Width", "Header Font Size", "Date Column", "Hide Column", "Data Wrap", "Horizontal Alignment", "Vertical Alignment", "Number Format"],
@@ -231,6 +234,16 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionH_Headers: [
     ["Sheet Type", "Column Order", "Header", "Source of Data"],
+    ["Index", "1", "Section/Month", "Index workflow"],
+    ["Index", "2", "Sheet Tab Name", "Index workflow"],
+    ["Index", "3", "Workspace Link", "Index workflow"],
+    ["Index", "4", "Visibility", "Index workflow"],
+    ["Index", "5", "", "Intentional spacer"],
+    ["Index", "6", "Archive Month", "Archive index"],
+    ["Index", "7", "Archive Sheet Name", "Archive index"],
+    ["Index", "8", "Link to Sheet", "Archive index"],
+    ["Index", "9", "Restore Action", "Archive index"],
+    ["Index", "10", "Status", "Archive index"],
     ["Banners", "1", "Last Name", "Primary Data"],
     ["Banners", "2", "First Name", "Primary Data"],
     ["Banners", "3", "Participant PMR#", "Primary Data"],
@@ -542,115 +555,155 @@ var MASTER_FORMAT_DEFAULTS = {
   ]
 };
 
+const FORMAT_DASHBOARD_SECTION_REGISTRY = Object.freeze([
+  { key: "sectionA_Globals", title: "SECTION A - GLOBAL SETTINGS" },
+  { key: "sectionB_Creation", title: "SECTION B - SHEET CREATION & LIFECYCLE GOVERNANCE" },
+  { key: "sectionC_Structural", title: "SECTION C - TEMPLATE STRUCTURAL SPECS" },
+  { key: "sectionD_OutputGov", title: "SECTION D - ACTIVE OUTPUT GOVERNANCE" },
+  { key: "sectionE_TitleRows", title: "SECTION E - TITLE ROWS" },
+  { key: "sectionF_Subheaders", title: "SECTION F - SUBHEADER ROWS" },
+  { key: "sectionG_Columns", title: "SECTION G - COLUMN DEFINITIONS" },
+  { key: "sectionH_Headers", title: "SECTION H - SHEET HEADERS" }
+]);
+
+function getFormatDashboardDefaultSection_(key) {
+  const matrix = MASTER_FORMAT_DEFAULTS[key];
+  if (!Array.isArray(matrix) || matrix.length < 1) {
+    throw new Error("Format Dashboard default section is missing: " + key + ".");
+  }
+  return matrix;
+}
+
+
 // ============================================================================
 // 5.2. DASHBOARD BUILDER & LAYOUT
 // ============================================================================
 
 function buildFormatDashboardTemplate_() {
+  return BuildDefaultFormatDashboard();
+}
+
+/**
+ * Builds Default - Format Dashboard from the governed base template, writes
+ * the complete default data matrix, and formats that existing sheet through
+ * the general template pipeline without copying or naming it a second time.
+ */
+function BuildDefaultFormatDashboard() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const recoveryConfig = getFallbackDashboardConfig_();
+  const hslPercents = {
+    l1: Number(recoveryConfig.globals["HSL Level 1 Lightness %"]),
+    l2: Number(recoveryConfig.globals["HSL Level 2 Lightness %"]),
+    l3: Number(recoveryConfig.globals["HSL Level 3 Lightness %"]),
+    l4: Number(recoveryConfig.globals["HSL Level 4 Lightness %"]),
+    l5: Number(recoveryConfig.globals["HSL Level 5 Lightness %"])
+  };
+  const fontColor = String(recoveryConfig.globals["Standard Font Color"] || "").trim();
+  if (!fontColor) throw new Error("Format Dashboard recovery data is missing Standard Font Color.");
 
-  // 1. Get Live Config
-  const liveConfig = loadDashboardConfig_(true);
-  const dashConfig = getTemplateConfigFromDashboard_("Format Dashboard");
-
-  // Override template routing just to ensure correct factory generation
-  dashConfig.templateName = "Default - Format Dashboard";
-  dashConfig.sheetType = "SYSTEM";
-  dashConfig.rank = 812;
-
-  // 2. Prep data dump (Hydrate Section C Hex Codes dynamically first)
-  const hslPercents = typeof getHslPercentsFromDashboard_ === "function" ? getHslPercentsFromDashboard_(null) : { l1: 60, l2: 75, l3: 85, l4: 90, l5: 97 };
-  const fontColor = liveConfig.globals["Standard Font Color"] || "#000000";
-
+  // Section C is generated from each row's Base Color and the five HSL
+  // percentages stored in Section A.
+  const structuralDefaults = getFormatDashboardDefaultSection_("sectionC_Structural");
   const hydratedSectionC = [];
-  for (let i = 1; i < MASTER_FORMAT_DEFAULTS.sectionC_Structural.length; i++) {
-    const spec = MASTER_FORMAT_DEFAULTS.sectionC_Structural[i];
-    const t = calculateThemeLevels_(spec[3], hslPercents);
-    const row = [spec[0], spec[1], spec[2], spec[3], t.level1, t.level2, t.level3, t.level4, t.level5, fontColor].concat(spec.slice(10));
-    hydratedSectionC.push(row);
+  for (let i = 1; i < structuralDefaults.length; i++) {
+    const spec = structuralDefaults[i];
+    const baseColor = String(spec[3] || "").trim();
+    if (!isValidHex_(baseColor)) {
+      throw new Error("Format Dashboard recovery data has an invalid Base Color for " + String(spec[0] || "unknown sheet") + ".");
+    }
+    const theme = calculateThemeLevels_(baseColor, hslPercents);
+    hydratedSectionC.push([
+      spec[0], spec[1], spec[2], baseColor,
+      theme.level1, theme.level2, theme.level3, theme.level4, theme.level5,
+      fontColor
+    ].concat(spec.slice(10)));
   }
 
-  const dashWidth = dashConfig.columnCount || 19;
-  const dashRows = [];
+  const dashboardDefinition = (recoveryConfig.sheetDefinitions || []).find(function(definition) {
+    return String(definition.systemSheetName || "").trim().toLowerCase() === "format dashboard";
+  });
+  const dashWidth = Number(dashboardDefinition && dashboardDefinition.columnCount);
+  if (!dashWidth || dashWidth < 1) {
+    throw new Error("Format Dashboard recovery data is missing a valid Column Count.");
+  }
 
-  // Title and Date
+  const dashRows = [];
+  const emptyDashboardRow = new Array(dashWidth).fill("");
   dashRows.push(["Format Dashboard"]);
   dashRows.push(["Date Created", Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss")]);
-  dashRows.push([]);
+  // Rows 3-5 remain the governed title spacer, header row, and pre-section
+  // buffer. The first six-row subheader block therefore begins on row 6.
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
 
-  // Append data blocks with exactly the 5-row standard subheader spacing
-  function appendDashboardSectionRows_(rows, sectionName, headers, dataRows, width) {
+  function appendDefaultDashboardSection_(rows, sectionName, headers, dataRows, width) {
     const emptyRow = new Array(width).fill("");
-    rows.push(emptyRow); // Buffer 1
-    const bannerRow = new Array(width).fill("");
-    bannerRow[0] = sectionName;
-    rows.push(bannerRow); // Title 2
-    rows.push(emptyRow); // Spacer 3
-    const headerRow = new Array(width).fill("");
-    for (let i = 0; i < headers.length; i++) { headerRow[i] = headers[i]; }
-    rows.push(headerRow); // Headers 4
-    rows.push(emptyRow); // Buffer 5
-    (dataRows || []).forEach(row => {
+    rows.push(emptyRow.slice()); // Subheader step 1: blank row above title.
+
+    const sectionRow = emptyRow.slice();
+    sectionRow[0] = sectionName;
+    rows.push(sectionRow); // Subheader step 2: section title.
+
+    rows.push(emptyRow.slice()); // Subheader step 3: visual spacer.
+
+    const headerRow = emptyRow.slice();
+    for (let i = 0; i < headers.length; i++) headerRow[i] = headers[i];
+    rows.push(headerRow); // Subheader step 4: governed headers.
+
+    rows.push(emptyRow.slice()); // Subheader step 5: data buffer.
+
+    // Data begins in subheader step 6. Unlike the previous writer, no four-row
+    // tail is added; the next section's step-1 row supplies the sole separator.
+    (dataRows || []).forEach(function(row) {
       const paddedRow = row.slice(0, width);
       while (paddedRow.length < width) paddedRow.push("");
       rows.push(paddedRow);
     });
   }
 
-  appendDashboardSectionRows_(dashRows, "SECTION A - GLOBAL SETTINGS", MASTER_FORMAT_DEFAULTS.sectionA_Globals[0], MASTER_FORMAT_DEFAULTS.sectionA_Globals.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION B - SHEET CREATION & LIFECYCLE GOVERNANCE", MASTER_FORMAT_DEFAULTS.sectionB_Creation[0], MASTER_FORMAT_DEFAULTS.sectionB_Creation.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION C - TEMPLATE STRUCTURAL SPECS", MASTER_FORMAT_DEFAULTS.sectionC_Structural[0], hydratedSectionC, dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION D - ACTIVE OUTPUT GOVERNANCE", MASTER_FORMAT_DEFAULTS.sectionD_OutputGov[0], MASTER_FORMAT_DEFAULTS.sectionD_OutputGov.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION E - TITLE ROWS", MASTER_FORMAT_DEFAULTS.sectionE_TitleRows[0], MASTER_FORMAT_DEFAULTS.sectionE_TitleRows.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION F - SUBHEADER ROWS", MASTER_FORMAT_DEFAULTS.sectionF_Subheaders[0], MASTER_FORMAT_DEFAULTS.sectionF_Subheaders.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION G - COLUMN DEFINITIONS", MASTER_FORMAT_DEFAULTS.sectionG_Columns[0], MASTER_FORMAT_DEFAULTS.sectionG_Columns.slice(1), dashWidth);
-  appendDashboardSectionRows_(dashRows, "SECTION H - SHEET HEADERS", MASTER_FORMAT_DEFAULTS.sectionH_Headers[0], MASTER_FORMAT_DEFAULTS.sectionH_Headers.slice(1), dashWidth);
-
-  const paddedRows = dashRows.map(r => {
-     const row = r.slice();
-     while(row.length < dashWidth) row.push("");
-     return row;
+  FORMAT_DASHBOARD_SECTION_REGISTRY.forEach(function(section) {
+    const matrix = getFormatDashboardDefaultSection_(section.key);
+    const dataRows = section.key === "sectionC_Structural" ? hydratedSectionC : matrix.slice(1);
+    appendDefaultDashboardSection_(dashRows, section.title, matrix[0], dataRows, dashWidth);
   });
 
-  // Create the default dashboard as a clean, unformatted data sheet first.
-  // The general template builder owns every formatting operation afterward.
-  const existingDefault = ss.getSheetByName("Default - Format Dashboard");
-  if (existingDefault) {
-    ss.deleteSheet(existingDefault);
-    SpreadsheetApp.flush();
-  }
-  const unformattedDefault = ss.insertSheet("Default - Format Dashboard");
-  if (typeof resizeSheetGrid_ === "function") {
-    resizeSheetGrid_(unformattedDefault, paddedRows.length, dashWidth);
-  }
-  unformattedDefault.getRange(1, 1, paddedRows.length, dashWidth).setValues(paddedRows);
+  const paddedRows = dashRows.map(function(row) {
+    const paddedRow = row.slice(0, dashWidth);
+    while (paddedRow.length < dashWidth) paddedRow.push("");
+    return paddedRow;
+  });
 
-  // Route the populated data-only sheet through the same general formatting
-  // engine used by all other templates.
+  if (typeof createTemplateFromBase_ !== "function") {
+    throw new Error("createTemplateFromBase_ is required to build Default - Format Dashboard.");
+  }
+  const defaultDashboard = createTemplateFromBase_("Default - Format Dashboard");
+  defaultDashboard.clearContents();
+  if (typeof resizeSheetGrid_ === "function") {
+    resizeSheetGrid_(defaultDashboard, paddedRows.length, dashWidth);
+  }
+  defaultDashboard.getRange(1, 1, paddedRows.length, dashWidth).setValues(paddedRows);
+
+  // Resolve configuration from the new default dashboard itself. This avoids
+  // an older or malformed active Format Dashboard overriding bootstrap data.
+  const dashConfig = getTemplateConfigFromDashboard_("Format Dashboard", defaultDashboard);
+  dashConfig.templateName = "Default - Format Dashboard";
+  dashConfig.sheetType = "SYSTEM";
+  const defaultDashboardRule = recoveryConfig.creationRules && recoveryConfig.creationRules["Template - Format Dashboard"];
+  dashConfig.rank = Number(defaultDashboardRule && defaultDashboardRule.templateRank);
+  if (!dashConfig.rank) throw new Error("Format Dashboard recovery data is missing the default dashboard template rank.");
   dashConfig.minimumRows = paddedRows.length;
   dashConfig.columnCount = dashWidth;
-  dashConfig.unformattedSheet = unformattedDefault;
+  dashConfig.existingTemplateSheet = defaultDashboard;
   dashConfig.formatExistingSections = true;
 
-  // ==========================================================================
-  // 3. BUILD USING THE NORMAL GENERAL TEMPLATE PROCESS
-  // ==========================================================================
-  // We pass dashConfig exactly as is, letting the general template build process
-  // handle whatever native banding, sizing, or setup it normally does!
-  let defaultDash;
-  if (typeof buildGeneralTemplate_ === "function") {
-    defaultDash = buildGeneralTemplate_(dashConfig);
-  } else {
-    throw new Error("buildGeneralTemplate_ not found.");
+  if (typeof buildGeneralTemplate_ !== "function") {
+    throw new Error("buildGeneralTemplate_ is required to format Default - Format Dashboard.");
   }
-
-  // Final data-dependent calculation after the general formatting pass.
-  if (typeof recalculateDashboardHexCodes_ === "function") {
-    recalculateDashboardHexCodes_(defaultDash);
-  }
-
-  defaultDash.hideSheet();
-  return defaultDash;
+  const formattedDashboard = buildGeneralTemplate_(dashConfig);
+  recalculateDashboardHexCodes_(formattedDashboard);
+  formattedDashboard.hideSheet();
+  return formattedDashboard;
 }
 
 function saveActiveLayoutAsRebuildDefault() {
@@ -716,13 +769,7 @@ function restoreFormatDashboardFromDefault() {
     validBackgrounds = false;
   }
 
-  // Re-apply the native banding since we cleared it
-  const theme = typeof getTemplateTheme_ === "function" ? getTemplateTheme_("Format Dashboard") : { level4: "#fff", level5: "#fafafa" };
-  if (typeof applyNativeBandingSafe_ === "function") {
-      applyNativeBandingSafe_(sheet, 1, width, payload.values.length, theme.level4, theme.level5);
-  }
-
-  // Apply the explicitly saved backgrounds over the top of the new banding
+  // Format Dashboard surfaces intentionally use explicit fills only; do not restore native banding.
   if (validBackgrounds) {
     target.setBackgrounds(payload.backgrounds);
   }
@@ -739,7 +786,7 @@ function restoreFormatDashboardFromDefault() {
 
 function getFallbackDashboardConfig_() {
   const config = {
-    globals: {}, creationRules: {}, titleRows: [], subheaderRows: [],
+    globals: {}, baseTemplateGlobals: {}, creationRules: {}, titleRows: [], subheaderRows: [],
     sheetDefinitions: [], outputGovernance: {}, columnDefinitions: {}, sheetHeaders: {}
   };
 
@@ -760,98 +807,107 @@ function getFallbackDashboardConfig_() {
     return rows;
   }
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionA_Globals).forEach(function(row) {
-    const key = String(row["setting"] || "").trim();
-    if (key) config.globals[key] = row["value"];
+  const fallbackSections = {};
+  FORMAT_DASHBOARD_SECTION_REGISTRY.forEach(function(section) {
+    fallbackSections[section.key] = mapFallbackRows(getFormatDashboardDefaultSection_(section.key));
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionB_Creation).forEach(function(row) {
+  fallbackSections.sectionA_Globals.forEach(function(row) {
+    const key = String(row["setting"] || "").trim();
+    if (!key) return;
+    config.globals[key] = row["value"];
+    if (String(row["base template"] || "").trim().toUpperCase() === "TRUE") {
+      config.baseTemplateGlobals[key] = row["value"];
+    }
+  });
+
+  fallbackSections.sectionB_Creation.forEach(function(row) {
     const sysName = String(row["system sheet name"] || "").trim();
     if (sysName) {
       config.creationRules[sysName] = {
         systemSheetName: sysName,
-        namingPattern: String(row["output naming pattern"] || sysName).trim(),
-        templateRank: Number(row["template tab rank"]) || 800,
-        activeRank: Number(row["active tab rank"]) || 999,
-        group: String(row["group"] || "Other").trim(),
-        visibility: String(row["visibility"] || "VISIBLE").trim().toUpperCase(),
-        collisionPolicy: String(row["collision policy"] || "OVERWRITE").trim().toUpperCase(),
-        trimmingPolicy: String(row["data row trimming"] || "TRIM_TO_DATA").trim().toUpperCase(),
+        namingPattern: String(row["output naming pattern"] || "").trim(),
+        templateRank: Number(row["template tab rank"]),
+        activeRank: Number(row["active tab rank"]),
+        group: String(row["group"] || "").trim(),
+        visibility: String(row["visibility"] || "").trim().toUpperCase(),
+        collisionPolicy: String(row["collision policy"] || "").trim().toUpperCase(),
+        trimmingPolicy: String(row["data row trimming"] || "").trim().toUpperCase(),
         indexRegistration: row["index reg."] !== false && String(row["index reg."]).toUpperCase() !== "FALSE",
         special: String(row["notes"] || row["special"] || "").trim()
       };
     }
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionC_Structural).forEach(function(row) {
+  fallbackSections.sectionC_Structural.forEach(function(row) {
     const sysName = String(row["system sheet name"] || "").trim();
     if (sysName) {
       config.sheetDefinitions.push({
         systemSheetName: sysName,
         templateName: "Template - " + sysName,
         group: "Template",
-        reportTitle: String(row["report title"] || sysName).trim(),
+        reportTitle: String(row["report title"] || "").trim(),
         titleDateFormat: String(row["title date format"] || "").trim(),
-        baseColor: String(row["base color"] || "#79B5D2").trim(),
-        columnCount: Number(row["column count"]) || 10,
-        columnWidths: String(row["default column widths"] || "105").trim(),
+        baseColor: String(row["base color"] || "").trim(),
+        columnCount: Number(row["column count"]),
+        columnWidths: String(row["default column widths"] || "").trim(),
         usesAlternatingColors: String(row["uses alternating colors"]).toLowerCase() !== "false",
         usesSubheaders: String(row["uses subheaders"]).toLowerCase() === "true"
       });
     }
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionD_OutputGov).forEach(function(row) {
+  fallbackSections.sectionD_OutputGov.forEach(function(row) {
     const sysName = String(row["system sheet name"] || "").trim();
     if (sysName) {
       config.outputGovernance[sysName] = {
-        namingPattern: String(row["output naming pattern"] || sysName).trim(),
-        group: String(row["group"] || "Other").trim(),
+        namingPattern: String(row["output naming pattern"] || "").trim(),
+        group: String(row["group"] || "").trim(),
         endDateSource: String(row["end date source"] || "").trim(),
-        rowHeightEnforcement: String(row["row height enforcement"] || "TRUE").trim().toUpperCase() !== "FALSE"
+        rowHeightEnforcement: String(row["row height enforcement"] || "").trim().toUpperCase() === "TRUE"
       };
     }
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionE_TitleRows).forEach(function(row) {
+  fallbackSections.sectionE_TitleRows.forEach(function(row) {
     config.titleRows.push({
-      sheetType: String(row["sheet type"] || "GLOBAL").trim(),
-      row: Number(row["row"]) || 1,
+      sheetType: String(row["sheet type"] || "").trim(),
+      row: Number(row["row"]),
       purpose: String(row["purpose"] || "").trim(),
-      height: Number(row["height"]) || 25,
-      fillLevel: String(row["fill level"] || "Level 3").trim(),
-      fontSize: String(row["font size"] || "10").trim(),
-      fontWeight: String(row["font weight"] || "Normal").trim(),
-      alignment: String(row["alignment"] || "Left").trim(),
-      wrap: String(row["wrap"] || "CLIP").trim()
+      height: Number(row["height"]),
+      fillLevel: String(row["fill level"] || "").trim(),
+      fontSize: String(row["font size"] || "").trim(),
+      fontWeight: String(row["font weight"] || "").trim(),
+      alignment: String(row["alignment"] || "").trim(),
+      wrap: String(row["wrap"] || "").trim()
     });
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionF_Subheaders).forEach(function(row) {
+  fallbackSections.sectionF_Subheaders.forEach(function(row) {
     config.subheaderRows.push({
-      sheetType: String(row["sheet type"] || "GLOBAL").trim(),
-      row: Number(row["row"]) || 1,
+      sheetType: String(row["sheet type"] || "").trim(),
+      row: Number(row["row"]),
       purpose: String(row["purpose"] || "").trim(),
-      height: Number(row["height"]) || 25,
-      fillLevel: String(row["fill level"] || "None").trim(),
-      fontSize: String(row["font size"] || "10").trim(),
-      fontWeight: String(row["font weight"] || "Normal").trim(),
-      alignment: String(row["alignment"] || "Left").trim(),
-      wrap: String(row["wrap"] || "CLIP").trim()
+      height: Number(row["height"]),
+      fillLevel: String(row["fill level"] || "").trim(),
+      fontSize: String(row["font size"] || "").trim(),
+      fontWeight: String(row["font weight"] || "").trim(),
+      alignment: String(row["alignment"] || "").trim(),
+      wrap: String(row["wrap"] || "").trim()
     });
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionG_Columns).forEach(function(row) {
+  fallbackSections.sectionG_Columns.forEach(function(row) {
     const header = String(row["header"] || "").trim();
     if (header) {
       const colData = {
-        width: Number(row["width"]) || 105,
-        fontSize: Number(row["header font size"]) || 10,
+        width: Number(row["width"]),
+        fontSize: Number(row["header font size"]),
         dateColumn: String(row["date column"]).toLowerCase() === "true",
         hideColumn: String(row["hide column"]).toLowerCase() === "true",
-        wrap: String(row["data wrap"] || "CLIP").trim().toUpperCase(),
-        align: String(row["horizontal alignment"] || "left").trim().toLowerCase(),
-        vAlign: String(row["vertical alignment"] || "middle").trim().toLowerCase(),
+        wrap: String(row["data wrap"] || "").trim().toUpperCase(),
+        align: String(row["horizontal alignment"] || "").trim().toLowerCase(),
+        vAlign: String(row["vertical alignment"] || "").trim().toLowerCase(),
         format: String(row["number format"] || "").trim()
       };
       config.columnDefinitions[header] = colData;
@@ -859,21 +915,22 @@ function getFallbackDashboardConfig_() {
     }
   });
 
-  mapFallbackRows(MASTER_FORMAT_DEFAULTS.sectionH_Headers).forEach(function(row) {
+  fallbackSections.sectionH_Headers.forEach(function(row) {
     const sheetType = String(row["sheet type"] || "").trim();
+    const columnOrder = Number(row["column order"]);
     const header = String(row["header"] || "").trim();
-    if (sheetType && header) {
+    if (sheetType && columnOrder > 0) {
       if (!config.sheetHeaders[sheetType]) config.sheetHeaders[sheetType] = [];
-      config.sheetHeaders[sheetType].push(header);
+      config.sheetHeaders[sheetType][columnOrder - 1] = header;
     }
   });
 
   return config;
 }
 
-function loadDashboardConfig_(isSystemSetup) {
+function loadDashboardConfig_(isSystemSetup, dashboardSheet) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Format Dashboard") || ss.getSheetByName("Default - Format Dashboard");
+  const sheet = dashboardSheet || ss.getSheetByName("Format Dashboard") || ss.getSheetByName("Default - Format Dashboard");
 
   if (!sheet) {
     if (isSystemSetup) return getFallbackDashboardConfig_();
@@ -885,6 +942,7 @@ function loadDashboardConfig_(isSystemSetup) {
 
   const config = {
     globals: Object.assign({}, fallbackConfig.globals),
+    baseTemplateGlobals: Object.assign({}, fallbackConfig.baseTemplateGlobals),
     creationRules: {}, titleRows: [], subheaderRows: [],
     sheetDefinitions: [], outputGovernance: {}, columnDefinitions: {}, sheetHeaders: {}
   };
@@ -961,7 +1019,15 @@ function loadDashboardConfig_(isSystemSetup) {
   for (let i = 0; i < aParsed.length; i++) {
     const row = aParsed[i];
     const key = String(row["setting"] || "").trim();
-    if (key) config.globals[key] = row["value"];
+    if (!key) continue;
+    config.globals[key] = row["value"];
+    if (Object.prototype.hasOwnProperty.call(row, "base template")) {
+      if (String(row["base template"] || "").trim().toUpperCase() === "TRUE") {
+        config.baseTemplateGlobals[key] = row["value"];
+      } else {
+        delete config.baseTemplateGlobals[key];
+      }
+    }
   }
 
   const bParsed = parseSectionRows_("SECTION B - SHEET CREATION & LIFECYCLE GOVERNANCE");
@@ -1029,12 +1095,12 @@ function loadDashboardConfig_(isSystemSetup) {
       sheetType: String(row["sheet type"] || "GLOBAL").trim(),
       row: Number(row["row"]) || 1,
       purpose: String(row["purpose"] || "").trim(),
-      height: Number(row["height"]) || 25,
-      fillLevel: String(row["fill level"] || "Level 3").trim(),
-      fontSize: String(row["font size"] || "10").trim(),
-      fontWeight: String(row["font weight"] || "Normal").trim(),
-      alignment: String(row["alignment"] || "Left").trim(),
-      wrap: String(row["wrap"] || "CLIP").trim()
+      height: Number(row["height"]),
+      fillLevel: String(row["fill level"] || "").trim(),
+      fontSize: String(row["font size"] || "").trim(),
+      fontWeight: String(row["font weight"] || "").trim(),
+      alignment: String(row["alignment"] || "").trim(),
+      wrap: String(row["wrap"] || "").trim()
     });
   }
 
@@ -1045,12 +1111,12 @@ function loadDashboardConfig_(isSystemSetup) {
       sheetType: String(row["sheet type"] || "GLOBAL").trim(),
       row: Number(row["row"]) || 1,
       purpose: String(row["purpose"] || "").trim(),
-      height: Number(row["height"]) || 25,
-      fillLevel: String(row["fill level"] || "None").trim(),
-      fontSize: String(row["font size"] || "10").trim(),
-      fontWeight: String(row["font weight"] || "Normal").trim(),
-      alignment: String(row["alignment"] || "Left").trim(),
-      wrap: String(row["wrap"] || "CLIP").trim()
+      height: Number(row["height"]),
+      fillLevel: String(row["fill level"] || "").trim(),
+      fontSize: String(row["font size"] || "").trim(),
+      fontWeight: String(row["font weight"] || "").trim(),
+      alignment: String(row["alignment"] || "").trim(),
+      wrap: String(row["wrap"] || "").trim()
     });
   }
 
@@ -1079,10 +1145,11 @@ function loadDashboardConfig_(isSystemSetup) {
   for (let i = 0; i < hParsed.length; i++) {
     const row = hParsed[i];
     const sheetType = String(row["sheet type"] || "").trim();
+    const columnOrder = Number(row["column order"]);
     const header = String(row["header"] || "").trim();
-    if (sheetType && header) {
+    if (sheetType && columnOrder > 0) {
       if (!config.sheetHeaders[sheetType]) config.sheetHeaders[sheetType] = [];
-      config.sheetHeaders[sheetType].push(header);
+      config.sheetHeaders[sheetType][columnOrder - 1] = header;
     }
   }
 
@@ -1122,8 +1189,8 @@ function getHeadersForSheetType_(dashboardConfig, sheetType) {
   return [];
 }
 
-function getTemplateConfigFromDashboard_(systemSheetName) {
-  const dashboard = loadDashboardConfig_(true);
+function getTemplateConfigFromDashboard_(systemSheetName, dashboardSheet) {
+  const dashboard = loadDashboardConfig_(true, dashboardSheet);
   const key = String(systemSheetName || "").trim().toLowerCase();
 
   let sheetDef = {};
@@ -1139,6 +1206,8 @@ function getTemplateConfigFromDashboard_(systemSheetName) {
 
   return {
     dashboard: dashboard,
+    globals: dashboard.globals,
+    baseTemplateGlobals: dashboard.baseTemplateGlobals,
     systemSheetName: systemSheetName,
     templateName: sheetDef.templateName || "Template - " + systemSheetName,
     reportTitle: sheetDef.reportTitle || systemSheetName,
@@ -1148,13 +1217,13 @@ function getTemplateConfigFromDashboard_(systemSheetName) {
     columnCount: Math.max(Number(sheetDef.columnCount) || 0, headers.length, 1),
     minimumRows: Number(sheetDef.minimumRows) || 100,
     rank: Number(creationRule.templateRank) || 800,
-    columnWidths: sheetDef.columnWidths || "105",
+    columnWidths: sheetDef.columnWidths,
     usesSubheaders: sheetDef.usesSubheaders === true,
     usesAlternatingColors: sheetDef.usesAlternatingColors !== false,
     titleRows: getDashboardRowFormattingSpecs_(dashboard.titleRows, systemSheetName),
     subheaderRowSpecs: getDashboardRowFormattingSpecs_(dashboard.subheaderRows, systemSheetName),
     subheaders: getSubheadersFromDashboardConfig_(systemSheetName),
-    theme: getTemplateTheme_(systemSheetName)
+    theme: getTemplateTheme_(systemSheetName, dashboardSheet)
   };
 }
 
@@ -1175,16 +1244,13 @@ function getSubheadersFromDashboardConfig_(systemSheetName) {
   const nameLower = String(systemSheetName || "").toLowerCase();
 
   if (nameLower === "format dashboard" || nameLower === "default - format dashboard") {
-    return [
-      { title: "SECTION A - GLOBAL SETTINGS", headers: MASTER_FORMAT_DEFAULTS.sectionA_Globals[0], stampLastUpdated: false },
-      { title: "SECTION B - SHEET CREATION & LIFECYCLE GOVERNANCE", headers: MASTER_FORMAT_DEFAULTS.sectionB_Creation[0], stampLastUpdated: false },
-      { title: "SECTION C - TEMPLATE STRUCTURAL SPECS", headers: MASTER_FORMAT_DEFAULTS.sectionC_Structural[0], stampLastUpdated: false },
-      { title: "SECTION D - ACTIVE OUTPUT GOVERNANCE", headers: MASTER_FORMAT_DEFAULTS.sectionD_OutputGov[0], stampLastUpdated: false },
-      { title: "SECTION E - TITLE ROWS", headers: MASTER_FORMAT_DEFAULTS.sectionE_TitleRows[0], stampLastUpdated: false },
-      { title: "SECTION F - SUBHEADER ROWS", headers: MASTER_FORMAT_DEFAULTS.sectionF_Subheaders[0], stampLastUpdated: false },
-      { title: "SECTION G - COLUMN DEFINITIONS", headers: MASTER_FORMAT_DEFAULTS.sectionG_Columns[0], stampLastUpdated: false },
-      { title: "SECTION H - SHEET HEADERS", headers: MASTER_FORMAT_DEFAULTS.sectionH_Headers[0], stampLastUpdated: false }
-    ];
+    return FORMAT_DASHBOARD_SECTION_REGISTRY.map(function(section) {
+      return {
+        title: section.title,
+        headers: getFormatDashboardDefaultSection_(section.key)[0],
+        stampLastUpdated: false
+      };
+    });
   }
 
   if (nameLower.indexOf("timing") !== -1) {
@@ -1322,94 +1388,91 @@ function hslToHex_(h, s, l) {
 
 function calculateThemeLevels_(baseHex, hslPercents) {
   const hsl = hexToHsl_(baseHex);
+  ["l1", "l2", "l3", "l4", "l5"].forEach(function(level) {
+    if (!hslPercents || !Number.isFinite(Number(hslPercents[level]))) {
+      throw new Error("Format Dashboard is missing HSL setting " + level.toUpperCase() + ".");
+    }
+  });
   return {
     base: baseHex,
-    level1: hslToHex_(hsl.h, hsl.s, hslPercents.l1 || 60),
-    level2: hslToHex_(hsl.h, hsl.s, hslPercents.l2 || 75),
-    level3: hslToHex_(hsl.h, hsl.s, hslPercents.l3 || 85),
-    level4: hslToHex_(hsl.h, hsl.s, hslPercents.l4 || 90),
-    level5: hslToHex_(hsl.h, hsl.s, hslPercents.l5 || 97)
+    level1: hslToHex_(hsl.h, hsl.s, Number(hslPercents.l1)),
+    level2: hslToHex_(hsl.h, hsl.s, Number(hslPercents.l2)),
+    level3: hslToHex_(hsl.h, hsl.s, Number(hslPercents.l3)),
+    level4: hslToHex_(hsl.h, hsl.s, Number(hslPercents.l4)),
+    level5: hslToHex_(hsl.h, hsl.s, Number(hslPercents.l5))
   };
 }
 
 function getHslPercentsFromDashboard_(dashSheet) {
-  let l1 = 60, l2 = 75, l3 = 85, l4 = 90, l5 = 97;
-
-  if (dashSheet) {
-    try {
-      const data = dashSheet.getDataRange().getValues();
-      for (let r = 0; r < data.length; r++) {
-        const setting = String(data[r][0] || "").trim();
-        if (setting === "HSL Level 1 Lightness %") l1 = Number(data[r][1]) || l1;
-        if (setting === "HSL Level 2 Lightness %") l2 = Number(data[r][1]) || l2;
-        if (setting === "HSL Level 3 Lightness %") l3 = Number(data[r][1]) || l3;
-        if (setting === "HSL Level 4 Lightness %") l4 = Number(data[r][1]) || l4;
-        if (setting === "HSL Level 5 Lightness %") l5 = Number(data[r][1]) || l5;
-      }
-      return { l1: l1, l2: l2, l3: l3, l4: l4, l5: l5 };
-    } catch (e) {}
+  if (!dashSheet) throw new Error("Default - Format Dashboard or Format Dashboard is required for HSL formatting.");
+  const values = {};
+  const data = dashSheet.getDataRange().getValues();
+  const settingMap = {
+    "HSL Level 1 Lightness %": "l1",
+    "HSL Level 2 Lightness %": "l2",
+    "HSL Level 3 Lightness %": "l3",
+    "HSL Level 4 Lightness %": "l4",
+    "HSL Level 5 Lightness %": "l5"
+  };
+  for (let r = 0; r < data.length; r++) {
+    const setting = String(data[r][0] || "").trim();
+    if (settingMap[setting]) values[settingMap[setting]] = Number(data[r][1]);
   }
-
-  if (typeof MASTER_FORMAT_DEFAULTS !== "undefined" && MASTER_FORMAT_DEFAULTS.sectionA_Globals) {
-    for (let i = 0; i < MASTER_FORMAT_DEFAULTS.sectionA_Globals.length; i++) {
-      const row = MASTER_FORMAT_DEFAULTS.sectionA_Globals[i];
-      if (row[0] === "HSL Level 1 Lightness %") l1 = Number(row[1]) || l1;
-      if (row[0] === "HSL Level 2 Lightness %") l2 = Number(row[1]) || l2;
-      if (row[0] === "HSL Level 3 Lightness %") l3 = Number(row[1]) || l3;
-      if (row[0] === "HSL Level 4 Lightness %") l4 = Number(row[1]) || l4;
-      if (row[0] === "HSL Level 5 Lightness %") l5 = Number(row[1]) || l5;
-    }
-  }
-
-  return { l1: l1, l2: l2, l3: l3, l4: l4, l5: l5 };
+  ["l1", "l2", "l3", "l4", "l5"].forEach(function(level) {
+    if (!Number.isFinite(values[level])) throw new Error("Format Dashboard is missing HSL setting " + level.toUpperCase() + ".");
+  });
+  return values;
 }
 
-function getTemplateTheme_(systemSheetName) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var dashSheet = ss.getSheetByName("Format Dashboard") || ss.getSheetByName("Default - Format Dashboard");
-    if (!dashSheet) return getFallbackTheme_();
-    var data = dashSheet.getDataRange().getValues();
-    var hslPercents = getHslPercentsFromDashboard_(dashSheet);
-
-    var baseColorIdx = 3;
-    for (var r = 0; r < data.length; r++) {
-      if (String(data[r][0] || "").trim() === "System Sheet Name") {
-        var headerRow = [];
-        for (var c = 0; c < data[r].length; c++) {
-          headerRow.push(String(data[r][c] || "").trim().toLowerCase());
-        }
-        var foundIdx = headerRow.indexOf("base color");
-        if (foundIdx !== -1) baseColorIdx = foundIdx;
-        break;
+function getDashboardStructuralSectionBounds_(data) {
+  var sectionRow = -1;
+  var headerRow = -1;
+  var endRow = data.length;
+  for (var row = 0; row < data.length; row++) {
+    var firstCell = String(data[row][0] || "").trim();
+    if (firstCell === "SECTION C - TEMPLATE STRUCTURAL SPECS") {
+      sectionRow = row;
+      continue;
+    }
+    if (sectionRow !== -1 && row > sectionRow && firstCell.indexOf("SECTION ") === 0) {
+      endRow = row;
+      break;
+    }
+    if (sectionRow !== -1 && headerRow === -1) {
+      var normalized = data[row].map(function(value) { return String(value || "").trim().toLowerCase(); });
+      if (normalized.indexOf("system sheet name") !== -1 && normalized.indexOf("base color") !== -1) {
+        headerRow = row;
       }
     }
-
-    for (var i = 0; i < data.length; i++) {
-      var sysKey = String(data[i][0] || "").trim();
-      if (sysKey === systemSheetName || sysKey.toLowerCase() === String(systemSheetName || "").toLowerCase()) {
-        var rawBase = String(data[i][baseColorIdx] || "").trim();
-        if (isValidHex_(rawBase)) {
-          var computed = calculateThemeLevels_(rawBase, hslPercents);
-          return {
-            baseColor: rawBase,
-            level1: computed.level1,
-            level2: computed.level2,
-            level3: computed.level3,
-            level4: computed.level4,
-            level5: computed.level5,
-            titleFontColor: "#000000"
-          };
-        }
-      }
-    }
-  } catch (e) { logBestEffortWarning_("Non-fatal operation failed: " + e.message); }
-
-  return getFallbackTheme_();
+  }
+  if (sectionRow === -1) throw new Error("Format Dashboard is missing SECTION C - TEMPLATE STRUCTURAL SPECS.");
+  if (headerRow === -1) throw new Error("Format Dashboard Section C is missing its structural header row.");
+  return { sectionRow: sectionRow, headerRow: headerRow, dataStartRow: headerRow + 1, endRow: endRow };
 }
 
-function getFallbackTheme_() {
-  return { baseColor: "#79B5D2", level1: "#79B5D2", level2: "#A5D0E3", level3: "#C4E2F0", level4: "#eff8cf", level5: "#f3fadd", titleFontColor: "#000000" };
+function getTemplateTheme_(systemSheetName, dashboardSheet) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dashSheet = dashboardSheet || ss.getSheetByName("Format Dashboard") || ss.getSheetByName("Default - Format Dashboard");
+  if (!dashSheet) throw new Error("Default - Format Dashboard or Format Dashboard is required for template formatting.");
+  var data = dashSheet.getDataRange().getValues();
+  var hslPercents = getHslPercentsFromDashboard_(dashSheet);
+  var bounds = getDashboardStructuralSectionBounds_(data);
+  var headerValues = data[bounds.headerRow].map(function(value) { return String(value || "").trim().toLowerCase(); });
+  var baseColorIdx = headerValues.indexOf("base color");
+  var titleFontColorIdx = headerValues.indexOf("title font color");
+
+  for (var i = bounds.dataStartRow; i < bounds.endRow; i++) {
+    var sysKey = String(data[i][0] || "").trim().toLowerCase();
+    if (sysKey === String(systemSheetName || "").trim().toLowerCase()) {
+      var rawBase = String(data[i][baseColorIdx] || "").trim();
+      if (!isValidHex_(rawBase)) throw new Error("Format Dashboard has an invalid Base Color for " + systemSheetName + ".");
+      var computed = calculateThemeLevels_(rawBase, hslPercents);
+      computed.baseColor = rawBase;
+      computed.titleFontColor = titleFontColorIdx === -1 ? "" : String(data[i][titleFontColorIdx] || "").trim();
+      return computed;
+    }
+  }
+  throw new Error("Format Dashboard is missing a structural formatting row for " + systemSheetName + ".");
 }
 
 function recalculateDashboardHexCodes_(dashboardSheet) {
@@ -1417,24 +1480,13 @@ function recalculateDashboardHexCodes_(dashboardSheet) {
   const rawDashData = dashboardSheet.getDataRange().getValues();
   const hslPercents = getHslPercentsFromDashboard_(dashboardSheet);
 
-  let baseColorIdx = 3;
-  let level1Idx = 4;
+  const bounds = getDashboardStructuralSectionBounds_(rawDashData);
+  const headerRow = rawDashData[bounds.headerRow].map(function(value) { return String(value || "").trim().toLowerCase(); });
+  const baseColorIdx = headerRow.indexOf("base color");
+  const level1Idx = headerRow.indexOf("level 1");
+  if (baseColorIdx === -1 || level1Idx === -1) throw new Error("Format Dashboard Section C is missing Base Color or Level 1 columns.");
 
-  for (let r = 0; r < rawDashData.length; r++) {
-    if (String(rawDashData[r][0] || "").trim() === "System Sheet Name") {
-      const headerRow = [];
-      for (let c = 0; c < rawDashData[r].length; c++) {
-        headerRow.push(String(rawDashData[r][c] || "").trim().toLowerCase());
-      }
-      const foundBase = headerRow.indexOf("base color");
-      const foundL1 = headerRow.indexOf("level 1");
-      if (foundBase !== -1) baseColorIdx = foundBase;
-      if (foundL1 !== -1) level1Idx = foundL1;
-      break;
-    }
-  }
-
-  for (let r = 0; r < rawDashData.length; r++) {
+  for (let r = bounds.dataStartRow; r < bounds.endRow; r++) {
     const firstCell = String(rawDashData[r][0] || "").trim();
     if (!firstCell || firstCell.indexOf("SECTION ") === 0 || firstCell === "System Sheet Name" || firstCell === "Sheet Type") continue;
 
