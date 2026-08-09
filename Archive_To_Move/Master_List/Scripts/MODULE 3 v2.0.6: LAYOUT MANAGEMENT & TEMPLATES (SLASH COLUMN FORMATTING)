@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 3 v2.0.1: LAYOUT MANAGEMENT & TEMPLATES
+// MODULE 3 v2.0.6: LAYOUT MANAGEMENT & TEMPLATES
 // File: 03_Layout_Archiving_Templates.gs
 // ============================================================================
 
@@ -541,7 +541,22 @@ function getWrapStrategyEnum_(wrapStr) {
   var w = String(wrapStr || "").toUpperCase();
   if (w === "WRAP") return SpreadsheetApp.WrapStrategy.WRAP;
   if (w === "OVERFLOW") return SpreadsheetApp.WrapStrategy.OVERFLOW;
-  return SpreadsheetApp.WrapStrategy.CLIP;
+  if (w === "CLIP") return SpreadsheetApp.WrapStrategy.CLIP;
+  throw new Error("Format Dashboard has an invalid wrap strategy: " + wrapStr + ".");
+}
+
+function getBorderStyleEnum_(styleName) {
+  var key = String(styleName || "").trim().toUpperCase();
+  var styles = {
+    SOLID: SpreadsheetApp.BorderStyle.SOLID,
+    SOLID_MEDIUM: SpreadsheetApp.BorderStyle.SOLID_MEDIUM,
+    SOLID_THICK: SpreadsheetApp.BorderStyle.SOLID_THICK,
+    DASHED: SpreadsheetApp.BorderStyle.DASHED,
+    DOTTED: SpreadsheetApp.BorderStyle.DOTTED,
+    DOUBLE: SpreadsheetApp.BorderStyle.DOUBLE
+  };
+  if (!styles[key]) throw new Error("Format Dashboard has an invalid Global Border Style: " + styleName + ".");
+  return styles[key];
 }
 
 // ============================================================================
@@ -560,48 +575,68 @@ function createOrRefreshBaseTemplate_() {
     baseSheet.clearFormats();
   }
 
-  var dashboard = (typeof loadDashboardConfig_ === "function") ? loadDashboardConfig_(true) : { globals: {} };
-  var globals = dashboard.globals || {};
+  if (typeof loadDashboardConfig_ !== "function") throw new Error("Base-template formatting requires Format Dashboard configuration.");
+  var dashboard = loadDashboardConfig_(true);
+  var globals = dashboard.baseTemplateGlobals;
+  if (!globals || !Object.keys(globals).length) {
+    throw new Error("Format Dashboard Section A has no settings enabled for Base Template formatting.");
+  }
 
-  baseSheet.setFrozenRows(Number(globals["Freeze Rows"]) || 4);
-  baseSheet.setFrozenColumns(Number(globals["Freeze Columns"]) || 2);
+  if (hasDashboardFormattingValue_(globals, "Freeze Rows")) baseSheet.setFrozenRows(Number(globals["Freeze Rows"]));
+  if (hasDashboardFormattingValue_(globals, "Freeze Columns")) baseSheet.setFrozenColumns(Number(globals["Freeze Columns"]));
 
   var baseCols = 80;
   if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(baseSheet, 100, baseCols + 1);
 
   var fullRange = baseSheet.getRange(1, 1, 100, baseCols + 1);
-  fullRange.setFontFamily(globals["Standard Font"] || "Arial");
-  fullRange.setFontSize(Number(globals["Standard Font Size"]) || 10);
-  fullRange.setFontColor(globals["Standard Font Color"] || "#000000");
-  fullRange.setHorizontalAlignment("left");
-  fullRange.setVerticalAlignment("middle");
-  fullRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-  fullRange.setNumberFormat(globals["Default Text Format"] || "@");
-  fullRange.setBorder(true, true, true, true, true, true, globals["Global Border Color"] || "#CCCCCC", SpreadsheetApp.BorderStyle.SOLID);
+  if (hasDashboardFormattingValue_(globals, "Standard Font")) fullRange.setFontFamily(globals["Standard Font"]);
+  if (hasDashboardFormattingValue_(globals, "Standard Font Size")) fullRange.setFontSize(Number(globals["Standard Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "Standard Font Color")) fullRange.setFontColor(globals["Standard Font Color"]);
+  if (hasDashboardFormattingValue_(globals, "Default Horizontal Alignment")) fullRange.setHorizontalAlignment(String(globals["Default Horizontal Alignment"]).toLowerCase());
+  if (hasDashboardFormattingValue_(globals, "Default Vertical Alignment")) fullRange.setVerticalAlignment(String(globals["Default Vertical Alignment"]).toLowerCase());
+  if (hasDashboardFormattingValue_(globals, "Default Data Wrap")) fullRange.setWrapStrategy(getWrapStrategyEnum_(globals["Default Data Wrap"]));
+  if (hasDashboardFormattingValue_(globals, "Standard Font Weight")) fullRange.setFontWeight(globals["Standard Font Weight"]);
+  if (hasDashboardFormattingValue_(globals, "Default Background Color")) fullRange.setBackground(globals["Default Background Color"]);
+  if (hasDashboardFormattingValue_(globals, "Default Text Format")) fullRange.setNumberFormat(globals["Default Text Format"]);
+  if (hasDashboardFormattingValue_(globals, "Global Borders Enabled")) {
+    var bordersEnabled = String(globals["Global Borders Enabled"]).toUpperCase() === "TRUE";
+    if (bordersEnabled) {
+      fullRange.setBorder(true, true, true, true, true, true,
+        requireDashboardFormattingValue_(globals, "Global Border Color", "enabled base-template borders"),
+        getBorderStyleEnum_(requireDashboardFormattingValue_(globals, "Global Border Style", "enabled base-template borders")));
+    } else {
+      fullRange.setBorder(false, false, false, false, false, false);
+    }
+  }
 
-  baseSheet.setRowHeight(1, Number(globals["Row 1 (Title)Height"]) || 25);
-  baseSheet.setRowHeight(2, Number(globals["Row 2 Height"]) || 20);
-  baseSheet.setRowHeight(3, Number(globals["Row 3 Height"]) || 10);
+  if (hasDashboardFormattingValue_(globals, "Row 1 (Title)Height")) baseSheet.setRowHeight(1, Number(globals["Row 1 (Title)Height"]));
+  if (hasDashboardFormattingValue_(globals, "Row 2 Height")) baseSheet.setRowHeight(2, Number(globals["Row 2 Height"]));
+  if (hasDashboardFormattingValue_(globals, "Row 3 Height")) baseSheet.setRowHeight(3, Number(globals["Row 3 Height"]));
+  var headerRow = hasDashboardFormattingValue_(globals, "Header Row") ? Number(globals["Header Row"]) : null;
+  var dataStartRow = hasDashboardFormattingValue_(globals, "Data Start Row") ? Number(globals["Data Start Row"]) : null;
+  if (headerRow && hasDashboardFormattingValue_(globals, "Row 4 (Header) Height")) baseSheet.setRowHeight(headerRow, Number(globals["Row 4 (Header) Height"]));
 
-  var dataRowHeight = Number(globals["Default Data Row Height"]) || 25;
-  for (var r = 4; r <= 100; r++) { baseSheet.setRowHeight(r, dataRowHeight); }
+  if (dataStartRow && dataStartRow <= 100 && hasDashboardFormattingValue_(globals, "Default Data Row Height")) {
+    baseSheet.setRowHeights(dataStartRow, 100 - dataStartRow + 1, Number(globals["Default Data Row Height"]));
+  }
 
-  var defaultWidth = Number(globals["Default Column Width"]) || 105;
-  for (var c = 1; c <= baseCols + 1; c++) { baseSheet.setColumnWidth(c, defaultWidth); }
+  if (hasDashboardFormattingValue_(globals, "Default Column Width")) {
+    var defaultWidth = Number(globals["Default Column Width"]);
+    for (var c = 1; c <= baseCols + 1; c++) { baseSheet.setColumnWidth(c, defaultWidth); }
+  }
 
   var cellA1 = baseSheet.getRange("A1");
-  cellA1.setFontSize(Number(globals["A1 (Title) Font Size"]) || 14);
-  cellA1.setFontWeight(globals["A1 (Title) Font Style"] || "Bold");
-  var wrapA1 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["A1 (Title) Wrap"]) : SpreadsheetApp.WrapStrategy.OVERFLOW;
-  cellA1.setWrapStrategy(wrapA1 || SpreadsheetApp.WrapStrategy.OVERFLOW);
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Font Size")) cellA1.setFontSize(Number(globals["A1 (Title) Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Font Style")) cellA1.setFontWeight(globals["A1 (Title) Font Style"]);
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Wrap")) cellA1.setWrapStrategy(getWrapStrategyEnum_(globals["A1 (Title) Wrap"]));
 
   var cellC1 = baseSheet.getRange("C1");
-  cellC1.setFontSize(Number(globals["C1 (Title) Font Size"]) || 5);
-  var wrapC1 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["C1 (Title) Wrap"]) : SpreadsheetApp.WrapStrategy.WRAP;
-  cellC1.setWrapStrategy(wrapC1 || SpreadsheetApp.WrapStrategy.WRAP);
+  if (hasDashboardFormattingValue_(globals, "C1 (Title) Font Size")) cellC1.setFontSize(Number(globals["C1 (Title) Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "C1 (Title) Wrap")) cellC1.setWrapStrategy(getWrapStrategyEnum_(globals["C1 (Title) Wrap"]));
 
-  var wrapRow4 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["Row 4 (Header) Wrap"]) : SpreadsheetApp.WrapStrategy.WRAP;
-  baseSheet.getRange(4, 1, 1, baseCols).setWrapStrategy(wrapRow4 || SpreadsheetApp.WrapStrategy.WRAP);
+  if (headerRow && hasDashboardFormattingValue_(globals, "Row 4 (Header) Wrap")) {
+    baseSheet.getRange(headerRow, 1, 1, baseCols).setWrapStrategy(getWrapStrategyEnum_(globals["Row 4 (Header) Wrap"]));
+  }
 
   if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(baseSheet, 100, baseCols);
   baseSheet.hideSheet();
@@ -630,20 +665,25 @@ function buildGeneralTemplate_(config, timing) {
   // A caller may provide a newly-created, data-only sheet. This keeps content
   // creation separate from the general formatting pass while preserving the
   // original base-template behavior for every other template.
-  var templateSheet = config.unformattedSheet || createTemplateFromBase_(templateName);
-  if (templateSheet.getName() !== templateName) templateSheet.setName(templateName);
+  var providedSheet = config.existingTemplateSheet || config.unformattedSheet;
+  var templateSheet = providedSheet || createTemplateFromBase_(templateName);
+  // An existing template sheet has already been copied from the base and
+  // named by its caller. Do not copy or rename it again.
+  if (!config.existingTemplateSheet && templateSheet.getName() !== templateName) templateSheet.setName(templateName);
   templateSheet.showSheet();
 
   if (typeof positionSheetBySectionFRank_ === "function") positionSheetBySectionFRank_(templateSheet, config.rank);
 
   var contentCols = Math.max(config.columnCount || 0, config.headers ? config.headers.length : 0, 1);
   var targetCols = contentCols + 1;
-  var targetRows = config.minimumRows || 100;
+  var targetRows = Number(config.minimumRows);
+  if (!targetRows || targetRows < 1) throw new Error("General template configuration is missing a valid Minimum Rows value from Format Dashboard.");
   if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, targetRows, targetCols);
 
   if (config.unformattedSheet) applyGeneralSheetDefaults_(templateSheet, config, targetRows, targetCols);
 
-  var theme = config.theme || (typeof getTemplateTheme_ === "function" ? getTemplateTheme_(sysName) : { level1: "#eee", level2: "#ddd", level3: "#ccc", level4: "#fff", level5: "#fafafa" });
+  var theme = config.theme;
+  validateDashboardFormattingConfig_(config, theme, sysName);
 
   if (config.usesAlternatingColors !== false && sysName !== SYSTEM_SHEETS.DASHBOARD) {
     if (typeof applyNativeBandingSafe_ === "function") applyNativeBandingSafe_(templateSheet, 5, targetCols, targetRows, theme.level4, theme.level5);
@@ -652,7 +692,7 @@ function buildGeneralTemplate_(config, timing) {
   if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Titles: " + templateName, "Applying title rows");
   applyTitleRows_(templateSheet, config, theme);
 
-  if (config.usesSubheaders && config.subheaders && config.subheaders.length > 0) {
+  if (!config.formatExistingSections && config.usesSubheaders && config.subheaders && config.subheaders.length > 0) {
     if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Subheaders: " + templateName, "Applying subheader blocks");
     applySubheaderBlocks_(templateSheet, config.subheaders, theme, sysName, config.subheaderRowSpecs);
   }
@@ -673,28 +713,64 @@ function buildGeneralTemplate_(config, timing) {
 }
 
 function applyGeneralSheetDefaults_(sheet, config, rowCount, columnCount) {
-  var globals = config.globals || {};
-  var fontFamily = globals["Standard Font"] || "Arial";
-  var fontSize = Number(globals["Standard Font Size"]) || 10;
-  var fontColor = globals["Standard Font Color"] || "#000000";
-  var horizontal = String(globals["Default Horizontal Alignment"] || "left").toLowerCase();
-  var vertical = String(globals["Default Vertical Alignment"] || "middle").toLowerCase();
-  var wrapName = String(globals["Default Data Wrap"] || "CLIP").toUpperCase();
-  var wrapStrategy = wrapName === "WRAP" ? SpreadsheetApp.WrapStrategy.WRAP :
-    wrapName === "OVERFLOW" ? SpreadsheetApp.WrapStrategy.OVERFLOW : SpreadsheetApp.WrapStrategy.CLIP;
+  var globals = config.globals;
+  var fontFamily = requireDashboardFormattingValue_(globals, "Standard Font", "general sheet defaults");
+  var fontSize = Number(requireDashboardFormattingValue_(globals, "Standard Font Size", "general sheet defaults"));
+  var fontColor = requireDashboardFormattingValue_(globals, "Standard Font Color", "general sheet defaults");
+  var horizontal = String(requireDashboardFormattingValue_(globals, "Default Horizontal Alignment", "general sheet defaults")).toLowerCase();
+  var vertical = String(requireDashboardFormattingValue_(globals, "Default Vertical Alignment", "general sheet defaults")).toLowerCase();
+  var wrapName = String(requireDashboardFormattingValue_(globals, "Default Data Wrap", "general sheet defaults")).toUpperCase();
+  var wrapStrategy = getWrapStrategyEnum_(wrapName);
 
   sheet.getRange(1, 1, rowCount, columnCount)
     .setFontFamily(fontFamily)
     .setFontSize(fontSize)
     .setFontColor(fontColor)
-    .setFontWeight("normal")
+    .setFontWeight(requireDashboardFormattingValue_(globals, "Standard Font Weight", "general sheet defaults"))
     .setHorizontalAlignment(horizontal)
     .setVerticalAlignment(vertical)
     .setWrapStrategy(wrapStrategy)
-    .setBackground(null);
+    .setNumberFormat(requireDashboardFormattingValue_(globals, "Default Text Format", "general sheet defaults"))
+    .setBackground(requireDashboardFormattingValue_(globals, "Default Background Color", "general sheet defaults"));
 
-  sheet.setFrozenRows(Math.max(Number(globals["Freeze Rows"]) || 0, 0));
-  sheet.setFrozenColumns(Math.max(Number(globals["Freeze Columns"]) || 0, 0));
+  var bordersEnabled = String(requireDashboardFormattingValue_(globals, "Global Borders Enabled", "general sheet defaults")).toUpperCase() === "TRUE";
+  sheet.getRange(1, 1, rowCount, columnCount).setBorder(
+    bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled,
+    requireDashboardFormattingValue_(globals, "Global Border Color", "general sheet defaults"),
+    getBorderStyleEnum_(requireDashboardFormattingValue_(globals, "Global Border Style", "general sheet defaults"))
+  );
+
+  var defaultRowHeight = Number(requireDashboardFormattingValue_(globals, "Default Data Row Height", "general sheet defaults"));
+  sheet.setRowHeights(1, rowCount, defaultRowHeight);
+
+  sheet.setFrozenRows(Math.max(Number(requireDashboardFormattingValue_(globals, "Freeze Rows", "general sheet defaults")), 0));
+  sheet.setFrozenColumns(Math.max(Number(requireDashboardFormattingValue_(globals, "Freeze Columns", "general sheet defaults")), 0));
+}
+
+function requireDashboardFormattingValue_(source, key, context) {
+  if (!source || source[key] === undefined || source[key] === null || String(source[key]).trim() === "") {
+    throw new Error("Format Dashboard is missing '" + key + "' required for " + context + ".");
+  }
+  return source[key];
+}
+
+function hasDashboardFormattingValue_(source, key) {
+  return !!source && source[key] !== undefined && source[key] !== null && String(source[key]).trim() !== "";
+}
+
+function validateDashboardFormattingConfig_(config, theme, systemSheetName) {
+  if (!config || !config.dashboard || !config.globals) {
+    throw new Error("General template formatting requires configuration loaded from Default - Format Dashboard or Format Dashboard.");
+  }
+  ["level1", "level2", "level3", "level4", "level5", "titleFontColor"].forEach(function(level) {
+    requireDashboardFormattingValue_(theme, level, "the " + systemSheetName + " theme");
+  });
+  if (!Array.isArray(config.titleRows) || !config.titleRows.length) {
+    throw new Error("Format Dashboard contains no title-row formatting specifications for " + systemSheetName + ".");
+  }
+  if (config.usesSubheaders && (!Array.isArray(config.subheaderRowSpecs) || !config.subheaderRowSpecs.length)) {
+    throw new Error("Format Dashboard contains no subheader-row formatting specifications for " + systemSheetName + ".");
+  }
 }
 
 /**
@@ -704,43 +780,40 @@ function applyGeneralSheetDefaults_(sheet, config, rowCount, columnCount) {
 function applyExistingSectionFormatting_(sheet, config, theme) {
   var values = sheet.getDataRange().getDisplayValues();
   var width = Math.max(Number(config.columnCount) || sheet.getLastColumn(), 1);
-  var bannerRanges = [];
-  var headerRanges = [];
+  var sectionRows = [];
 
   for (var rowIndex = 0; rowIndex < values.length; rowIndex++) {
     if (String(values[rowIndex][0] || "").trim().indexOf("SECTION ") !== 0) continue;
 
-    bannerRanges.push(sheet.getRange(rowIndex + 1, 1, 1, width).getA1Notation());
+    sectionRows.push(rowIndex + 1);
+  }
 
-    // Dashboard sections are emitted as buffer, banner, spacer, header,
-    // buffer. Locate the first populated row after the banner so the general
-    // formatter remains resilient if spacing is adjusted later.
-    for (var headerIndex = rowIndex + 1; headerIndex < Math.min(rowIndex + 5, values.length); headerIndex++) {
+  var specs = config.subheaderRowSpecs || [];
+  var bannerSpec = specs.filter(function(spec) { return Number(spec.row) === 2; })[0];
+  var headerSpec = specs.filter(function(spec) { return Number(spec.row) === 4; })[0];
+  if (!bannerSpec || !headerSpec) throw new Error("Format Dashboard must define subheader formatting rows 2 and 4.");
+
+  sectionRows.forEach(function(sectionRow) {
+    applyDashboardRowFormattingSpec_(sheet, sheet.getRange(sectionRow, 1, 1, width), bannerSpec, theme, "section banner");
+
+    for (var headerIndex = sectionRow; headerIndex < Math.min(sectionRow + 4, values.length); headerIndex++) {
       if (values[headerIndex].some(function(value) { return String(value || "").trim() !== ""; })) {
-        headerRanges.push(sheet.getRange(headerIndex + 1, 1, 1, width).getA1Notation());
+        applyDashboardRowFormattingSpec_(sheet, sheet.getRange(headerIndex + 1, 1, 1, width), headerSpec, theme, "section header");
         break;
       }
     }
-  }
+  });
+}
 
-  if (bannerRanges.length) {
-    sheet.getRangeList(bannerRanges)
-      .setBackground(theme.level2 || theme.level1 || "#dddddd")
-      .setFontWeight("bold")
-      .setFontSize(12)
-      .setHorizontalAlignment("left")
-      .setVerticalAlignment("middle")
-      .setWrapStrategy(SpreadsheetApp.WrapStrategy.OVERFLOW);
-  }
-
-  if (headerRanges.length) {
-    sheet.getRangeList(headerRanges)
-      .setBackground(theme.level3 || theme.level2 || "#eeeeee")
-      .setFontWeight("bold")
-      .setHorizontalAlignment("left")
-      .setVerticalAlignment("middle")
-      .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-  }
+function applyDashboardRowFormattingSpec_(sheet, range, spec, theme, context) {
+  var height = Number(requireDashboardFormattingValue_(spec, "height", context));
+  var fillLevel = String(requireDashboardFormattingValue_(spec, "fillLevel", context)).toLowerCase().replace(/[^a-z0-9]/g, "");
+  sheet.setRowHeight(range.getRow(), height);
+  range.setBackground(fillLevel === "none" ? null : requireDashboardFormattingValue_(theme, fillLevel, context + " fill"));
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "fontSize", context), "fontSize");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "fontWeight", context), "fontWeight");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "alignment", context), "alignment");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "wrap", context), "wrap");
 }
 
 function applyTitleRows_(sheet, config, theme) {
@@ -760,20 +833,12 @@ function applyTitleRows_(sheet, config, theme) {
   }
 
   (config.titleRows || []).forEach(function(spec) {
-    const rowNumber = Math.max(Number(spec.row) || 1, 1);
+    const rowNumber = Number(requireDashboardFormattingValue_(spec, "row", "title-row formatting"));
     if (rowNumber > sheet.getMaxRows()) return;
 
     const rowRange = sheet.getRange(rowNumber, 1, 1, fullGridCols);
-    if (spec.height) sheet.setRowHeight(rowNumber, Number(spec.height));
-
-    const fillKey = String(spec.fillLevel || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (fillKey && theme[fillKey]) rowRange.setBackground(theme[fillKey]);
-    else if (!fillKey || fillKey === "none") rowRange.setBackground(null);
-
-    applyDelimitedProperty_(rowRange, spec.fontSize, "fontSize");
-    applyDelimitedProperty_(rowRange, spec.fontWeight, "fontWeight");
-    applyDelimitedProperty_(rowRange, spec.alignment, "alignment");
-    applyDelimitedProperty_(rowRange, spec.wrap, "wrap");
+    applyDashboardRowFormattingSpec_(sheet, rowRange, spec, theme, "title row " + rowNumber);
+    rowRange.setFontColor(requireDashboardFormattingValue_(theme, "titleFontColor", "title-row font color"));
   });
 }
 
@@ -787,22 +852,11 @@ function applySubheaderBlocks_(sheet, subheaders, theme, sysName, subheaderRowSp
     steps.forEach(function(stepNum) {
       var stepSpecs = b2Specs.filter(function(s) { return Number(s.row) === stepNum; });
       var primarySpec = stepSpecs.length > 0 ? stepSpecs[0] : null;
+      if (!primarySpec) throw new Error("Format Dashboard is missing subheader formatting row " + stepNum + " for " + sysName + ".");
 
       currentRow++;
-      var rHeight = (primarySpec && primarySpec.height && !isNaN(primarySpec.height)) ? Number(primarySpec.height) : 25;
-      sheet.setRowHeight(currentRow, rHeight);
-
       var governedRowRange = sheet.getRange(currentRow, 1, 1, maxCols);
-      if (primarySpec) {
-        var fillLevelKey = String(primarySpec.fillLevel || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        var bgColor = (fillLevelKey && fillLevelKey !== "none") ? theme[fillLevelKey] : null;
-        governedRowRange.setBackground(bgColor || null);
-
-        applyDelimitedProperty_(governedRowRange, primarySpec.fontSize, "fontSize");
-        applyDelimitedProperty_(governedRowRange, primarySpec.fontWeight, "fontWeight");
-        applyDelimitedProperty_(governedRowRange, primarySpec.alignment, "alignment");
-        applyDelimitedProperty_(governedRowRange, primarySpec.wrap, "wrap");
-      }
+      applyDashboardRowFormattingSpec_(sheet, governedRowRange, primarySpec, theme, "subheader row " + stepNum);
 
       if (stepNum === 1 || stepNum === 5 || stepNum === 3) return;
 
@@ -836,19 +890,28 @@ function applySubheaderBlocks_(sheet, subheaders, theme, sysName, subheaderRowSp
 function applyColumnWidthsEngine_(sheet, config) {
   if (!sheet) return;
   var targetCols = sheet.getMaxColumns();
-  var dashConfig = (typeof loadDashboardConfig_ === "function") ? loadDashboardConfig_(true) : {globals: {}};
-  var defaultColWidth = Number(dashConfig.globals["Default Column Width"]) || GLOBAL_DEFAULTS.DEFAULT_COL_WIDTH;
+  var dashConfig = config.dashboard;
+  if (!dashConfig) {
+    if (typeof loadDashboardConfig_ !== "function") throw new Error("Column-width formatting requires Format Dashboard configuration.");
+    dashConfig = loadDashboardConfig_(true);
+  }
+  var defaultColWidth = Number(requireDashboardFormattingValue_(dashConfig.globals, "Default Column Width", "column-width formatting"));
   var widthSpec = String(config.columnWidths || "").trim();
 
   if (widthSpec && widthSpec.toUpperCase() !== "FIT_TO_DATA") {
-    var parsedWidths = widthSpec.split("/").map(item => parseInt(item.trim(), 10));
-    if (parsedWidths.some(w => !isNaN(w) && w > 0)) {
-      if (parsedWidths.length === 1 && !isNaN(parsedWidths[0]) && parsedWidths[0] > 0) {
+    var widthParts = widthSpec.split('/');
+    var parsedWidths = widthParts.map(function(item) {
+      var token = item.trim();
+      return token === "" ? null : parseInt(token, 10);
+    });
+    if (parsedWidths.some(function(width) { return width !== null && !isNaN(width) && width > 0; })) {
+      if (widthParts.length === 1 && parsedWidths[0] > 0) {
         for (var col = 1; col <= targetCols; col++) { sheet.setColumnWidth(col, parsedWidths[0]); }
       } else {
-        for (var i = 0; i < targetCols; i++) {
-          var colWidth = (i < parsedWidths.length && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) ? parsedWidths[i] : defaultColWidth;
-          sheet.setColumnWidth(i + 1, colWidth);
+        for (var i = 0; i < targetCols && i < parsedWidths.length; i++) {
+          if (parsedWidths[i] !== null && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) {
+            sheet.setColumnWidth(i + 1, parsedWidths[i]);
+          }
         }
       }
       return;
@@ -857,14 +920,11 @@ function applyColumnWidthsEngine_(sheet, config) {
   for (var c = 1; c <= targetCols; c++) { sheet.setColumnWidth(c, defaultColWidth); }
 }
 
-function applyOperationalFormatting_(templateSheet, systemSheetName) {
+function applyOperationalFormatting_(templateSheet, systemSheetName, dashboardConfig) {
   if (!templateSheet) return;
-  let config;
-  if (typeof loadDashboardConfig_ === "function") {
-    config = loadDashboardConfig_(true);
-  } else {
-    return;
-  }
+  let config = dashboardConfig;
+  if (!config && typeof loadDashboardConfig_ === "function") config = loadDashboardConfig_(true);
+  if (!config) throw new Error("Operational formatting requires Format Dashboard configuration.");
   let sysKey = systemSheetName;
   if (typeof getStandardSheetKey_ === "function") sysKey = getStandardSheetKey_(systemSheetName);
 
@@ -873,16 +933,18 @@ function applyOperationalFormatting_(templateSheet, systemSheetName) {
 
   if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, templateSheet.getMaxRows(), headers.length + 1);
 
-  const headerRange = templateSheet.getRange(4, 1, 1, headers.length);
-  headerRange.setValues([headers]);
-
   const colDefs = config.columnDefinitions || {};
-  const defaultWidth = Number(config.globals["Default Column Width"]) || GLOBAL_DEFAULTS.DEFAULT_COL_WIDTH;
-  const defaultDateFormat = config.globals["Default Date Format"] || "mm/dd/yyyy";
-  const defaultWrap = config.globals["Default Data Wrap"] || "CLIP";
-  const defaultHAlign = config.globals["Default Horizontal Alignment"] || "left";
-  const defaultVAlign = config.globals["Default Vertical Alignment"] || "middle";
+  const defaultWidth = Number(requireDashboardFormattingValue_(config.globals, "Default Column Width", "operational column formatting"));
+  const defaultDateFormat = requireDashboardFormattingValue_(config.globals, "Default Date Format", "operational date formatting");
+  const defaultWrap = requireDashboardFormattingValue_(config.globals, "Default Data Wrap", "operational wrap formatting");
+  const defaultHAlign = requireDashboardFormattingValue_(config.globals, "Default Horizontal Alignment", "operational horizontal alignment");
+  const defaultVAlign = requireDashboardFormattingValue_(config.globals, "Default Vertical Alignment", "operational vertical alignment");
+  const headerRowNumber = Number(requireDashboardFormattingValue_(config.globals, "Header Row", "operational header placement"));
+  const dataStartRow = Number(requireDashboardFormattingValue_(config.globals, "Data Start Row", "operational data placement"));
   const maxRows = templateSheet.getMaxRows();
+
+  const governedHeaderRange = templateSheet.getRange(headerRowNumber, 1, 1, headers.length);
+  governedHeaderRange.setValues([headers]);
 
   for (let c = 0; c < headers.length; c++) {
     const headerName = String(headers[c] || "").trim();
@@ -892,11 +954,11 @@ function applyOperationalFormatting_(templateSheet, systemSheetName) {
     templateSheet.setColumnWidth(colIdx, (colDef.width && colDef.width > 0) ? colDef.width : defaultWidth);
 
     if (colDef.fontSize && colDef.fontSize > 0) {
-      templateSheet.getRange(4, colIdx).setFontSize(colDef.fontSize);
+      templateSheet.getRange(headerRowNumber, colIdx).setFontSize(colDef.fontSize);
     }
 
-    if (maxRows >= DATA_START_ROW) {
-      const dataColRange = templateSheet.getRange(DATA_START_ROW, colIdx, maxRows - DATA_START_ROW + 1, 1);
+    if (maxRows >= dataStartRow) {
+      const dataColRange = templateSheet.getRange(dataStartRow, colIdx, maxRows - dataStartRow + 1, 1);
 
       if (colDef.format) {
         dataColRange.setNumberFormat(colDef.format);
@@ -911,13 +973,7 @@ function applyOperationalFormatting_(templateSheet, systemSheetName) {
       if (vAlign) dataColRange.setVerticalAlignment(vAlign.toLowerCase());
 
       const wrapStr = colDef.wrap || defaultWrap;
-      if (wrapStr) {
-        dataColRange.setWrapStrategy(
-          wrapStr.toUpperCase() === "WRAP" ? SpreadsheetApp.WrapStrategy.WRAP :
-          wrapStr.toUpperCase() === "OVERFLOW" ? SpreadsheetApp.WrapStrategy.OVERFLOW :
-          SpreadsheetApp.WrapStrategy.CLIP
-        );
-      }
+      if (wrapStr) dataColRange.setWrapStrategy(getWrapStrategyEnum_(wrapStr));
     }
   }
 
@@ -955,48 +1011,11 @@ function buildIndexTemplate_() {
     config = getTemplateConfigFromDashboard_(SYSTEM_SHEETS.INDEX);
   }
 
-  if (!config.headers || config.headers.length === 0) {
-    config.headers = [
-      "Section/Month", "Sheet Tab Name", "Workspace Link", "Visibility",
-      "", "Archive Month", "Archive Sheet Name", "Link to Sheet", "Restore Action", "Status"
-    ];
-    config.columnCount = 10;
-  }
+  if (!config.headers || config.headers.length === 0) throw new Error("Format Dashboard Section H is missing Index headers.");
 
   const template = buildGeneralTemplate_(config);
-  template.getRange("F1").setValue("Archive Index").setFontSize(14).setFontWeight("bold");
+  template.getRange("F1").setValue("Archive Index");
   template.getRange("F2").setValue("Archive File ID");
-  if (config.theme && config.theme.titleFontColor) template.getRange("F1").setFontColor(config.theme.titleFontColor);
-  if (config.theme && config.theme.level1) template.getRange(1, 5, template.getMaxRows(), 1).setBackground(config.theme.level1);
-
-  const rules = template.getConditionalFormatRules();
-
-  const uniqueGroups = new Set(["Unformatted", "Templates", "Source Data"]);
-  if (config.dashboard && config.dashboard.creationRules) {
-    Object.keys(config.dashboard.creationRules).forEach(key => {
-      const rule = config.dashboard.creationRules[key];
-      if (rule && rule.group) {
-        uniqueGroups.add(String(rule.group).trim());
-      }
-    });
-  }
-
-  const groupArray = Array.from(uniqueGroups).map(g => g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const groupFormula = '=REGEXMATCH($A5, "^(' + groupArray.join("|") + ')$")';
-
-  if (config.theme && config.theme.level3) {
-    const rule1 = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(groupFormula)
-      .setBackground(config.theme.level3).setBold(true).setRanges([template.getRange("A5:D1000")]).build();
-    rules.push(rule1);
-
-    const rule2 = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=REGEXMATCH($F5, "^(January|February|March|April|May|June|July|August|September|October|November|December)")')
-      .setBackground(config.theme.level3).setBold(true).setRanges([template.getRange("F5:J1000")]).build();
-    rules.push(rule2);
-  }
-
-  template.setConditionalFormatRules(rules);
   return template;
 }
 
@@ -1014,22 +1033,22 @@ function createAllReportTemplates() {
 }
 
 function buildOperationalReportTemplate_(systemSheetName) {
-  let templateSheet;
-  if (typeof getTemplateConfigFromDashboard_ === "function") {
-    templateSheet = buildGeneralTemplate_(getTemplateConfigFromDashboard_(systemSheetName));
-  }
-  applyOperationalFormatting_(templateSheet, systemSheetName);
-  applyOperationalTemplateSort_(templateSheet);
+  if (typeof getTemplateConfigFromDashboard_ !== "function") throw new Error("Operational template creation requires Format Dashboard configuration.");
+  const templateConfig = getTemplateConfigFromDashboard_(systemSheetName);
+  const templateSheet = buildGeneralTemplate_(templateConfig);
+  applyOperationalFormatting_(templateSheet, systemSheetName, templateConfig.dashboard);
+  applyOperationalTemplateSort_(templateSheet, templateConfig.globals);
   return templateSheet;
 }
 
-function applyOperationalTemplateSort_(sheet) {
+function applyOperationalTemplateSort_(sheet, globals) {
   if (!sheet) return;
   const existingFilter = sheet.getFilter();
   if (existingFilter) existingFilter.remove();
+  const headerRow = Number(requireDashboardFormattingValue_(globals, "Header Row", "operational filter placement"));
   const columnCount = Math.max(sheet.getLastColumn() - 1, 1);
-  const rowCount = Math.max(sheet.getMaxRows() - HEADER_ROW + 1, 2);
-  sheet.getRange(HEADER_ROW, 1, rowCount, columnCount).createFilter();
+  const rowCount = Math.max(sheet.getMaxRows() - headerRow + 1, 2);
+  sheet.getRange(headerRow, 1, rowCount, columnCount).createFilter();
 }
 
 function buildTemplateArchiveRefinedData() {
@@ -1042,8 +1061,8 @@ function buildTemplateArchiveRefinedData() {
     config.columnCount = config.headers ? config.headers.length : 0;
   }
   const templateSheet = buildGeneralTemplate_(config);
-  applyOperationalFormatting_(templateSheet, "Refined Data");
-  applyOperationalTemplateSort_(templateSheet);
+  applyOperationalFormatting_(templateSheet, "Refined Data", config.dashboard);
+  applyOperationalTemplateSort_(templateSheet, config.globals);
   return templateSheet;
 }
 
