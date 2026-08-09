@@ -1,0 +1,50 @@
+sheet,source_log,process_original,process_normalized,run_number_in_same_log,step_rows,process_run_total_seconds,process_run_total_minutes,average_process_total_seconds_ignoring_dates,ok_steps,slow_steps,bottleneck_steps,critical_steps,error_steps
+Create / Refresh All Templates,TEST v1.7.7 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,57,11.140,0.19,85.917,57,0,0,0,0
+Format Monthly Sheets,TEST v1.7.7 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,89,55.243,0.92,106.731,89,0,0,0,0
+Format Monthly Sheets,TEST v1.7.7 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,89,70.332,1.17,106.731,89,0,0,0,0
+Create Monthly Update,TEST v1.7.7 - Framework Timing Report.pdf,Create Monthly Update 06.01.26,Create Monthly Update,1,96,153.958,2.57,144.679,92,4,0,0,0
+Create / Refresh All Templates,testv1.8.9.8 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,176,47.749,0.80,85.917,176,0,0,0,0
+Format Monthly Sheets,testv1.8.9.8 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,94,38.339,0.64,106.731,94,0,0,0,0
+Create Monthly Start,testv1.8.9.8 - Framework Timing Report.pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,65,109.982,1.83,123.196,61,4,0,0,0
+Format Monthly Sheets,testv1.8.9.8 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,94,34.696,0.58,106.731,94,0,0,0,0
+Format Monthly Sheets,testv1.8.9.8 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,94,39.312,0.66,106.731,94,0,0,0,0
+Create Monthly Update,testv1.8.9.8 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,103,99.611,1.66,144.679,100,3,0,0,0
+Create Monthly Update,testv1.8.9.8 - Framework Timing Report.pdf,Create Monthly Update 06.01.26,Create Monthly Update,1,100,87.237,1.45,144.679,99,1,0,0,0
+Format Monthly Sheets,v1.8.6 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,82,114.400,1.91,106.731,81,1,0,0,0
+Format Monthly Sheets,v1.8.6 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,90,84.066,1.40,106.731,88,2,0,0,0
+Create Monthly Update,v1.8.6 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,49,179.040,2.98,144.679,45,4,0,0,0
+Format Monthly Sheets,v1.8.6 - Framework Timing Report.pdf,Format Monthly Sheets 07.26,Format Monthly Sheets,1,56,189.190,3.15,106.731,52,2,2,0,0
+Create / Refresh All Templates,v1.8.9.1 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,71,82.721,1.38,85.917,70,1,0,0,0
+Format Monthly Sheets,v1.8.9.1 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,90,68.326,1.14,106.731,90,0,0,0,0
+Format Monthly Sheets,v1.8.9.1 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,90,95.253,1.59,106.731,88,2,0,0,0
+Create Monthly Start,v1.8.9.1 - Framework Timing Report.pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,60,106.585,1.78,123.196,56,4,0,0,0
+Create Monthly Update,v1.8.9.1 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,99,124.273,2.07,144.679,96,3,0,0,0
+Create Monthly Update,v1.8.9.1 - Framework Timing Report.pdf,Create Monthly Update 06.01.26,Create Monthly Update,1,96,121.075,2.02,144.679,93,3,0,0,0
+Format Monthly Sheets,v1.8.9.1 - Framework Timing Report.pdf,Format Monthly Sheets 07.26,Format Monthly Sheets,1,90,107.402,1.79,106.731,86,4,0,0,0
+Create / Refresh All Templates,v1.8.9.3 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,124,96.901,1.62,85.917,123,1,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,90,94.496,1.57,106.731,87,3,0,0,0
+Create Monthly Start,v1.8.9.3 - Framework Timing Report.pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,60,95.672,1.59,123.196,58,2,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,90,112.027,1.87,106.731,86,4,0,0,0
+Create Monthly Update,v1.8.9.3 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,99,148.971,2.48,144.679,94,5,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,90,112.427,1.87,106.731,86,4,0,0,0
+Create / Refresh All Templates,v1.8.9.3 - Wave 4 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,209,119.558,1.99,85.917,207,2,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,90,242.432,4.04,106.731,85,3,2,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,91,267.257,4.45,106.731,85,4,2,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,91,158.060,2.63,106.731,86,5,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4.1 - Framework Timing Report (1).pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,70,82.883,1.38,106.731,69,1,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4.1 - Framework Timing Report (1).pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,92,85.843,1.43,106.731,91,1,0,0,0
+Create Monthly Start,v1.8.9.3 - Wave 4.1 - Framework Timing Report (1).pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,59,148.866,2.48,123.196,54,4,1,0,0
+Create Monthly Update,v1.8.9.3 - Wave 4.1 - Framework Timing Report (1).pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,98,111.838,1.86,144.679,96,2,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4.1 - Framework Timing Report (1).pdf,Format Monthly Sheets 07.26,Format Monthly Sheets,1,92,95.205,1.59,106.731,88,4,0,0,0
+Create / Refresh All Templates,v1.8.9.3 - Wave 4.1 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,166,79.011,1.32,85.917,165,1,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4.1 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,92,82.883,1.38,106.731,91,1,0,0,0
+Format Monthly Sheets,v1.8.9.3 - Wave 4.1 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,92,85.843,1.43,106.731,91,1,0,0,0
+Create Monthly Start,v1.8.9.3 - Wave 4.1 - Framework Timing Report.pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,59,148.866,2.48,123.196,54,4,1,0,0
+Create Monthly Update,v1.8.9.3 - Wave 4.1 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,98,111.838,1.86,144.679,96,2,0,0,0
+Create / Refresh All Templates,v1.8.9.4.2 - Framework Timing Report.pdf,Create / Refresh All Templates,Create / Refresh All Templates,1,137,164.340,2.74,85.917,131,6,0,0,0
+Format Monthly Sheets,v1.8.9.4.2 - Framework Timing Report.pdf,Format Monthly Sheets 04.26,Format Monthly Sheets,1,92,115.330,1.92,106.731,90,2,0,0,0
+Format Monthly Sheets,v1.8.9.4.2 - Framework Timing Report.pdf,Format Monthly Sheets 05.26,Format Monthly Sheets,1,92,97.510,1.63,106.731,90,2,0,0,0
+Create Monthly Start,v1.8.9.4.2 - Framework Timing Report.pdf,Create Monthly Start 04.01.26,Create Monthly Start,1,59,129.205,2.15,123.196,55,3,1,0,0
+Create Monthly Update,v1.8.9.4.2 - Framework Timing Report.pdf,Create Monthly Update 05.01.26,Create Monthly Update,1,98,150.343,2.51,144.679,94,4,0,0,0
+Format Monthly Sheets,v1.8.9.4.2 - Framework Timing Report.pdf,Format Monthly Sheets 06.26,Format Monthly Sheets,1,92,139.516,2.33,106.731,87,5,0,0,0
+Create Monthly Update,v1.8.9.4.2 - Framework Timing Report.pdf,Create Monthly Update 06.01.26,Create Monthly Update,1,95,303.289,5.05,144.679,86,6,3,0,0
