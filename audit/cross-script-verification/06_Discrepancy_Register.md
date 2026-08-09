@@ -1,0 +1,14 @@
+# Consolidated Discrepancy Register
+
+**Stage 6 status:** COMPLETE. Production code was not modified.
+
+| ID | Severity | Script/Module | Menu/Trigger | Function | Discrepancy | Evidence | Required Correction | State |
+|---|---|---|---|---|---|---|---|---|
+| DISC-0001 | Critical | Modules | 31 menu paths | 28 callback names | Registered callbacks have no declaration in the ten-module population, so those modular menu paths cannot begin. | Stage 2 table; `1_Config.gs` registrations vs complete Stage 1 modular register | Restore the omitted modules/declarations or correct registrations, then rerun all stages. | Open |
+| DISC-0002 | High | Modules vs rebuilt combined | menu workflows and downstream dependencies | 337 names | Modular and combined executable populations are not equivalent. | Stage 4 exact omitted-name list and Stage 1 source ranges | Regenerate modules from the approved combined baseline with a deterministic equivalence check. | Open |
+| DISC-0003 | Medium | Combined production candidates | all paths | version constant | Two byte/line-distinct combined scripts declare the same version `1.8.9.8.4`, obscuring which is approved. | SRC-0001/SRC-0002 hashes and line counts in Stage 0 | Designate the approved source and assign a unique version to materially different production content. | Open |
+| DISC-0004 | Medium | Prior audit | project-wide conclusion | scope statement | Prior audit correctly diagnoses modules but incorrectly says no usable prior/combined baseline was supplied and presents modules as governing without reconciling combined files. | Stage 5 cross-check; project README; Stage 0 population | Amend prior result scope and use this cross-verification for source-population qualification. | Corrected in audit; source remains open |
+| DISC-0005 | High | Modules vs combined scripts | edit trigger | `onEdit(e)` | Both combined versions define the simple edit trigger, but the modules omit it, so the modular trigger population is not equivalent. | `v1.8.9.8.4_Current_Script:2959`; `v1.8.9.8.4.4_Current_Script.gs:2981`; no modular definition | Restore/reconcile `onEdit(e)` and its downstream path or document approved removal, then rerun. | Open |
+| DISC-0006 | Medium | Apps Script container/workbook | triggers and every runtime path | `onOpen`, `doGet`, dynamic workflows | Deployment, trigger ownership, workbook schema, permissions, quotas, concurrency, and runtime-selected paths cannot be statically verified. | No container export or runtime evidence in supplied population | Export deployment/trigger inventory and execute representative/failure/concurrency tests on a disposable workbook copy. | Unable to verify |
+
+No exact duplicates were merged unless defect, affected population, evidence, and corrective action were identical. Severity reflects execution impact in the modular population.

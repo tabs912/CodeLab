@@ -24,6 +24,25 @@ Before beginning work:
 
 Do not require project-specific documentation when none exists. Do not force a standalone script into a formal project structure.
 
+GITHUB AUTHENTICATION
+
+The execution environment may not have GitHub credentials.
+
+Before attempting any remote operation:
+
+- Verify authentication using:
+  gh auth status
+
+If authentication is unavailable:
+
+- Do not attempt git push.
+- Do not attempt gh commands.
+- Do not retry authentication.
+- Complete all local repository work.
+- Stop after preparing the repository.
+- Provide the exact git and gh commands for the user to execute from an authenticated terminal.
+
+Authentication failure is not a task failure.
 ## Codex Cloud Command Execution
 
 Codex Cloud tasks may execute Git and repository commands when instructed in the task chat. Command output appears in the task Log.
@@ -187,6 +206,22 @@ Before reporting missing files:
 7. Only then report that files are unavailable.
 
 Never infer or fabricate unseen file contents.
+
+Before creating a branch, committing, pushing, or creating a pull request:
+
+1. Fetch and synchronize with origin.
+2. Compare the current branch to origin/main.
+3. Verify that at least one commit exists in:
+
+git log origin/main..HEAD
+
+If no commits exist:
+
+- Do not create a PR.
+- Report that the branch contains no changes relative to main.
+- Recommend closing the task or re-evaluating the requested implementation.
+
+Never create a pull request whose only purpose would be to duplicate commits already present in main.
 
 ## Branch Awareness
 
