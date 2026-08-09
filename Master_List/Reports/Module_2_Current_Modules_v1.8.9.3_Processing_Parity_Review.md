@@ -20,8 +20,8 @@ This is a static source comparison. Workbook runtime and visual parity were not 
 |---|---:|---:|---|
 | Format Monthly Sheets | Yes | Partial | All four routes exist, but Raw Data has a different lifecycle. |
 | Banners | Yes | Mostly | Header mapping, archive, output, visibility, and timing are present. |
-| CP Due | Yes | Partial | Source report dates are replaced by prompted-month dates. |
-| Unlock CP | Yes | Partial | Source report dates are replaced by prompted-month dates. |
+| CP Due | Yes | Mostly | Valid source dates come from C3/E3; prompted dates are per-value fallbacks. |
+| Unlock CP | Yes | Mostly | Valid source dates come from E2/G2; prompted dates are per-value fallbacks. |
 | Raw Data | Yes | Partial | Source-only columns are preserved, but a new output is created instead of formatting RD in place. |
 | Create Monthly Start | Yes | Partial | No Master List replacement preflight or staged replacement. |
 | Demo P / Refined Data build | Yes | Partial | Most transformations exist, but some phone, contact, and notes logic differs. |
@@ -64,7 +64,7 @@ Module 2 v2.10 preserves imported columns that are not listed in Dashboard Secti
 
 ### 2. CP Due and Unlock CP dates
 
-`v1.8.9.3` uses dates stored in the source reports when valid. The modular governed-sheet factory writes the prompted month’s first and last day to `B2` and `D2` instead.
+Module 2 v2.11 uses valid dates stored in CP Due `C3`/`E3` and Unlock CP `E2`/`G2`. An invalid individual source date falls back to the corresponding prompted-month date and records a warning.
 
 ### 3. Monthly Start replacement safety
 
