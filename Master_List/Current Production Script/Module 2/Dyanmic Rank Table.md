@@ -1,4 +1,10 @@
+# Dynamic Rank Table
 
+Dynamic monthly tab rank is calculated as:
+
+`Dynamic Rank = Base Rank + ((12 - Month Number) × 22)`
+
+December is month 12, so its month offset is `0`; November uses offset `22`, October `44`, through January `242`.
 
 | Month | Base Rank | Sheet | Dynamic Rank |
 | :---- | :---- | :---- | :---- |
@@ -122,4 +128,3 @@
 | 01 | 28 | Source \- Banners | 270 |
 | 01 | 29 | Source \- CP Due Date | 271 |
 | 01 | 30 | Source \- Unlock CP | 272 |
-

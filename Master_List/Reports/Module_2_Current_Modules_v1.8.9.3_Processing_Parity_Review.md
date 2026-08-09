@@ -1,5 +1,7 @@
 # Module 2 Monthly Processing Parity Review
 
+> **Superseded:** This report describes the pre-v2.14 module set. For the current Module 2 v2.15 remediation status and workflow summary, use [`v1.8.9.3_to_Module_2_Process_Summary.md`](v1.8.9.3_to_Module_2_Process_Summary.md).
+
 ## Question
 
 Does the manifest-selected script set in `Master_List/Current Production Script/Module 2/Current_Modules/` contain all processing performed by `v1.8.9.3` for:

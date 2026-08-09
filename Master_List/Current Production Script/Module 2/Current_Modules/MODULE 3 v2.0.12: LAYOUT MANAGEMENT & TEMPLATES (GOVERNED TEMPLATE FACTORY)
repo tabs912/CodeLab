@@ -1,0 +1,1114 @@
+// ============================================================================
+// MODULE 3 v2.0.12: LAYOUT MANAGEMENT & TEMPLATES (GOVERNED TEMPLATE FACTORY)
+// File: 03_Layout_Archiving_Templates.gs
+// ============================================================================
+
+// ============================================================================
+// 3.1. SHEET TAB RANKING & ORGANIZATION ENGINE (HARDCODED FOR RELIABILITY)
+// ============================================================================
+
+function organizeTabs() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+
+  const visibilitySnapshot = new Map();
+  sheets.forEach(s => visibilitySnapshot.set(s.getSheetId(), s.isSheetHidden()));
+
+  const sheetData = sheets.map(sheet => {
+    const name = sheet.getName();
+    let match = { group: "Unformatted", rank: 999 };
+    if (typeof matchSheetToSectionFRule_ === "function") {
+      match = matchSheetToSectionFRule_(name);
+    }
+
+    let dateVal = 0;
+    const dateMatch = name.match(/(\d{2})[.\/-](\d{2,4})/);
+    if (dateMatch) {
+        let m = parseInt(dateMatch[1], 10);
+        let y = parseInt(dateMatch[2], 10);
+        if (y < 100) y += 2000;
+        dateVal = new Date(y, m - 1, 1).getTime();
+    }
+
+    return { sheet, name, rank: match.rank, dateVal };
+  });
+
+  sheetData.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    if (a.dateVal !== b.dateVal) return b.dateVal - a.dateVal;
+    return a.name.localeCompare(b.name);
+  });
+
+  for (let i = 0; i < sheetData.length; i++) {
+    const currentSheet = sheetData[i].sheet;
+    if (currentSheet.getIndex() !== (i + 1)) {
+      ss.setActiveSheet(currentSheet);
+      ss.moveActiveSheet(i + 1);
+    }
+  }
+
+  ss.getSheets().forEach(s => {
+    const wasHidden = visibilitySnapshot.get(s.getSheetId());
+    if (wasHidden && !s.isSheetHidden()) s.hideSheet();
+    else if (!wasHidden && s.isSheetHidden()) s.showSheet();
+  });
+
+  ss.toast("Sheet Tabs Re-organized!", "Tab Engine", 4);
+}
+
+function positionSheetBySectionFRank_(sheet, optionalRank, spreadsheet) {
+  if (!sheet) return;
+  try {
+    var ss = spreadsheet || SpreadsheetApp.getActiveSpreadsheet();
+    var currentSheet = ss.getSheetByName(sheet.getName());
+    if (!currentSheet) return;
+
+    var targetRank = (optionalRank !== undefined && optionalRank !== null) ? optionalRank : getTargetRankForSheet_(currentSheet.getName());
+
+    var targetDateVal = 0;
+    var dateMatch = currentSheet.getName().match(/(\d{2})[.\/-](\d{2,4})/);
+    if (dateMatch) {
+        let m = parseInt(dateMatch[1], 10);
+        let y = parseInt(dateMatch[2], 10);
+        if (y < 100) y += 2000;
+        targetDateVal = new Date(y, m - 1, 1).getTime();
+    }
+
+    var sheets = ss.getSheets();
+    var targetPos = 1;
+
+    for (var i = 0; i < sheets.length; i++) {
+      if (sheets[i].getName() === currentSheet.getName()) continue;
+
+      var otherRank = getTargetRankForSheet_(sheets[i].getName());
+      var otherDateVal = 0;
+      var otherMatch = sheets[i].getName().match(/(\d{2})[.\/-](\d{2,4})/);
+      if (otherMatch) {
+        let m = parseInt(otherMatch[1], 10);
+        let y = parseInt(otherMatch[2], 10);
+        if (y < 100) y += 2000;
+        otherDateVal = new Date(y, m - 1, 1).getTime();
+      }
+
+      var placeAfter = false;
+      if (otherRank < targetRank) {
+        placeAfter = true;
+      } else if (otherRank === targetRank) {
+        if (otherDateVal > targetDateVal) {
+          placeAfter = true;
+        } else if (otherDateVal === targetDateVal) {
+          if (sheets[i].getName().localeCompare(currentSheet.getName()) < 0) {
+            placeAfter = true;
+          }
+        }
+      }
+
+      if (placeAfter) {
+        targetPos++;
+      }
+    }
+
+    if (currentSheet.getIndex() !== targetPos) {
+      ss.setActiveSheet(currentSheet);
+      ss.moveActiveSheet(Math.min(Math.max(1, targetPos), sheets.length));
+    }
+  } catch (e) {
+    if (typeof logBestEffortWarning_ === "function") logBestEffortWarning_("Non-fatal tab position operation failed: " + e.message);
+  }
+}
+
+function getTargetRankForSheet_(sheetName) {
+  const name = String(sheetName || "").trim().toLowerCase();
+
+  if (name === "index") return 1;
+  if (name === "refined data") return 2;
+  if (name.indexOf("disenrolled") === 0) return 10;
+
+  if (name.indexOf("master list") === 0) return 21;
+  if (name.indexOf("monthly change") === 0) return 22;
+  if (name.indexOf("raw data") === 0) return 23;
+
+  if (name.indexOf("banners") === 0) return 24;
+  if (name.indexOf("cp due") === 0 || name.indexOf("care plan due") === 0) return 25;
+  if (name.indexOf("unlock cp") === 0 || name.indexOf("unlocked cp") === 0) return 26;
+
+  if (name.indexOf("source - raw data") === 0) return 27;
+  if (name.indexOf("source - banners") === 0) return 28;
+  if (name.indexOf("source - cp due") === 0) return 29;
+  if (name.indexOf("source - unlock cp") === 0 || name.indexOf("source - unlocked cp") === 0) return 30;
+
+  if (name.indexOf("archive - refined data") === 0) return 350;
+
+  if (name.indexOf("framework timing") === 0) return 500;
+  if (name.indexOf("dashboard quality") === 0) return 501;
+  if (name === "format dashboard") return 502;
+  if (name === "default - format dashboard") return 812;
+
+  if (name === "rff_base_template") return 814;
+  if (name.indexOf("template - ") === 0) {
+    if (name.indexOf("banners") !== -1) return 801;
+    if (name.indexOf("cp due") !== -1) return 802;
+    if (name.indexOf("unlock") !== -1) return 803;
+    if (name.indexOf("raw data") !== -1) return 804;
+    if (name.indexOf("refined data") !== -1 && name.indexOf("archive") === -1) return 805;
+    if (name.indexOf("disenrolled") !== -1) return 806;
+    if (name.indexOf("master list") !== -1) return 807;
+    if (name.indexOf("monthly change") !== -1) return 808;
+    if (name.indexOf("archive - refined data") !== -1) return 809;
+    if (name.indexOf("framework timing") !== -1) return 810;
+    if (name.indexOf("dashboard quality") !== -1) return 811;
+    return 800;
+  }
+
+  return 999;
+}
+
+function matchSheetToSectionFRule_(sheetName) {
+  const rank = getTargetRankForSheet_(sheetName);
+  let group = "Unformatted";
+
+  if (rank === 1 || (rank >= 500 && rank <= 502)) group = "System & Configuration";
+  else if (rank === 2 || rank === 10 || rank === 350) group = "Core Operational";
+  else if (rank >= 21 && rank <= 23) group = "Monthly Active";
+  else if (rank >= 24 && rank <= 26) group = "Monthly Sub-Reports";
+  else if (rank >= 27 && rank <= 30) group = "Source Data";
+  else if (rank >= 800 && rank <= 814) group = "Template";
+
+  return { group: group, rank: rank };
+}
+
+// ============================================================================
+// 3.2. VISIBILITY CONTROLS (HIDE & SHOW)
+// ============================================================================
+
+function hideMonthlyImportSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Hide Monthly Sub-Reports (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+  const specs = [
+    { label: "Banners", keywords: ["Banners", "Banner Report", SYSTEM_SHEETS.SOURCE_PREFIX + "Banners"] },
+    { label: "CP Due Date", keywords: ["CP Due Date", "CP Due", "Care Plan Due Date Report", "Care Plan Due", SYSTEM_SHEETS.SOURCE_PREFIX + "CP Due"] },
+    { label: "Unlocked CP", keywords: ["Unlocked CP", "Unlock CP", "Unlocked Care Plan", SYSTEM_SHEETS.SOURCE_PREFIX + "Unlocked CP"] }
+  ];
+  return hideMonthlySheetsBySpecs_("Hide Monthly Sub-Reports", parsed, specs);
+}
+
+function hideMonthlyActiveSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Hide Active Sheets (Month & Prior)");
+  if (!monthParts) return null;
+  return hideMonthlySheetsBySpecs_("Hide Monthly Active Sheets", monthParts, [
+    { label: "Raw Data", keywords: ["Raw Data"] },
+    { label: "Master List", keywords: ["Master List"] },
+    { label: "Monthly Change", keywords: ["Monthly Change"] },
+    { label: "Disenrolled Exclusion", keywords: ["Disenrolled Exclusion", "Source - Disenrolled"] }
+  ]);
+}
+
+function hideTemplates_() { return hideReportTemplates(); }
+function showTemplates_() { return showReportTemplates(); }
+
+function getDashboardConfigForTemplateVisibility_(dashboardOverride) {
+  if (dashboardOverride) return dashboardOverride;
+  try {
+    return loadDashboardConfig_();
+  } catch (err) {
+    logBestEffortWarning_("Template visibility config unavailable; using prefix scan: " + err.message);
+    return { sheetDefinitions: [], creationRules: {} };
+  }
+}
+
+function hideReportTemplates(dashboardOverride, timing) {
+  if (timing) return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), true, timing);
+  return runFrameworkTimed_("Hide Report Templates", function(activeTiming) {
+    return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), true, activeTiming);
+  });
+}
+
+function showReportTemplates(dashboardOverride, timing) {
+  if (timing) return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), false, timing);
+  return runFrameworkTimed_("Show Report Templates", function(activeTiming) {
+    return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), false, activeTiming);
+  });
+}
+
+function setReportTemplateVisibility_(dashboard, hidden, timing) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetMap = {};
+
+  ss.getSheets().forEach(function(sheet) {
+    sheetMap[sheet.getName()] = sheet;
+  });
+
+  if (dashboard && dashboard.sheetDefinitions) {
+    dashboard.sheetDefinitions.forEach(function(sheetDef) {
+      const sheet = sheetMap[sheetDef.templateName];
+      if (!sheet || sheetDef.templateName === SYSTEM_SHEETS.BASE_TEMPLATE) return;
+      if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide template: " + sheetDef.templateName);
+      else showSheetIfNeeded_(sheet, timing, "Show template: " + sheetDef.templateName);
+    });
+  }
+
+  Object.keys(sheetMap).forEach(function(sheetName) {
+    if (sheetName === SYSTEM_SHEETS.BASE_TEMPLATE) return;
+    if (String(sheetName || "").indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) !== 0) return;
+
+    const sheet = sheetMap[sheetName];
+    if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide orphan template: " + sheetName);
+    else showSheetIfNeeded_(sheet, timing, "Show orphan template: " + sheetName);
+  });
+
+  const baseSheet = ss.getSheetByName(SYSTEM_SHEETS.BASE_TEMPLATE);
+  if (baseSheet) hideSheetIfNeeded_(baseSheet, null, "Force base template hidden");
+
+  if (timing && typeof markFrameworkStep_ === "function") {
+    markFrameworkStep_(timing, hidden ? "All templates hidden" : "All templates shown");
+  }
+}
+
+function hideSystemSheets_() { return hideSystemSheetsNow(); }
+function showSystemSheets_() { return showSystemSheetsNow(); }
+
+function hideSystemSheetsNow() {
+  return runFrameworkTimed_("Hide System Sheets", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const systemSheets = [SYSTEM_SHEETS.TIMING, SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.DASHBOARD, SYSTEM_SHEETS.INDEX];
+
+    let hiddenCount = 0;
+    systemSheets.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (sheet) {
+        hideSheetIfNeeded_(sheet, timing, "Hide system sheet: " + name);
+        hiddenCount++;
+      }
+    });
+    if (typeof notify_ === "function") notify_("System sheets hidden: " + hiddenCount);
+  });
+}
+
+function showSystemSheetsNow() {
+  return runFrameworkTimed_("Show System Sheets", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const systemSheets = [SYSTEM_SHEETS.DASHBOARD, SYSTEM_SHEETS.TIMING, SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.INDEX];
+
+    let shownCount = 0;
+    systemSheets.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (sheet) {
+        showSheetIfNeeded_(sheet, timing, "Show system sheet: " + name);
+        shownCount++;
+      }
+    });
+    if (typeof notify_ === "function") notify_("System sheets shown: " + shownCount);
+  });
+}
+
+function hideMonthlySheetsBySpecs_(processName, parsedMonth, specs) {
+  return runFrameworkTimed_(processName + " " + parsedMonth.monthLabel + " & Prior", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const result = { hidden: [], skipped: [] };
+
+    specs.forEach(function(spec) {
+      const sheets = findArchiveMonthlyCandidateSheetsUpToDate_(ss, spec.keywords, parsedMonth.reportDate);
+      if (!sheets.length) {
+        result.skipped.push(spec.label + " not found");
+        return;
+      }
+      sheets.forEach(function(sheet) {
+        try {
+          if (!sheet.isSheetHidden()) {
+            activateVisibleSheetBeforeHiding_(sheet);
+            sheet.hideSheet();
+          }
+          result.hidden.push(sheet.getName());
+        } catch (err) {
+          result.skipped.push(sheet.getName() + ": " + err.message);
+        }
+      });
+    });
+    if (typeof notify_ === "function") notify_(processName + " complete for " + parsedMonth.monthLabel + " and prior. Hidden: " + result.hidden.length + "; Skipped: " + result.skipped.length + ".");
+    return result;
+  });
+}
+
+// ============================================================================
+// 3.3. ARCHIVING ENGINE
+// ============================================================================
+
+function archiveMonthlyImportSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Archive Monthly Sub-Reports (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+
+  return runFrameworkTimed_("Archive Monthly Sub-Reports " + parsed.monthLabel + " & Prior", function(timing) {
+    const result = archiveMonthlySheetsBySpecs_(parsed, [
+      { label: "Banners", keywords: ["Banners", "Banner Report", SYSTEM_SHEETS.SOURCE_PREFIX + "Banners"] },
+      { label: "CP Due Date", keywords: ["CP Due Date", "CP Due", "Care Plan Due Date Report", "Care Plan Due", SYSTEM_SHEETS.SOURCE_PREFIX + "CP Due"] },
+      { label: "Unlocked CP", keywords: ["Unlocked CP", "Unlock CP", "Unlocked Care Plan", SYSTEM_SHEETS.SOURCE_PREFIX + "Unlocked CP"] }
+    ], timing);
+
+    if (typeof populateActiveIndex === "function") populateActiveIndex();
+    notifyArchiveMonthlySheetsResult_("Archive Monthly Sub-Reports", parsed.monthLabel + " and prior", result);
+    return result;
+  });
+}
+
+function archiveMonthlyActiveSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Archive Active Sheets (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+
+  return runFrameworkTimed_("Archive Monthly Active Sheets " + parsed.monthLabel + " & Prior", function(timing) {
+    const result = archiveMonthlySheetsBySpecs_(parsed, [
+      { label: "Raw Data", keywords: ["Raw Data", SYSTEM_SHEETS.SOURCE_PREFIX + "Raw Data"] },
+      { label: "Master List", keywords: ["Master List"] },
+      { label: "Monthly Change", keywords: ["Monthly Change"] }
+    ], timing);
+
+    if (typeof populateActiveIndex === "function") populateActiveIndex();
+    notifyArchiveMonthlySheetsResult_("Archive Monthly Active Sheets", parsed.monthLabel + " and prior", result);
+    return result;
+  });
+}
+
+function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
+  const writeLock = LockService.getDocumentLock();
+  if (!writeLock.tryLock(30000)) {
+    throw new Error("Another write workflow is already running: archiveMonthlySheetsBySpecs.");
+  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const archiveId = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID");
+    if (!archiveId) throw new Error("RFF_ARCHIVE_SPREADSHEET_ID is not configured.");
+
+    const archiveSs = SpreadsheetApp.openById(archiveId);
+    const result = { archived: [], skipped: [], failed: [] };
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Archive workbook connection established for batch", "Archive ID: " + archiveId);
+
+    specs.forEach(function(spec) {
+      const sheets = findArchiveMonthlyCandidateSheetsUpToDate_(ss, spec.keywords, parsedMonth.reportDate);
+      if (!sheets.length) {
+        logBestEffortWarning_("No local sheet found for " + spec.label + " " + parsedMonth.monthLabel + " or prior");
+        result.skipped.push(spec.label);
+        return;
+      }
+
+      sheets.forEach(function(sheet) {
+        const sheetName = sheet.getName();
+        try {
+          const archiveResult = copySheetToArchiveAndDeleteLocal_(ss, archiveSs, sheet, sheetName, timing);
+          result.archived.push(sheetName);
+          if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Archived monthly sheet: " + sheetName, archiveResult.localAction);
+        } catch (err) {
+          logBestEffortWarning_("Archive monthly sheet failed: " + sheetName + " - " + err.message);
+          result.failed.push(sheetName + ": " + err.message);
+        }
+      });
+    });
+
+    pingArchiveIndexUpdate_();
+
+    return result;
+
+  } finally {
+    writeLock.releaseLock();
+  }
+}
+
+function pingArchiveIndexUpdate_() {
+  try {
+    const archiveWebAppUrl = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_WEB_APP_URL");
+    if (archiveWebAppUrl) {
+      UrlFetchApp.fetch(archiveWebAppUrl, { muteHttpExceptions: true });
+    }
+  } catch (err) {
+    logBestEffortWarning_("Failed to ping Archive Index Web App: " + err.message);
+  }
+}
+
+function findArchiveMonthlyCandidateSheetsUpToDate_(ss, keywords, cutoffDate) {
+  const keywordList = (keywords || []).map(function(keyword) {
+    return String(keyword || "").trim().toLowerCase();
+  }).filter(Boolean);
+
+  const matches = [];
+  const seen = new Set();
+  const cutoffKey = cutoffDate ? Number(Utilities.formatDate(cutoffDate, Session.getScriptTimeZone(), "yyyyMM")) : 0;
+
+  ss.getSheets().forEach(function(sheet) {
+    const name = sheet.getName();
+    const lowerName = name.toLowerCase();
+    if (lowerName.indexOf("template") !== -1) return;
+
+    const hasKeyword = keywordList.some(function(keyword) { return lowerName.indexOf(keyword) !== -1; });
+    if (!hasKeyword) return;
+    if (seen.has(name)) return;
+
+    const sheetDate = extractFirstDateFromSheetName_(name);
+    if (sheetDate) {
+      const sheetKey = Number(Utilities.formatDate(sheetDate, Session.getScriptTimeZone(), "yyyyMM"));
+      if (sheetKey <= cutoffKey) {
+        seen.add(name);
+        matches.push(sheet);
+      }
+    }
+  });
+
+  matches.sort(function(a, b) { return a.getName().localeCompare(b.getName()); });
+  return matches;
+}
+
+function notifyArchiveMonthlySheetsResult_(title, monthLabel, result) {
+  const msg = title + " complete for " + monthLabel + ".\nArchived: " + (result.archived ? result.archived.length : 0) +
+              "\nSkipped: " + (result.skipped ? result.skipped.length : 0) +
+              "\nFailed: " + (result.failed ? result.failed.length : 0);
+  SpreadsheetApp.getActiveSpreadsheet().toast(msg, title, 5);
+}
+
+function copySheetToArchiveAndDeleteLocal_(ss, archiveSs, sheet, sheetName, timing) {
+  const archiveResult = archiveRawSourceSheet_(sheet, sheetName, timing, "Archive monthly sheet", archiveSs);
+  activateVisibleSheetBeforeHiding_(sheet);
+  ss.deleteSheet(sheet);
+  return { localAction: "Deleted local sheet " + sheetName, archiveName: archiveResult.archivedName };
+}
+
+function archiveRawSourceSheet_(sourceSheet, archiveName, timing, timingLabel, preOpenedArchiveSpreadsheet) {
+  if (!sourceSheet) throw new Error("A source sheet is required for archive.");
+  const archiveSpreadsheet = preOpenedArchiveSpreadsheet || openArchiveSpreadsheetOnce_();
+  const finalArchiveName = getUniqueArchiveSheetName_(archiveSpreadsheet, archiveName);
+  const copied = sourceSheet.copyTo(archiveSpreadsheet);
+  copied.setName(finalArchiveName);
+  if (copied.getMaxRows() !== sourceSheet.getMaxRows() || copied.getMaxColumns() !== sourceSheet.getMaxColumns()) {
+    archiveSpreadsheet.deleteSheet(copied);
+    throw new Error("Archived source verification failed.");
+  }
+  if (typeof markFrameworkStep_ === "function") {
+    markFrameworkStep_(timing, timingLabel || "Archive source", finalArchiveName);
+  }
+  return { archivedSuccessfully: true, sheet: copied, archiveSpreadsheetId: archiveSpreadsheet.getId(), archivedName: finalArchiveName };
+}
+
+
+// ============================================================================
+// 3.4. SLASH-DELIMITED FORMATTING ENGINE
+// ============================================================================
+
+function applyDelimitedProperty_(range, propertyValue, type) {
+  if (propertyValue === undefined || propertyValue === null || propertyValue === "") return;
+  const strVal = String(propertyValue);
+
+  if (strVal.indexOf('/') === -1) {
+    applySingleCellProperty_(range, strVal.trim(), type);
+  } else {
+    const parts = strVal.split('/');
+    const startRow = range.getRow();
+    const startCol = range.getColumn();
+    const sheet = range.getSheet();
+    const maxCols = sheet.getMaxColumns();
+
+    for (let i = 0; i < parts.length; i++) {
+      const val = parts[i].trim();
+      if (val !== "" && (startCol + i) <= maxCols) {
+        const cell = sheet.getRange(startRow, startCol + i, range.getNumRows(), 1);
+        applySingleCellProperty_(cell, val, type);
+      }
+    }
+  }
+}
+
+function applySingleCellProperty_(range, val, type) {
+  if (!val) return;
+  if (type === "fontSize" && !isNaN(Number(val))) {
+    range.setFontSize(Number(val));
+  } else if (type === "fontWeight") {
+    const lower = val.toLowerCase();
+    range.setFontWeight(lower === "bold" ? "bold" : "normal");
+    range.setFontStyle(lower === "italic" ? "italic" : "normal");
+  } else if (type === "alignment") {
+    range.setHorizontalAlignment(val.toLowerCase());
+  } else if (type === "wrap") {
+    range.setWrapStrategy(getWrapStrategyEnum_(val));
+  } else if (type === "dateFormat") {
+    const isDateFormat = /^[mdy\/\-\.\s]+$/i.test(val) && val.toLowerCase().indexOf('m') !== -1;
+    if (isDateFormat) {
+      range.setNumberFormat(val);
+    } else {
+      range.setValue(val);
+    }
+  }
+}
+
+function getWrapStrategyEnum_(wrapStr) {
+  var w = String(wrapStr || "").toUpperCase();
+  if (w === "WRAP") return SpreadsheetApp.WrapStrategy.WRAP;
+  if (w === "OVERFLOW") return SpreadsheetApp.WrapStrategy.OVERFLOW;
+  if (w === "CLIP") return SpreadsheetApp.WrapStrategy.CLIP;
+  throw new Error("Format Dashboard has an invalid wrap strategy: " + wrapStr + ".");
+}
+
+function getBorderStyleEnum_(styleName) {
+  var key = String(styleName || "").trim().toUpperCase();
+  var styles = {
+    SOLID: SpreadsheetApp.BorderStyle.SOLID,
+    SOLID_MEDIUM: SpreadsheetApp.BorderStyle.SOLID_MEDIUM,
+    SOLID_THICK: SpreadsheetApp.BorderStyle.SOLID_THICK,
+    DASHED: SpreadsheetApp.BorderStyle.DASHED,
+    DOTTED: SpreadsheetApp.BorderStyle.DOTTED,
+    DOUBLE: SpreadsheetApp.BorderStyle.DOUBLE
+  };
+  if (!styles[key]) throw new Error("Format Dashboard has an invalid Global Border Style: " + styleName + ".");
+  return styles[key];
+}
+
+// ============================================================================
+// 3.5. TEMPLATE BUILDERS
+// ============================================================================
+
+function createOrRefreshBaseTemplate_() {
+  if (typeof createGovernedSheet_ !== "function") throw new Error("Base-template creation requires the governed output factory.");
+  var baseSheet = createGovernedSheet_(SYSTEM_SHEETS.BASE_TEMPLATE, null, {
+    isTemplate: true,
+    isSystemSetup: true,
+    customName: SYSTEM_SHEETS.BASE_TEMPLATE,
+    overwrite: true
+  });
+
+  if (typeof loadDashboardConfig_ !== "function") throw new Error("Base-template formatting requires Format Dashboard configuration.");
+  var dashboard = loadDashboardConfig_(true);
+  var globals = dashboard.baseTemplateGlobals;
+  if (!globals || !Object.keys(globals).length) {
+    throw new Error("Format Dashboard Section A has no settings enabled for Base Template formatting.");
+  }
+
+  if (hasDashboardFormattingValue_(globals, "Freeze Rows")) baseSheet.setFrozenRows(Number(globals["Freeze Rows"]));
+  if (hasDashboardFormattingValue_(globals, "Freeze Columns")) baseSheet.setFrozenColumns(Number(globals["Freeze Columns"]));
+
+  var baseCols = 80;
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(baseSheet, 100, baseCols + 1);
+
+  var fullRange = baseSheet.getRange(1, 1, 100, baseCols + 1);
+  if (hasDashboardFormattingValue_(globals, "Standard Font")) fullRange.setFontFamily(globals["Standard Font"]);
+  if (hasDashboardFormattingValue_(globals, "Standard Font Size")) fullRange.setFontSize(Number(globals["Standard Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "Standard Font Color")) fullRange.setFontColor(globals["Standard Font Color"]);
+  if (hasDashboardFormattingValue_(globals, "Default Horizontal Alignment")) fullRange.setHorizontalAlignment(String(globals["Default Horizontal Alignment"]).toLowerCase());
+  if (hasDashboardFormattingValue_(globals, "Default Vertical Alignment")) fullRange.setVerticalAlignment(String(globals["Default Vertical Alignment"]).toLowerCase());
+  if (hasDashboardFormattingValue_(globals, "Default Data Wrap")) fullRange.setWrapStrategy(getWrapStrategyEnum_(globals["Default Data Wrap"]));
+  if (hasDashboardFormattingValue_(globals, "Standard Font Weight")) fullRange.setFontWeight(globals["Standard Font Weight"]);
+  if (hasDashboardFormattingValue_(globals, "Default Background Color")) fullRange.setBackground(globals["Default Background Color"]);
+  if (hasDashboardFormattingValue_(globals, "Default Text Format")) fullRange.setNumberFormat(globals["Default Text Format"]);
+  if (hasDashboardFormattingValue_(globals, "Global Borders Enabled")) {
+    var bordersEnabled = String(globals["Global Borders Enabled"]).toUpperCase() === "TRUE";
+    if (bordersEnabled) {
+      fullRange.setBorder(true, true, true, true, true, true,
+        requireDashboardFormattingValue_(globals, "Global Border Color", "enabled base-template borders"),
+        getBorderStyleEnum_(requireDashboardFormattingValue_(globals, "Global Border Style", "enabled base-template borders")));
+    } else {
+      fullRange.setBorder(false, false, false, false, false, false);
+    }
+  }
+
+  if (hasDashboardFormattingValue_(globals, "Row 1 (Title)Height")) baseSheet.setRowHeight(1, Number(globals["Row 1 (Title)Height"]));
+  if (hasDashboardFormattingValue_(globals, "Row 2 Height")) baseSheet.setRowHeight(2, Number(globals["Row 2 Height"]));
+  if (hasDashboardFormattingValue_(globals, "Row 3 Height")) baseSheet.setRowHeight(3, Number(globals["Row 3 Height"]));
+  var headerRow = hasDashboardFormattingValue_(globals, "Header Row") ? Number(globals["Header Row"]) : null;
+  var dataStartRow = hasDashboardFormattingValue_(globals, "Data Start Row") ? Number(globals["Data Start Row"]) : null;
+  if (headerRow && hasDashboardFormattingValue_(globals, "Row 4 (Header) Height")) baseSheet.setRowHeight(headerRow, Number(globals["Row 4 (Header) Height"]));
+
+  if (dataStartRow && dataStartRow <= 100 && hasDashboardFormattingValue_(globals, "Default Data Row Height")) {
+    baseSheet.setRowHeights(dataStartRow, 100 - dataStartRow + 1, Number(globals["Default Data Row Height"]));
+  }
+
+  if (hasDashboardFormattingValue_(globals, "Default Column Width")) {
+    var defaultWidth = Number(globals["Default Column Width"]);
+    for (var c = 1; c <= baseCols + 1; c++) { baseSheet.setColumnWidth(c, defaultWidth); }
+  }
+
+  var cellA1 = baseSheet.getRange("A1");
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Font Size")) cellA1.setFontSize(Number(globals["A1 (Title) Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Font Style")) cellA1.setFontWeight(globals["A1 (Title) Font Style"]);
+  if (hasDashboardFormattingValue_(globals, "A1 (Title) Wrap")) cellA1.setWrapStrategy(getWrapStrategyEnum_(globals["A1 (Title) Wrap"]));
+
+  var cellC1 = baseSheet.getRange("C1");
+  if (hasDashboardFormattingValue_(globals, "C1 (Title) Font Size")) cellC1.setFontSize(Number(globals["C1 (Title) Font Size"]));
+  if (hasDashboardFormattingValue_(globals, "C1 (Title) Wrap")) cellC1.setWrapStrategy(getWrapStrategyEnum_(globals["C1 (Title) Wrap"]));
+
+  if (headerRow && hasDashboardFormattingValue_(globals, "Row 4 (Header) Wrap")) {
+    baseSheet.getRange(headerRow, 1, 1, baseCols).setWrapStrategy(getWrapStrategyEnum_(globals["Row 4 (Header) Wrap"]));
+  }
+
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(baseSheet, 100, baseCols);
+  if (typeof writeConfiguredSheetGovernanceNote_ === "function") {
+    writeConfiguredSheetGovernanceNote_(baseSheet, SYSTEM_SHEETS.BASE_TEMPLATE, true);
+  }
+  baseSheet.hideSheet();
+  return baseSheet;
+}
+
+function createTemplateFromBase_(targetName, systemSheetName, timing) {
+  if (typeof createGovernedSheet_ !== "function") throw new Error("Template creation requires the governed output factory.");
+  const governedType = systemSheetName || (targetName === SYSTEM_SHEETS.DASHBOARD_DEFAULT
+    ? SYSTEM_SHEETS.DASHBOARD
+    : String(targetName || "").replace(/^Template\s*-\s*/i, "").trim());
+  return createGovernedSheet_(governedType, null, {
+    isTemplate: true,
+    isSystemSetup: true,
+    customName: targetName,
+    overwrite: true,
+    timing: timing
+  });
+}
+
+function buildGeneralTemplate_(config, timing) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sysName = config.systemSheetName;
+  var templateName = config.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sysName);
+
+  if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Build General Template", "Creating template base for: " + templateName);
+  // A caller may provide a newly-created, data-only sheet. This keeps content
+  // creation separate from the general formatting pass while preserving the
+  // original base-template behavior for every other template.
+  var providedSheet = config.existingTemplateSheet || config.unformattedSheet;
+  var templateSheet = providedSheet || createTemplateFromBase_(templateName, sysName, timing);
+  // An existing template sheet has already been copied from the base and
+  // named by its caller. Do not copy or rename it again.
+  if (!config.existingTemplateSheet && templateSheet.getName() !== templateName) templateSheet.setName(templateName);
+  templateSheet.showSheet();
+
+  if (typeof positionSheetBySectionFRank_ === "function") positionSheetBySectionFRank_(templateSheet, config.rank);
+
+  var contentCols = Math.max(config.columnCount || 0, config.headers ? config.headers.length : 0, 1);
+  var targetCols = contentCols + 1;
+  var targetRows = Number(config.minimumRows);
+  if (!targetRows || targetRows < 1) throw new Error("General template configuration is missing a valid Minimum Rows value from Format Dashboard.");
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, targetRows, targetCols);
+
+  if (config.unformattedSheet) applyGeneralSheetDefaults_(templateSheet, config, targetRows, targetCols);
+
+  var theme = config.theme;
+  validateDashboardFormattingConfig_(config, theme, sysName);
+
+  const isDashboardSurface = sysName === SYSTEM_SHEETS.DASHBOARD || templateName === SYSTEM_SHEETS.DASHBOARD_DEFAULT;
+  if (isDashboardSurface) {
+    templateSheet.getBandings().forEach(function(banding) { banding.remove(); });
+  } else if (config.usesAlternatingColors !== false) {
+    if (typeof applyNativeBandingSafe_ === "function") applyNativeBandingSafe_(templateSheet, 5, targetCols, targetRows, theme.level4, theme.level5);
+  }
+
+  if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Titles: " + templateName, "Applying title rows");
+  applyTitleRows_(templateSheet, config, theme);
+
+  if (!config.formatExistingSections && config.usesSubheaders && config.subheaders && config.subheaders.length > 0) {
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Subheaders: " + templateName, "Applying subheader blocks");
+    applySubheaderBlocks_(templateSheet, config.subheaders, theme, sysName, config.subheaderRowSpecs);
+  }
+
+  if (config.formatExistingSections) {
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Format Existing Sections: " + templateName, "Applying dashboard section headers and subheaders");
+    applyExistingSectionFormatting_(templateSheet, config, theme);
+  }
+
+  applyColumnWidthsEngine_(templateSheet, config);
+
+  if (theme.level1) templateSheet.setTabColor(theme.level1);
+  writeTemplateMetadata_(templateSheet, config, targetCols);
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(templateSheet, targetRows, contentCols);
+  if (typeof writeConfiguredSheetGovernanceNote_ === "function") {
+    writeConfiguredSheetGovernanceNote_(templateSheet, sysName, true);
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Write Template Rank Note: " + templateName, "Governance metadata written to B1 note");
+  }
+
+  templateSheet.hideSheet();
+  return templateSheet;
+}
+
+function applyGeneralSheetDefaults_(sheet, config, rowCount, columnCount) {
+  var globals = config.globals;
+  var fontFamily = requireDashboardFormattingValue_(globals, "Standard Font", "general sheet defaults");
+  var fontSize = Number(requireDashboardFormattingValue_(globals, "Standard Font Size", "general sheet defaults"));
+  var fontColor = requireDashboardFormattingValue_(globals, "Standard Font Color", "general sheet defaults");
+  var horizontal = String(requireDashboardFormattingValue_(globals, "Default Horizontal Alignment", "general sheet defaults")).toLowerCase();
+  var vertical = String(requireDashboardFormattingValue_(globals, "Default Vertical Alignment", "general sheet defaults")).toLowerCase();
+  var wrapName = String(requireDashboardFormattingValue_(globals, "Default Data Wrap", "general sheet defaults")).toUpperCase();
+  var wrapStrategy = getWrapStrategyEnum_(wrapName);
+
+  sheet.getRange(1, 1, rowCount, columnCount)
+    .setFontFamily(fontFamily)
+    .setFontSize(fontSize)
+    .setFontColor(fontColor)
+    .setFontWeight(requireDashboardFormattingValue_(globals, "Standard Font Weight", "general sheet defaults"))
+    .setHorizontalAlignment(horizontal)
+    .setVerticalAlignment(vertical)
+    .setWrapStrategy(wrapStrategy)
+    .setNumberFormat(requireDashboardFormattingValue_(globals, "Default Text Format", "general sheet defaults"))
+    .setBackground(requireDashboardFormattingValue_(globals, "Default Background Color", "general sheet defaults"));
+
+  var bordersEnabled = String(requireDashboardFormattingValue_(globals, "Global Borders Enabled", "general sheet defaults")).toUpperCase() === "TRUE";
+  sheet.getRange(1, 1, rowCount, columnCount).setBorder(
+    bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled, bordersEnabled,
+    requireDashboardFormattingValue_(globals, "Global Border Color", "general sheet defaults"),
+    getBorderStyleEnum_(requireDashboardFormattingValue_(globals, "Global Border Style", "general sheet defaults"))
+  );
+
+  var defaultRowHeight = Number(requireDashboardFormattingValue_(globals, "Default Data Row Height", "general sheet defaults"));
+  sheet.setRowHeights(1, rowCount, defaultRowHeight);
+
+  sheet.setFrozenRows(Math.max(Number(requireDashboardFormattingValue_(globals, "Freeze Rows", "general sheet defaults")), 0));
+  sheet.setFrozenColumns(Math.max(Number(requireDashboardFormattingValue_(globals, "Freeze Columns", "general sheet defaults")), 0));
+}
+
+function requireDashboardFormattingValue_(source, key, context) {
+  if (!source || source[key] === undefined || source[key] === null || String(source[key]).trim() === "") {
+    throw new Error("Format Dashboard is missing '" + key + "' required for " + context + ".");
+  }
+  return source[key];
+}
+
+function hasDashboardFormattingValue_(source, key) {
+  return !!source && source[key] !== undefined && source[key] !== null && String(source[key]).trim() !== "";
+}
+
+function validateDashboardFormattingConfig_(config, theme, systemSheetName) {
+  if (!config || !config.dashboard || !config.globals) {
+    throw new Error("General template formatting requires configuration loaded from Default - Format Dashboard or Format Dashboard.");
+  }
+  ["level1", "level2", "level3", "level4", "level5", "titleFontColor"].forEach(function(level) {
+    requireDashboardFormattingValue_(theme, level, "the " + systemSheetName + " theme");
+  });
+  if (!Array.isArray(config.titleRows) || !config.titleRows.length) {
+    throw new Error("Format Dashboard contains no title-row formatting specifications for " + systemSheetName + ".");
+  }
+  if (config.usesSubheaders && (!Array.isArray(config.subheaderRowSpecs) || !config.subheaderRowSpecs.length)) {
+    throw new Error("Format Dashboard contains no subheader-row formatting specifications for " + systemSheetName + ".");
+  }
+}
+
+/**
+ * Applies the general template theme to section banners and their header rows
+ * when a caller supplied an already-populated, data-only template sheet.
+ */
+function applyExistingSectionFormatting_(sheet, config, theme) {
+  var values = sheet.getDataRange().getDisplayValues();
+  var width = Math.max(Number(config.columnCount) || sheet.getLastColumn(), 1);
+  var sectionRows = [];
+
+  for (var rowIndex = 0; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][0] || "").trim().indexOf("SECTION ") !== 0) continue;
+
+    sectionRows.push(rowIndex + 1);
+  }
+
+  var specs = config.subheaderRowSpecs || [];
+  var requiredSteps = [1, 2, 3, 4, 5, 6];
+  requiredSteps.forEach(function(stepNum) {
+    if (!getDashboardRowFormattingSpec_(specs, stepNum)) {
+      throw new Error("Format Dashboard must define subheader formatting row " + stepNum + ".");
+    }
+  });
+
+  sectionRows.forEach(function(sectionRow) {
+    requiredSteps.forEach(function(stepNum) {
+      var targetRow = sectionRow + stepNum - 2;
+      if (targetRow < 1 || targetRow > sheet.getMaxRows()) return;
+
+      var spec = getDashboardRowFormattingSpec_(specs, stepNum);
+      applyDashboardRowFormattingSpec_(
+        sheet,
+        sheet.getRange(targetRow, 1, 1, width),
+        spec,
+        theme,
+        "subheader row " + stepNum
+      );
+    });
+  });
+}
+
+function getDashboardRowFormattingSpec_(specs, rowNumber) {
+  var matchingSpec = null;
+  (specs || []).forEach(function(spec) {
+    if (Number(spec.row) === Number(rowNumber)) matchingSpec = spec;
+  });
+  return matchingSpec;
+}
+
+function applyDashboardRowFormattingSpec_(sheet, range, spec, theme, context) {
+  var height = Number(requireDashboardFormattingValue_(spec, "height", context));
+  var fillLevel = String(requireDashboardFormattingValue_(spec, "fillLevel", context)).toLowerCase().replace(/[^a-z0-9]/g, "");
+  sheet.setRowHeight(range.getRow(), height);
+  range.setBackground(fillLevel === "none" ? null : requireDashboardFormattingValue_(theme, fillLevel, context + " fill"));
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "fontSize", context), "fontSize");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "fontWeight", context), "fontWeight");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "alignment", context), "alignment");
+  applyDelimitedProperty_(range, requireDashboardFormattingValue_(spec, "wrap", context), "wrap");
+}
+
+function applyTitleRows_(sheet, config, theme) {
+  var sysName = config.systemSheetName || "";
+  var fullGridCols = sheet.getMaxColumns();
+
+  var titleCell = sheet.getRange("A1");
+  titleCell.setValue(config.reportTitle || sysName);
+
+  if (!config.usesSubheaders && config.headers && config.headers.length > 0) {
+    var headerTextRange = sheet.getRange(4, 1, 1, config.headers.length);
+    headerTextRange.setValues([config.headers]);
+  }
+
+  if (config.titleDateFormat) {
+    applyDelimitedProperty_(sheet.getRange(2, 1, 1, fullGridCols), config.titleDateFormat, "dateFormat");
+  }
+
+  (config.titleRows || []).forEach(function(spec) {
+    const rowNumber = Number(requireDashboardFormattingValue_(spec, "row", "title-row formatting"));
+    if (rowNumber > sheet.getMaxRows()) return;
+
+    const rowRange = sheet.getRange(rowNumber, 1, 1, fullGridCols);
+    applyDashboardRowFormattingSpec_(sheet, rowRange, spec, theme, "title row " + rowNumber);
+    rowRange.setFontColor(requireDashboardFormattingValue_(theme, "titleFontColor", "title-row font color"));
+  });
+}
+
+function applySubheaderBlocks_(sheet, subheaders, theme, sysName, subheaderRowSpecs) {
+  var currentRow = 5;
+  var maxCols = sheet.getMaxColumns();
+  var b2Specs = subheaderRowSpecs || [];
+
+  subheaders.forEach(function(block) {
+    var steps = [1, 2, 3, 4, 5, 6];
+    steps.forEach(function(stepNum) {
+      var primarySpec = getDashboardRowFormattingSpec_(b2Specs, stepNum);
+      if (!primarySpec) throw new Error("Format Dashboard is missing subheader formatting row " + stepNum + " for " + sysName + ".");
+
+      currentRow++;
+      var governedRowRange = sheet.getRange(currentRow, 1, 1, maxCols);
+      applyDashboardRowFormattingSpec_(sheet, governedRowRange, primarySpec, theme, "subheader row " + stepNum);
+
+      if (stepNum === 1 || stepNum === 5 || stepNum === 3) return;
+
+      if (stepNum === 2) {
+        var titleCell = sheet.getRange(currentRow, 1);
+        titleCell.setValue(block.title);
+
+        if (sysName.indexOf("Timing") !== -1 || sysName.indexOf("Quality") !== -1 || sysName.indexOf("Change") !== -1 || block.stampLastUpdated) {
+          sheet.getRange(currentRow, 3).setValue("Last Updated");
+        }
+        return;
+      }
+
+      if (stepNum === 4) {
+        if (block.headers && block.headers.length > 0) {
+          var headerTextRange = sheet.getRange(currentRow, 1, 1, block.headers.length);
+          headerTextRange.setValues([block.headers]);
+        }
+        return;
+      }
+
+      if (stepNum === 6) {
+        var placeholderCell = sheet.getRange(currentRow, 1);
+        placeholderCell.setValue("Insert new data here");
+        return;
+      }
+    });
+  });
+}
+
+function applyColumnWidthsEngine_(sheet, config) {
+  if (!sheet) return;
+  var targetCols = sheet.getMaxColumns();
+  var dashConfig = config.dashboard;
+  if (!dashConfig) {
+    if (typeof loadDashboardConfig_ !== "function") throw new Error("Column-width formatting requires Format Dashboard configuration.");
+    dashConfig = loadDashboardConfig_(true);
+  }
+  var defaultColWidth = Number(requireDashboardFormattingValue_(dashConfig.globals, "Default Column Width", "column-width formatting"));
+  var widthSpec = String(config.columnWidths || "").trim();
+
+  if (widthSpec && widthSpec.toUpperCase() !== "FIT_TO_DATA") {
+    var widthParts = widthSpec.split('/');
+    var parsedWidths = widthParts.map(function(item) {
+      var token = item.trim();
+      return token === "" ? null : parseInt(token, 10);
+    });
+    if (parsedWidths.some(function(width) { return width !== null && !isNaN(width) && width > 0; })) {
+      if (widthParts.length === 1 && parsedWidths[0] > 0) {
+        for (var col = 1; col <= targetCols; col++) { sheet.setColumnWidth(col, parsedWidths[0]); }
+      } else {
+        for (var i = 0; i < targetCols && i < parsedWidths.length; i++) {
+          if (parsedWidths[i] !== null && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) {
+            sheet.setColumnWidth(i + 1, parsedWidths[i]);
+          }
+        }
+      }
+      return;
+    }
+  }
+  for (var c = 1; c <= targetCols; c++) { sheet.setColumnWidth(c, defaultColWidth); }
+}
+
+function applyOperationalFormatting_(templateSheet, systemSheetName, dashboardConfig) {
+  if (!templateSheet) return;
+  let config = dashboardConfig;
+  if (!config && typeof loadDashboardConfig_ === "function") config = loadDashboardConfig_(true);
+  if (!config) throw new Error("Operational formatting requires Format Dashboard configuration.");
+  let sysKey = systemSheetName;
+  if (typeof getStandardSheetKey_ === "function") sysKey = getStandardSheetKey_(systemSheetName);
+
+  const headers = config.sheetHeaders[systemSheetName] || config.sheetHeaders[sysKey] || [];
+  if (!headers || headers.length === 0) return;
+
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, templateSheet.getMaxRows(), headers.length + 1);
+
+  const colDefs = config.columnDefinitions || {};
+  const defaultWidth = Number(requireDashboardFormattingValue_(config.globals, "Default Column Width", "operational column formatting"));
+  const defaultWrap = requireDashboardFormattingValue_(config.globals, "Default Data Wrap", "operational wrap formatting");
+  const defaultHAlign = requireDashboardFormattingValue_(config.globals, "Default Horizontal Alignment", "operational horizontal alignment");
+  const defaultVAlign = requireDashboardFormattingValue_(config.globals, "Default Vertical Alignment", "operational vertical alignment");
+  const headerRowNumber = Number(requireDashboardFormattingValue_(config.globals, "Header Row", "operational header placement"));
+  const dataStartRow = Number(requireDashboardFormattingValue_(config.globals, "Data Start Row", "operational data placement"));
+  const maxRows = templateSheet.getMaxRows();
+
+  const governedHeaderRange = templateSheet.getRange(headerRowNumber, 1, 1, headers.length);
+  governedHeaderRange.setValues([headers]);
+
+  for (let c = 0; c < headers.length; c++) {
+    const headerName = String(headers[c] || "").trim();
+    const colDef = colDefs[headerName] || colDefs[headerName.toLowerCase()] || {};
+    const colIdx = c + 1;
+
+    templateSheet.setColumnWidth(colIdx, (colDef.width && colDef.width > 0) ? colDef.width : defaultWidth);
+
+    if (colDef.fontSize && colDef.fontSize > 0) {
+      templateSheet.getRange(headerRowNumber, colIdx).setFontSize(colDef.fontSize);
+    }
+
+    if (maxRows >= dataStartRow) {
+      const dataColRange = templateSheet.getRange(dataStartRow, colIdx, maxRows - dataStartRow + 1, 1);
+
+      if (colDef.dateColumn) {
+        const dateNumberFormat = requireDashboardFormattingValue_(
+          colDef,
+          "format",
+          "Format Dashboard Section G date column " + headerName
+        );
+        dataColRange.setNumberFormat(String(dateNumberFormat).trim());
+      } else if (colDef.format) {
+        dataColRange.setNumberFormat(String(colDef.format).trim());
+      }
+
+      const hAlign = colDef.align || defaultHAlign;
+      if (hAlign) dataColRange.setHorizontalAlignment(hAlign.toLowerCase());
+
+      const vAlign = colDef.vAlign || defaultVAlign;
+      if (vAlign) dataColRange.setVerticalAlignment(vAlign.toLowerCase());
+
+      const wrapStr = colDef.wrap || defaultWrap;
+      if (wrapStr) dataColRange.setWrapStrategy(getWrapStrategyEnum_(wrapStr));
+    }
+  }
+
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(templateSheet, templateSheet.getMaxRows(), headers.length);
+}
+
+function writeTemplateMetadata_(sheet, config, targetColumns) {
+  if (!sheet || !config) throw new Error("Template metadata requires a sheet and configuration.");
+  const column = Math.max(Math.min(Number(targetColumns) || 1, sheet.getMaxColumns()), 1);
+  const version = typeof MASTER_LIST_MERGE_ML_VERSION !== "undefined" ? MASTER_LIST_MERGE_ML_VERSION : "v2.0";
+  sheet.getRange(1, column).setNote("Template Mold: " + config.systemSheetName + "\nVersion: " + version + "\nUpdated: " + new Date().toISOString());
+}
+
+function createSystemTemplates() {
+  buildFrameworkTimingTemplate_();
+  buildDashboardQualityTemplate_();
+  buildIndexTemplate_();
+}
+
+function buildFrameworkTimingTemplate_() {
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    return buildGeneralTemplate_(getTemplateConfigFromDashboard_(SYSTEM_SHEETS.TIMING));
+  }
+}
+
+function buildDashboardQualityTemplate_() {
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    return buildGeneralTemplate_(getTemplateConfigFromDashboard_(SYSTEM_SHEETS.QUALITY));
+  }
+}
+
+function buildIndexTemplate_() {
+  let config = {};
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    config = getTemplateConfigFromDashboard_(SYSTEM_SHEETS.INDEX);
+  }
+
+  if (!config.headers || config.headers.length === 0) throw new Error("Format Dashboard Section H is missing Index headers.");
+
+  const template = buildGeneralTemplate_(config);
+  const indexLevelOne = requireDashboardFormattingValue_(config.theme, "level1", "Index column E fill");
+  template.getRange(1, 5, template.getMaxRows(), 1).setBackground(indexLevelOne);
+  template.getRange("F1").setValue("Archive Index");
+  template.getRange("F2").setValue("Archive File ID");
+  return template;
+}
+
+function createAllReportTemplates(timing) {
+  const builders = [
+    ["Base Template", createOrRefreshBaseTemplate_],
+    ["Banners", buildTemplateBannerReport],
+    ["CP Due Date", buildTemplateCarePlanDue],
+    ["Unlock CP", buildTemplateUnlockedCarePlan],
+    ["Raw Data", buildTemplateRawData],
+    ["Refined Data", buildTemplateRefinedData],
+    ["Disenrolled Exclusion", buildTemplateDisenrolledExclusion],
+    ["Master List", buildTemplateMasterList],
+    ["Monthly Change", buildTemplateMonthlyChange],
+    ["Archive - Refined Data", buildTemplateArchiveRefinedData]
+  ];
+  builders.forEach(function(entry) {
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Build Template: " + entry[0], "Starting governed template build");
+    entry[1]();
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Build Template Complete: " + entry[0], "Governed template built");
+  });
+}
+
+function buildOperationalReportTemplate_(systemSheetName) {
+  if (typeof getTemplateConfigFromDashboard_ !== "function") throw new Error("Operational template creation requires Format Dashboard configuration.");
+  const templateConfig = getTemplateConfigFromDashboard_(systemSheetName);
+  const templateSheet = buildGeneralTemplate_(templateConfig);
+  applyOperationalFormatting_(templateSheet, systemSheetName, templateConfig.dashboard);
+  applyOperationalTemplateSort_(templateSheet);
+  return templateSheet;
+}
+
+function applyOperationalTemplateSort_(sheet) {
+  if (!sheet) return;
+  const existingFilter = sheet.getFilter();
+  if (existingFilter) existingFilter.remove();
+
+  // Extend the filter to the absolute edge of the sheet to hide the vertical boundary line.
+  const columnCount = sheet.getMaxColumns();
+  const rowCount = Math.max(sheet.getMaxRows() - HEADER_ROW + 1, 2);
+
+  sheet.getRange(HEADER_ROW, 1, rowCount, columnCount).createFilter();
+}
+
+function buildTemplateArchiveRefinedData() {
+  let config = {};
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    config = getTemplateConfigFromDashboard_("Archive - Refined Data");
+  }
+  if (typeof getHeadersForSheetType_ === "function") {
+    config.headers = getHeadersForSheetType_(config.dashboard, "Refined Data");
+    config.columnCount = config.headers ? config.headers.length : 0;
+  }
+  const templateSheet = buildGeneralTemplate_(config);
+  applyOperationalFormatting_(templateSheet, "Refined Data", config.dashboard);
+  applyOperationalTemplateSort_(templateSheet);
+  return templateSheet;
+}
+
+function buildTemplateBannerReport() { return buildOperationalReportTemplate_("Banners"); }
+function buildTemplateCarePlanDue() { return buildOperationalReportTemplate_("CP Due Date"); }
+function buildTemplateUnlockedCarePlan() { return buildOperationalReportTemplate_("Unlock CP"); }
+function buildTemplateRawData() { return buildOperationalReportTemplate_("Raw Data"); }
+function buildTemplateRefinedData() { return buildOperationalReportTemplate_("Refined Data"); }
+function buildTemplateDisenrolledExclusion() { return buildOperationalReportTemplate_("Disenrolled Exclusion"); }
+function buildTemplateMasterList() { return buildOperationalReportTemplate_("Master List"); }
+function buildTemplateMonthlyChange() { return buildOperationalReportTemplate_("Monthly Change"); }
