@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 2 v2.8: DATA PROCESSING & OUTPUT ENGINE (TRACKING COLUMNS & FORMATS)
+// MODULE 2 v2.8.1: DATA PROCESSING & OUTPUT ENGINE (PROMPT DATES & RAW COLUMN PRESERVATION)
 // File: 02_Data_Processing_Engine.gs
 // ============================================================================
 
@@ -81,6 +81,10 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   }
 
   if (options.dataRows && options.dataRows.length && options.headers) {
+    if (sheet.getMaxColumns() < options.headers.length) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), options.headers.length - sheet.getMaxColumns());
+    }
+    sheet.getRange(HEADER_ROW, 1, 1, options.headers.length).setValues([options.headers]);
     if (typeof markFrameworkStep_ === "function") markFrameworkStep_(options.timing, "Factory - Write data matrix", options.dataRows.length + " row(s) x " + options.headers.length + " column(s)");
     sheet.getRange(DATA_START_ROW, 1, options.dataRows.length, options.headers.length).setValues(options.dataRows);
 
@@ -186,6 +190,30 @@ function collectMovedTitleInfoCells_(sheet, systemSheetName) {
   return parts.join(" ");
 }
 
+function appendSourceOnlyHeaders_(governedHeaders, sourceHeaders) {
+  const output = (governedHeaders || []).slice();
+  const seen = new Set(output.map(function(header) { return normalizeHeader_(header); }).filter(Boolean));
+
+  (sourceHeaders || []).forEach(function(header) {
+    const original = String(header == null ? "" : header).trim();
+    const normalized = normalizeHeader_(original);
+    if (!normalized || seen.has(normalized)) return;
+    output.push(original);
+    seen.add(normalized);
+  });
+
+  return output;
+}
+
+function stampPromptedMonthDates_(sheet, monthParts, timing, sheetName) {
+  if (!sheet || !monthParts || !monthParts.firstDay || !monthParts.lastDay) {
+    throw new Error("Prompted month dates are required for " + sheetName + ".");
+  }
+  sheet.getRange("B2").setValue(monthParts.firstDay).setNumberFormat("MM/dd/yyyy");
+  sheet.getRange("D2").setValue(monthParts.lastDay).setNumberFormat("MM/dd/yyyy");
+  markFrameworkStep_(timing, sheetName + " - Stamp prompted month dates", monthParts.monthLabel);
+}
+
 function runFormatterPipeline_(reportKeys, processName) {
   const monthParts = promptForLockedYearReportMonth_(processName);
   if (!monthParts) return null;
@@ -252,8 +280,18 @@ function processSingleSubReport_(key, monthParts, dashboard, timing, archiveStat
   const rawData = getDataValues_(sourceSheet, sourceHeaderRow, sourceHeaderRow + 1);
   if (!rawData.values.length) throw new Error("Source sheet is empty below header row " + sourceHeaderRow + ".");
 
-  const targetHeaders = getHeadersForSheetType_(dashboard, systemSheetName);
+  let targetHeaders = getHeadersForSheetType_(dashboard, systemSheetName);
   if (!targetHeaders.length) throw new Error("No Dashboard Section H headers for " + systemSheetName + ".");
+
+  if (key === "RD") {
+    const governedHeaderCount = targetHeaders.length;
+    targetHeaders = appendSourceOnlyHeaders_(targetHeaders, rawData.headers);
+    markFrameworkStep_(
+      timing,
+      "Raw Data - Preserve imported columns",
+      (targetHeaders.length - governedHeaderCount) + " source-only column(s) appended after governed Dashboard Section H columns"
+    );
+  }
 
   let filteredRows = mapRowsToHeaders_(rawData.values, rawData.headers, targetHeaders).filter(function(row) {
     return row.some(function(value) { return String(value == null ? "" : value).trim() !== ""; });
@@ -289,6 +327,10 @@ function processSingleSubReport_(key, monthParts, dashboard, timing, archiveStat
 
   const sourceSheetId = sourceSheet.getSheetId();
   const finalSheet = createGovernedSheet_(systemSheetName, monthParts, { dataRows: filteredRows, headers: targetHeaders, timing: timing });
+
+  if (key === "CD" || key === "UC") {
+    stampPromptedMonthDates_(finalSheet, monthParts, timing, systemSheetName);
+  }
 
   if ((systemSheetName === "CP Due Date" || systemSheetName === "Unlock CP") && titleInfo) {
     const titleRange = finalSheet.getRange("C1:D1");
