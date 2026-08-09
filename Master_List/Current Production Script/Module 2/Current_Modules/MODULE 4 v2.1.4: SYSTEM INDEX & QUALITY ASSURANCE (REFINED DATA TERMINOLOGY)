@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 4 v2.1.2: SYSTEM INDEX & QUALITY ASSURANCE (HEADER-MAPPED RESULTS)
+// MODULE 4 v2.1.4: SYSTEM INDEX & QUALITY ASSURANCE (REFINED DATA TERMINOLOGY)
 // File: 04_Index_Quality_Validation.gs
 // ============================================================================
 
@@ -515,6 +515,73 @@ function runDashboardQualityValidateTemplates() {
 }
 
 /**
+ * Audits Template - sheets to verify Section G date-column number formats.
+ */
+function runTemplateDateFormatValidation_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  let config;
+  try {
+    config = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null;
+    if (!config) throw new Error("loadDashboardConfig_ not found.");
+  } catch (err) {
+    ui.alert("Validation Error", "Error reading Format Dashboard: " + err.message, ui.ButtonSet.OK);
+    return null;
+  }
+
+  const dateDefinitions = new Map();
+  const columnDefinitions = config.columnDefinitions || {};
+  Object.keys(columnDefinitions).forEach(function(header) {
+    const definition = columnDefinitions[header];
+    const normalizedHeader = String(header || "").trim().toLowerCase();
+    const numberFormat = String(definition && definition.format || "").trim();
+    if (normalizedHeader && definition && definition.dateColumn === true) {
+      dateDefinitions.set(normalizedHeader, numberFormat);
+    }
+  });
+  if (!dateDefinitions.size) {
+    ui.alert("Validation Skipped", "No Date Columns are defined in Section G of the Dashboard.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const templateSheets = ss.getSheets().filter(function(sheet) {
+    return sheet.getName().indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) === 0;
+  });
+  if (!templateSheets.length) {
+    ui.alert("Validation Skipped", "No 'Template - ' sheets found to audit. Build templates first.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const headerRow = Number(config.globals && config.globals["Header Row"]) || HEADER_ROW;
+  const dataStartRow = Number(config.globals && config.globals["Data Start Row"]) || DATA_START_ROW;
+  const findings = [];
+  let checkedCount = 0;
+  templateSheets.forEach(function(sheet) {
+    const lastColumn = sheet.getLastColumn();
+    if (lastColumn < 1) return;
+    const headers = sheet.getRange(headerRow, 1, 1, lastColumn).getValues()[0];
+    headers.forEach(function(header, index) {
+      const normalizedHeader = String(header || "").trim().toLowerCase();
+      if (!normalizedHeader || !dateDefinitions.has(normalizedHeader)) return;
+      const expectedFormat = dateDefinitions.get(normalizedHeader);
+      const appliedFormat = sheet.getRange(dataStartRow, index + 1).getNumberFormat();
+      const passed = expectedFormat !== "" && appliedFormat === expectedFormat;
+      findings.push([sheet.getName() + " | " + header, passed ? "PASS" : "FAIL", passed ? "Section G date format applied: " + appliedFormat : "Expected " + (expectedFormat || "a configured Number Format") + "; found " + (appliedFormat || "General / Plain Text")]);
+      checkedCount++;
+    });
+  });
+
+  writeDashboardQualitySection_("SECTION B - TEMPLATE VALIDATION", ["Template / Sheet Name", "Status", "Quality Notes"], findings);
+  const failures = findings.filter(function(row) { return row[1] === "FAIL"; });
+  if (!failures.length) {
+    ui.alert("Validation Passed: Date Formats", "Checked " + checkedCount + " date columns across all templates. Every template applied the configured Section G date format.", ui.ButtonSet.OK);
+  } else {
+    ui.alert("Validation Failed: Date Formats", failures.length + " date column(s) are missing or incorrectly formatted. Review Section B of Dashboard Quality Report.", ui.ButtonSet.OK);
+  }
+  return findings;
+}
+
+/**
  * Menu Callback: Complete Quality Diagnostic Workflow
  * Executes full deep-dive audits for Sections A through H.
  */
@@ -534,9 +601,9 @@ function runDashboardQualityWorkflow() {
       runDashboardQualityRawDataValidation_();
     }
 
-    // 4. Run Section D - Deep Refined Data (Demo P) Quality Audit
-    if (typeof runDashboardQualityDemoPValidation_ === "function") {
-      runDashboardQualityDemoPValidation_();
+    // 4. Run Section D - Deep Refined Data Quality Audit
+    if (typeof runDashboardQualityRefinedDataValidation_ === "function") {
+      runDashboardQualityRefinedDataValidation_();
     }
 
     // 5. Run Section E - Deep Disenrolled Exclusion Audit
