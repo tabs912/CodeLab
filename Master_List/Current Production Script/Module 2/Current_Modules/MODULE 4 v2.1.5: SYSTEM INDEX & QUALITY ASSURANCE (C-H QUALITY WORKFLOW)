@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 4 v2.1.2: SYSTEM INDEX & QUALITY ASSURANCE (HEADER-MAPPED RESULTS)
+// MODULE 4 v2.1.5: SYSTEM INDEX & QUALITY ASSURANCE (C-H QUALITY WORKFLOW)
 // File: 04_Index_Quality_Validation.gs
 // ============================================================================
 
@@ -294,12 +294,17 @@ function restoreSheetFromArchiveWorkbook(targetSheetName) {
   const archiveSheet = archiveSpreadsheet.getSheetByName(name);
   if (!archiveSheet) throw new Error('Sheet "' + name + '" was not found in the archive workbook.');
 
-  const restoredSheet = archiveSheet.copyTo(mainSpreadsheet);
-  restoredSheet.setName(name);
-
-  if (typeof positionSheetBySectionFRank_ === "function") {
-    positionSheetBySectionFRank_(restoredSheet, null, mainSpreadsheet);
+  if (typeof createGovernedSheet_ !== "function" || typeof getGovernedSheetTypeForName_ !== "function") {
+    throw new Error("Archive restoration requires the governed output factory.");
   }
+  const dashboard = loadDashboardConfig_(true);
+  const sheetType = getGovernedSheetTypeForName_(name, dashboard);
+  const restoredSheet = createGovernedSheet_(sheetType, null, {
+    customName: name,
+    sourceSheet: archiveSheet,
+    overwrite: false,
+    isSystemSetup: true
+  });
 
   restoredSheet.showSheet();
 
@@ -509,57 +514,94 @@ function runDashboardQualityValidateTemplates() {
     });
 
     writeDashboardQualitySection_("SECTION B - TEMPLATE VALIDATION", ["Template / Sheet Name", "Status", "Quality Notes"], rows);
-    markFrameworkStep_(timing, "Templates validated", rows.length + " templates");
-    return rows;
+    const dateFormatRows = runTemplateDateFormatValidation_({ suppressAlerts: true });
+    markFrameworkStep_(timing, "Templates and date formats validated", rows.length + " templates; " + dateFormatRows.length + " governed date column(s)");
+    return rows.concat(dateFormatRows);
   });
 }
 
 /**
+ * Audits Template - sheets to verify Section G date-column number formats.
+ */
+function runTemplateDateFormatValidation_(options) {
+  options = options || {};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  let config;
+  try {
+    config = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null;
+    if (!config) throw new Error("loadDashboardConfig_ not found.");
+  } catch (err) {
+    if (!options.suppressAlerts) ui.alert("Validation Error", "Error reading Format Dashboard: " + err.message, ui.ButtonSet.OK);
+    return [];
+  }
+
+  const dateDefinitions = new Map();
+  const columnDefinitions = config.columnDefinitions || {};
+  Object.keys(columnDefinitions).forEach(function(header) {
+    const definition = columnDefinitions[header];
+    const normalizedHeader = String(header || "").trim().toLowerCase();
+    const numberFormat = String(definition && definition.format || "").trim();
+    if (normalizedHeader && definition && definition.dateColumn === true) {
+      dateDefinitions.set(normalizedHeader, numberFormat);
+    }
+  });
+  if (!dateDefinitions.size) {
+    if (!options.suppressAlerts) ui.alert("Validation Skipped", "No Date Columns are defined in Section G of the Dashboard.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const templateSheets = ss.getSheets().filter(function(sheet) {
+    return sheet.getName().indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) === 0;
+  });
+  if (!templateSheets.length) {
+    if (!options.suppressAlerts) ui.alert("Validation Skipped", "No 'Template - ' sheets found to audit. Build templates first.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const headerRow = Number(config.globals && config.globals["Header Row"]) || HEADER_ROW;
+  const dataStartRow = Number(config.globals && config.globals["Data Start Row"]) || DATA_START_ROW;
+  const findings = [];
+  let checkedCount = 0;
+  templateSheets.forEach(function(sheet) {
+    const lastColumn = sheet.getLastColumn();
+    if (lastColumn < 1) return;
+    const headers = sheet.getRange(headerRow, 1, 1, lastColumn).getValues()[0];
+    headers.forEach(function(header, index) {
+      const normalizedHeader = String(header || "").trim().toLowerCase();
+      if (!normalizedHeader || !dateDefinitions.has(normalizedHeader)) return;
+      const expectedFormat = dateDefinitions.get(normalizedHeader);
+      const appliedFormat = sheet.getRange(dataStartRow, index + 1).getNumberFormat();
+      const passed = expectedFormat !== "" && appliedFormat === expectedFormat;
+      findings.push([sheet.getName() + " | " + header, passed ? "PASS" : "FAIL", passed ? "Section G date format applied: " + appliedFormat : "Expected " + (expectedFormat || "a configured Number Format") + "; found " + (appliedFormat || "General / Plain Text")]);
+      checkedCount++;
+    });
+  });
+
+  writeDashboardQualitySection_("SECTION B - TEMPLATE VALIDATION", ["Template / Sheet Name", "Status", "Quality Notes"], findings);
+  const failures = findings.filter(function(row) { return row[1] === "FAIL"; });
+  if (!options.suppressAlerts) {
+    if (!failures.length) {
+      ui.alert("Validation Passed: Date Formats", "Checked " + checkedCount + " date columns across all templates. Every template applied the configured Section G date format.", ui.ButtonSet.OK);
+    } else {
+      ui.alert("Validation Failed: Date Formats", failures.length + " date column(s) are missing or incorrectly formatted. Review Section B of Dashboard Quality Report.", ui.ButtonSet.OK);
+    }
+  }
+  return findings;
+}
+
+/**
  * Menu Callback: Complete Quality Diagnostic Workflow
- * Executes full deep-dive audits for Sections A through H.
+ * Executes governed process audits for Sections C through H only.
  */
 function runDashboardQualityWorkflow() {
-  return runFrameworkTimed_("Dashboard Quality Workflow", function(timing) {
+  return runFrameworkTimed_("Dashboard Quality Workflow Sections C-H", function(timing) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    ss.toast("Running Full Quality Diagnostics (Sections A - H)...", "QA Engine", 5);
-
-    // 1. Run Section A - Format Dashboard Configuration Audit
-    const configResults = runDashboardQualityStartUp();
-
-    // 2. Run Section B - Template Fuzzy Validation Audit
-    const templateResults = runDashboardQualityValidateTemplates();
-
-    // 3. Run Section C - Deep Raw Data & Banner Sync Audit
-    if (typeof runDashboardQualityRawDataValidation_ === "function") {
-      runDashboardQualityRawDataValidation_();
-    }
-
-    // 4. Run Section D - Deep Refined Data (Demo P) Quality Audit
-    if (typeof runDashboardQualityDemoPValidation_ === "function") {
-      runDashboardQualityDemoPValidation_();
-    }
-
-    // 5. Run Section E - Deep Disenrolled Exclusion Audit
-    if (typeof runDashboardQualityDisenrolledExclusionValidation_ === "function") {
-      runDashboardQualityDisenrolledExclusionValidation_();
-    }
-
-    // 6. Run Section F - Deep Monthly Change Delta Audit
-    if (typeof runDashboardQualityMonthlyChangeValidation_ === "function") {
-      runDashboardQualityMonthlyChangeValidation_();
-    }
-
-    // 7. Run Section G - Deep Master List & Care Plan Sync Audit
-    if (typeof runDashboardQualityMasterListValidation_ === "function") {
-      runDashboardQualityMasterListValidation_();
-    }
-
-    // 8. Run Section H - Health Summary & Official Signoff
-    if (typeof runDashboardQualitySummaryAndSignoff_ === "function") {
-      runDashboardQualitySummaryAndSignoff_();
-    }
-
-    ss.toast("Quality Diagnostics Complete! Check the Dashboard Quality Report.", "QA Engine", 5);
+    ss.toast("Running Quality Diagnostics (Sections C - H)...", "QA Engine", 5);
+    const results = runDashboardQualityProcessValidationSections_();
+    markFrameworkStep_(timing, "Dashboard Quality Sections C-H complete", results.length + " validation result(s)");
+    ss.toast("Quality Diagnostics Complete! Check Sections C - H.", "QA Engine", 5);
+    return results;
   });
 }
 
@@ -568,7 +610,7 @@ function runDashboardQualityProcessValidationSections_() {
   const dashboard = loadDashboardConfig_();
   const validations = [
     ["SECTION C - RAW DATA VALIDATION", "Raw Data"],
-    ["SECTION D - DEMO P QUALITY VALIDATION", "Refined Data"],
+    ["SECTION D - REFINED DATA QUALITY VALIDATION", "Refined Data"],
     ["SECTION E - DISENROLLED EXCLUSION VALIDATION", "Disenrolled Exclusion"],
     ["SECTION F - MONTHLY CHANGE VALIDATION", "Monthly Change"],
     ["SECTION G - MASTER LIST VALIDATION", "Master List"]

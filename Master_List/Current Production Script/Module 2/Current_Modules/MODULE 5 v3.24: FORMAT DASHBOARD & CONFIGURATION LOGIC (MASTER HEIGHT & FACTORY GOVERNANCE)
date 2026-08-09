@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 5 v3.16: FORMAT DASHBOARD & CONFIGURATION LOGIC (DASHBOARD ONLY TEMPLATE FORMATTING)
+// MODULE 5 v3.24: FORMAT DASHBOARD & CONFIGURATION LOGIC (MASTER HEIGHT & FACTORY GOVERNANCE)
 // File: 05_Format_Dashboard_Config.gs
 // ============================================================================
 
@@ -10,14 +10,14 @@
 var MASTER_FORMAT_DEFAULTS = {
   sectionA_Globals: [
     ["Setting", "Value", "Base Template", "Options / Format Description"],
-    ["Header Row", "4", "TRUE", "Numeric row number (e.g., 4)"],
-    ["Data Start Row", "5", "TRUE", "Numeric row number (e.g., 5)"],
+    ["Header Row", "4", "FALSE", "Numeric row number (e.g., 4)"],
+    ["Data Start Row", "5", "FALSE", "Numeric row number (e.g., 5)"],
     ["Freeze Rows", "4", "TRUE", "Numeric count of frozen rows"],
     ["Freeze Columns", "2", "TRUE", "Numeric count of frozen columns"],
     ["Row 1 (Title)Height", "25", "TRUE", "Numeric pixel height"],
     ["Row 2 Height", "25", "TRUE", "Numeric pixel height"],
     ["Row 3 Height", "10", "TRUE", "Numeric pixel height"],
-    ["Row 4 (Header) Height", "40", "TRUE", "Numeric pixel height"],
+    ["Row 4 (Header) Height", "40", "FALSE", "Numeric pixel height"],
     ["A1 (Title) Font Size", "14", "TRUE", "Numeric point size"],
     ["A1 (Title) Font Style", "Bold", "TRUE", "Bold, Italic, or Normal"],
     ["C1 (Title) Font Size", "5", "TRUE", "Numeric point size"],
@@ -28,11 +28,11 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Standard Font Size", "10", "TRUE", "Numeric point size"],
     ["Standard Font Color", "#000000", "TRUE", "Hex color (e.g., #000000)"],
     ["Standard Font Weight", "Normal", "TRUE", "Normal or Bold"],
-    ["Default Background Color", "#FFFFFF", "TRUE", "Hex color (e.g., #FFFFFF)"],
+    ["Default Background Color", "#FFFFFF", "FALSE", "Hex color (e.g., #FFFFFF)"],
     ["Default Data Row Height", "25", "TRUE", "Numeric pixel height"],
     ["Default Column Width", "105", "TRUE", "Numeric pixel width"],
-    ["Default Date Format", "mm/dd/yyyy", "TRUE", "Google Sheets number format (e.g., m/d/yy)"],
-    ["Default Number Format", "General", "TRUE", "Google Sheets number format or General"],
+    ["Default Date Format", "mm/dd/yyyy", "FALSE", "Google Sheets number format (e.g., m/d/yy)"],
+    ["Default Number Format", "General", "FALSE", "Google Sheets number format or General"],
     ["Default Text Format", "@", "TRUE", "Google Sheets number format (e.g., @)"],
     ["Default Data Wrap", "Clip", "TRUE", "CLIP, WRAP, or OVERFLOW"],
     ["Default Horizontal Alignment", "left", "TRUE", "left, center, or right"],
@@ -43,9 +43,9 @@ var MASTER_FORMAT_DEFAULTS = {
     ["HSL Level 4 Lightness %", "90", "FALSE", "Numeric percent for alternating color 1"],
     ["HSL Level 5 Lightness %", "97", "FALSE", "Numeric percent for alternating color 2"],
     ["Global Border Color", "#CCCCCC", "TRUE", "Hex color (e.g., #CCCCCC)"],
-    ["Global Border Style", "SOLID", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
+    ["Global Border Style", "DOTTED", "TRUE", "SOLID, SOLID_MEDIUM, SOLID_THICK, DASHED, DOTTED, or DOUBLE"],
     ["Global Borders Enabled", "TRUE", "TRUE", "TRUE or FALSE"],
-    ["Template Version", "3.16", "FALSE", "Master release version"]
+    ["Template Version", "3.24", "FALSE", "Master release version"]
   ],
   sectionB_Creation: [
     ["System Sheet Name", "Output Naming Pattern", "Template Tab Rank", "Active Tab Rank", "Group", "Visibility", "Collision Policy", "Data Row Trimming", "Index Reg.", "Notes"],
@@ -82,19 +82,19 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionC_Structural: [
     ["System Sheet Name", "Report Title", "Title Date Format", "Base Color", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5", "Title Font Color", "Column Count", "Default Column Widths", "Row Mode", "Minimum Rows", "Buffer Rows", "Uses Alternating Colors", "Uses Subheaders", "Notes"],
-    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#F4FBF7", "#FBFEFC", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#F4FBFB", "#FBFEFE", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#FBF4F8", "#FEFBFD", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#F5F4FB", "#FCFBFE", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#F8F4FB", "#FDFBFE", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#F4F5FB", "#FBFCFE", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
-    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "7", "250, 250, 500, 350, 250, 250, 500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
-    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "4", "250, 250, 350, 300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "19", "220, 150, 215, 165, 130, 120, 120, 120, 140, 120, 120, 306, 144, 100, 100, 110, 100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
-    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#F4F9FB", "#FBFDFE", "#000000", "10", "160, 185, 160, 160, 30, 160, 185, 160, 160, 160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
+    ["Banners", "Banner Report", "Date: / / to /", "#65A9CC", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "9", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["CP Due Date", "Care Plan Due Date Report", "Date: / / to /", "#65CC99", "#66CC99", "#9FDFBF", "#C6ECD9", "#D9F2E6", "#F4FBF7", "#000000", "5", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Unlock CP", "Unlocked Care Plan Report", "Date: / / to /", "#65CCC3", "#66CCC3", "#9FDFDA", "#C6ECE9", "#D9F2F0", "#F4FBFB", "#000000", "4", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Raw Data", "Raw Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "54", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Refined Data", "Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Disenrolled Exclusion", "Disenrolled Exclusion", "Date: / / to /", "#CC65A1", "#CC66A1", "#DF9FC5", "#ECC6DC", "#F2D9E8", "#FBF4F8", "#000000", "66", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Master List", "Master List", "Date: / / to /", "#7665CC", "#7766CC", "#AA9FDF", "#CCC6EC", "#DDD9F2", "#F5F4FB", "#000000", "37", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Monthly Change", "Monthly Change Report", "Date: / / to /", "#A165CC", "#A166CC", "#C59FDF", "#DCC6EC", "#E8D9F2", "#F8F4FB", "#000000", "55", "", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Archive - Refined Data", "Archive - Refined Data", "Date: / / to /", "#657FCC", "#6680CC", "#9FAFDF", "#C6CFEC", "#D9DFF2", "#F4F5FB", "#000000", "80", "", "AUTO_EXPAND", "", "", "TRUE", "FALSE"],
+    ["Framework Timing Report", "Framework Timing Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "7", "250/250/500/350/250/250/500", "AUTO_EXPAND", "750", "150", "TRUE", "TRUE"],
+    ["Dashboard Quality Report", "Dashboard Quality Report", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "4", "250/250/350/300", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Format Dashboard", "Format Dashboard", "Date Created/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "19", "220/150/215/165/130/120/120/120/140/120/120/306/144/100/100/110/100", "AUTO_EXPAND", "", "", "TRUE", "TRUE"],
+    ["Index", "Index", "Last Update/", "#79B5D2", "#66AACC", "#9FCADF", "#C6DFEC", "#D9EAF2", "#F4F9FB", "#000000", "10", "160/185/160/160/30/160/185/160/160/160", "AUTO_EXPAND", "", "", "TRUE", "FALSE"]
   ],
   sectionD_OutputGov: [
     ["System Sheet Name", "Output Naming Pattern", "Group", "End Date Source", "Remove / Archive", "Row Height Enforcement"],
@@ -108,7 +108,7 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Source - Unlock CP", "Source - Unlock CP mm.yy", "Dynamic Ranking", "Pulled From Spreadsheet", "ARCHIVE", "FALSE"],
     ["Refined Data", "Refined Data", "", "", "", "TRUE"],
     ["Disenrolled Exclusion", "Disenrolled", "", "", "", "TRUE"],
-    ["Master List", "Master List", "Dynamic Ranking", "Last Day of Prompt Month", "", "FALSE"],
+    ["Master List", "Master List", "Dynamic Ranking", "Last Day of Prompt Month", "", "TRUE"],
     ["Monthly Change", "Monthly Change", "Dynamic Ranking", "Last Day of Prompt Month", "", "FALSE"],
     ["Archive - Refined Data", "", "", "", "", "TRUE"],
     ["Framework Timing Report", "", "", "", "", "FALSE"],
@@ -118,19 +118,19 @@ var MASTER_FORMAT_DEFAULTS = {
   ],
   sectionE_TitleRows: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
-    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14", "Bold", "Left", "Overflow", "Default title row"],
-    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10", "Normal", "Left", "Overflow", "Date labels and formatting"],
+    ["GLOBAL", "1", "Report Title", "25", "Level 3", "14/ /5/ / /14", "Bold/ /Normal/ / /Bold/", "Left/ /Left", "Overflow/ /Wrap/ / /Overflow", "A and C title cells; blank slash positions make no change"],
+    ["GLOBAL", "2", "Title Date Row", "20", "Level 3", "10/ /10", "Normal/ /Normal", "Left/ /Left", "Overflow/ /Overflow/ / /Overflow", "A and C date-label cells; blank slash positions make no change"],
     ["GLOBAL", "3", "Spacer", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row"],
-    ["GLOBAL", "4", "Header Row", "40", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
+    ["GLOBAL", "4", "Header Row", "30", "Level 2", "10", "Bold", "Left", "Wrap", "Governed header row"]
   ],
   sectionF_Subheaders: [
     ["Sheet Type", "Row", "Purpose", "Height", "Fill Level", "Font Size", "Font Weight", "Alignment", "Wrap", "Notes"],
     ["GLOBAL", "1", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer above section title"],
-    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14", "Bold", "Left", "Overflow", "Section title banner"],
+    ["GLOBAL", "2", "Section Header Title", "25", "Level 3", "14/ /10", "Bold/ /Italic", "Left/ /Left", "Overflow/ /Overflow", "A section title and C last-updated label"],
     ["GLOBAL", "3", "Visual Spacer Row", "10", "Level 1", "10", "Normal", "Left", "Clip", "Spacer row below section title"],
     ["GLOBAL", "4", "Governed Header Row", "25", "Level 2", "8", "Bold", "Left", "Wrap", "Governed column headers"],
     ["GLOBAL", "5", "Intentional Blank Buffer", "25", "None", "10", "Normal", "Left", "Clip", "Blank buffer right below headers"],
-    ["GLOBAL", "6", "Data Anchor", "25", "Level 4", "10", "Normal", "Left", "Clip", "First data entry point"]
+    ["GLOBAL", "6", "Data Anchor", "25", "None", "10", "Normal", "Left", "Clip", "First data entry point"]
   ],
   sectionG_Columns: [
     ["Header", "Width", "Header Font Size", "Date Column", "Hide Column", "Data Wrap", "Horizontal Alignment", "Vertical Alignment", "Number Format"],
@@ -182,9 +182,9 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Custom Field 1 - Value", "140", "", "", "TRUE", "CLIP"],
     ["Date of Birth", "90", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
     ["Date of Death", "80", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
-    ["Demo P Source Sheet", "140", "", "", "", "CLIP"],
-    ["Demo P Update Month", "140", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
-    ["Demo P Update Status", "140", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
+    ["Refined Data Source Sheet", "140", "", "", "", "CLIP"],
+    ["Refined Data Update Month", "140", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
+    ["Refined Data Update Status", "140", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
     ["Disenrollment Date", "115", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
     ["Disenrollment Effective Date", "115", "", "TRUE", "", "CLIP", "", "", "mm/dd/yyyy"],
     ["Disenrollment Reason", "115", "", "", "", "CLIP"],
@@ -315,6 +315,7 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Raw Data", "51", "DPOA or Guardian Active", "Banners"],
     ["Raw Data", "52", "Palliative Care", "Banners"],
     ["Raw Data", "53", "Primary PMR Row", "Raw Data Process"],
+    ["Raw Data", "54", "Banner Summary", "Banners / Raw Data process"],
     ["Refined Data", "1", "Last Name", "Raw Data"],
     ["Refined Data", "2", "First Name", "Raw Data"],
     ["Refined Data", "3", "Preferred Name", "Raw Data"],
@@ -367,137 +368,137 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Refined Data", "50", "Fall Risk", "Raw Data"],
     ["Refined Data", "51", "DPOA or Guardian Active", "Raw Data"],
     ["Refined Data", "52", "Palliative Care", "Raw Data"],
-    ["Refined Data", "53", "Primary PMR Row", "Demo P process"],
-    ["Refined Data", "54", "Banner Summary", "Demo P process"],
-    ["Refined Data", "55", "Phone 1 - Label", "Demo P process"],
-    ["Refined Data", "56", "Phone 1 - Value", "Demo P process"],
-    ["Refined Data", "57", "Phone 2 - Label", "Demo P process"],
-    ["Refined Data", "58", "Phone 2 - Value", "Demo P process"],
-    ["Refined Data", "59", "Phone 3 - Label", "Demo P process"],
-    ["Refined Data", "60", "Phone 3 - Value", "Demo P process"],
-    ["Refined Data", "61", "Phone 4 - Label", "Demo P process"],
-    ["Refined Data", "62", "Phone 4 - Value", "Demo P process"],
-    ["Refined Data", "63", "Address 1 - Street", "Demo P process"],
-    ["Refined Data", "64", "Custom Field 1 - Label", "Demo P process"],
-    ["Refined Data", "65", "Custom Field 1 - Value", "Demo P process"],
-    ["Refined Data", "66", "Notes", "Demo P process"],
-    ["Refined Data", "67", "Contact - 1", "Demo P process"],
-    ["Refined Data", "68", "Contact - 2", "Demo P process"],
-    ["Refined Data", "69", "Contact - 3", "Demo P process"],
-    ["Refined Data", "70", "Contact - 4", "Demo P process"],
-    ["Refined Data", "71", "Contact - 5", "Demo P process"],
-    ["Refined Data", "72", "Contact - 6", "Demo P process"],
-    ["Refined Data", "73", "Contact - 7", "Demo P process"],
-    ["Refined Data", "74", "Contact - 8", "Demo P process"],
-    ["Refined Data", "75", "Contact - Summary", "Demo P process"],
-    ["Refined Data", "76", "Participant Name", "Demo P process"],
-    ["Refined Data", "77", "Name", "Demo P process"],
-    ["Refined Data", "78", "Demo P Update Status", "Demo P process"],
-    ["Refined Data", "79", "Demo P Update Month", "Demo P process"],
-    ["Refined Data", "80", "Demo P Source Sheet", "Demo P process"],
-    ["Disenrolled Exclusion", "1", "Participant Name", "Demo P"],
-    ["Disenrolled Exclusion", "2", "Name", "Demo P"],
-    ["Disenrolled Exclusion", "3", "Preferred Name", "Demo P"],
-    ["Disenrolled Exclusion", "4", "Date of Birth", "Demo P"],
-    ["Disenrolled Exclusion", "5", "Address 1 - Street", "Demo P"],
-    ["Disenrolled Exclusion", "6", "City", "Demo P"],
-    ["Disenrolled Exclusion", "7", "State", "Demo P"],
-    ["Disenrolled Exclusion", "8", "Zip", "Demo P"],
-    ["Disenrolled Exclusion", "9", "Phone 1 - Value", "Demo P"],
-    ["Disenrolled Exclusion", "10", "Phone 2 - Value", "Demo P"],
-    ["Disenrolled Exclusion", "11", "Participant PMR#", "Demo P"],
-    ["Disenrolled Exclusion", "12", "Primary Language", "Demo P"],
-    ["Disenrolled Exclusion", "13", "Residence Type", "Demo P"],
-    ["Disenrolled Exclusion", "14", "Notes", "Demo P"],
-    ["Disenrolled Exclusion", "15", "IDT Meeting Date", "Demo P"],
-    ["Disenrolled Exclusion", "16", "Care Plan Start Date", "Demo P"],
-    ["Disenrolled Exclusion", "17", "Enrollment Date", "Demo P"],
-    ["Disenrolled Exclusion", "18", "Last Care Plan", "Demo P"],
-    ["Disenrolled Exclusion", "19", "Next Care Plan Due", "Demo P"],
-    ["Disenrolled Exclusion", "20", "CP Type", "Demo P"],
-    ["Disenrolled Exclusion", "21", "Oxygen", "Demo P"],
-    ["Disenrolled Exclusion", "22", "Caseload - Social Work", "Demo P"],
-    ["Disenrolled Exclusion", "23", "Caseload - RN", "Demo P"],
-    ["Disenrolled Exclusion", "24", "Caseload - PCP", "Demo P"],
-    ["Disenrolled Exclusion", "25", "Caseload - HCC", "Demo P"],
-    ["Disenrolled Exclusion", "26", "Caseload - Activities", "Demo P"],
-    ["Disenrolled Exclusion", "27", "Caseload - OT", "Demo P"],
-    ["Disenrolled Exclusion", "28", "Caseload - PT", "Demo P"],
-    ["Disenrolled Exclusion", "29", "Caseload - RD", "Demo P"],
-    ["Disenrolled Exclusion", "30", "Caseload - Supervising MD", "Demo P"],
-    ["Disenrolled Exclusion", "31", "Capitation Date", "Demo P"],
-    ["Disenrolled Exclusion", "32", "Enrollment Status", "Demo P"],
-    ["Disenrolled Exclusion", "33", "Disenrollment Date", "Demo P"],
-    ["Disenrolled Exclusion", "34", "Disenrollment Effective Date", "Demo P"],
-    ["Disenrolled Exclusion", "35", "Disenrollment Reason", "Demo P"],
-    ["Disenrolled Exclusion", "36", "Date of Death", "Demo P"],
-    ["Disenrolled Exclusion", "37", "Contact - Last Name", "Demo P"],
-    ["Disenrolled Exclusion", "38", "Contact - First Name", "Demo P"],
-    ["Disenrolled Exclusion", "39", "Type of Contact", "Demo P"],
-    ["Disenrolled Exclusion", "40", "Contact - Primary Language", "Demo P"],
-    ["Disenrolled Exclusion", "41", "Relationship", "Demo P"],
-    ["Disenrolled Exclusion", "42", "AD1 - Phone", "Demo P"],
-    ["Disenrolled Exclusion", "43", "AD1 - Phone Valid Dates From", "Demo P"],
-    ["Disenrolled Exclusion", "44", "AD1 - Phone Valid Dates To", "Demo P"],
-    ["Disenrolled Exclusion", "45", "AD2 - Phone", "Demo P"],
-    ["Disenrolled Exclusion", "46", "AD2 - Phone Valid Dates From", "Demo P"],
-    ["Disenrolled Exclusion", "47", "AD2 - Phone Valid Dates To", "Demo P"],
-    ["Disenrolled Exclusion", "48", "AD3 - Phone", "Demo P"],
-    ["Disenrolled Exclusion", "49", "AD3 - Phone Valid Dates From", "Demo P"],
-    ["Disenrolled Exclusion", "50", "AD3 - Phone Valid Dates To", "Demo P"],
-    ["Disenrolled Exclusion", "51", "Company", "Demo P"],
-    ["Disenrolled Exclusion", "52", "Contact - Notes", "Demo P"],
-    ["Disenrolled Exclusion", "53", "Safety - 2 Person", "Demo P"],
-    ["Disenrolled Exclusion", "54", "Wanderer", "Demo P"],
-    ["Disenrolled Exclusion", "55", "Interpreter Needed", "Demo P"],
-    ["Disenrolled Exclusion", "56", "Fall Risk", "Demo P"],
-    ["Disenrolled Exclusion", "57", "DPOA or Guardian Active", "Demo P"],
-    ["Disenrolled Exclusion", "58", "Palliative Care", "Demo P"],
-    ["Disenrolled Exclusion", "59", "Last Name", "Demo P"],
-    ["Disenrolled Exclusion", "60", "First Name", "Demo P"],
-    ["Disenrolled Exclusion", "61", "Phone Number", "Demo P"],
-    ["Disenrolled Exclusion", "62", "Address Line 1", "Demo P"],
-    ["Disenrolled Exclusion", "63", "Address Line 2", "Demo P"],
-    ["Disenrolled Exclusion", "64", "Additional Important Information", "Demo P"],
+    ["Refined Data", "53", "Primary PMR Row", "Refined Data process"],
+    ["Refined Data", "54", "Banner Summary", "Refined Data process"],
+    ["Refined Data", "55", "Phone 1 - Label", "Refined Data process"],
+    ["Refined Data", "56", "Phone 1 - Value", "Refined Data process"],
+    ["Refined Data", "57", "Phone 2 - Label", "Refined Data process"],
+    ["Refined Data", "58", "Phone 2 - Value", "Refined Data process"],
+    ["Refined Data", "59", "Phone 3 - Label", "Refined Data process"],
+    ["Refined Data", "60", "Phone 3 - Value", "Refined Data process"],
+    ["Refined Data", "61", "Phone 4 - Label", "Refined Data process"],
+    ["Refined Data", "62", "Phone 4 - Value", "Refined Data process"],
+    ["Refined Data", "63", "Address 1 - Street", "Refined Data process"],
+    ["Refined Data", "64", "Custom Field 1 - Label", "Refined Data process"],
+    ["Refined Data", "65", "Custom Field 1 - Value", "Refined Data process"],
+    ["Refined Data", "66", "Notes", "Refined Data process"],
+    ["Refined Data", "67", "Contact - 1", "Refined Data process"],
+    ["Refined Data", "68", "Contact - 2", "Refined Data process"],
+    ["Refined Data", "69", "Contact - 3", "Refined Data process"],
+    ["Refined Data", "70", "Contact - 4", "Refined Data process"],
+    ["Refined Data", "71", "Contact - 5", "Refined Data process"],
+    ["Refined Data", "72", "Contact - 6", "Refined Data process"],
+    ["Refined Data", "73", "Contact - 7", "Refined Data process"],
+    ["Refined Data", "74", "Contact - 8", "Refined Data process"],
+    ["Refined Data", "75", "Contact - Summary", "Refined Data process"],
+    ["Refined Data", "76", "Participant Name", "Refined Data process"],
+    ["Refined Data", "77", "Name", "Refined Data process"],
+    ["Refined Data", "78", "Refined Data Update Status", "Refined Data process"],
+    ["Refined Data", "79", "Refined Data Update Month", "Refined Data process"],
+    ["Refined Data", "80", "Refined Data Source Sheet", "Refined Data process"],
+    ["Disenrolled Exclusion", "1", "Participant Name", "Refined Data"],
+    ["Disenrolled Exclusion", "2", "Name", "Refined Data"],
+    ["Disenrolled Exclusion", "3", "Preferred Name", "Refined Data"],
+    ["Disenrolled Exclusion", "4", "Date of Birth", "Refined Data"],
+    ["Disenrolled Exclusion", "5", "Address 1 - Street", "Refined Data"],
+    ["Disenrolled Exclusion", "6", "City", "Refined Data"],
+    ["Disenrolled Exclusion", "7", "State", "Refined Data"],
+    ["Disenrolled Exclusion", "8", "Zip", "Refined Data"],
+    ["Disenrolled Exclusion", "9", "Phone 1 - Value", "Refined Data"],
+    ["Disenrolled Exclusion", "10", "Phone 2 - Value", "Refined Data"],
+    ["Disenrolled Exclusion", "11", "Participant PMR#", "Refined Data"],
+    ["Disenrolled Exclusion", "12", "Primary Language", "Refined Data"],
+    ["Disenrolled Exclusion", "13", "Residence Type", "Refined Data"],
+    ["Disenrolled Exclusion", "14", "Notes", "Refined Data"],
+    ["Disenrolled Exclusion", "15", "IDT Meeting Date", "Refined Data"],
+    ["Disenrolled Exclusion", "16", "Care Plan Start Date", "Refined Data"],
+    ["Disenrolled Exclusion", "17", "Enrollment Date", "Refined Data"],
+    ["Disenrolled Exclusion", "18", "Last Care Plan", "Refined Data"],
+    ["Disenrolled Exclusion", "19", "Next Care Plan Due", "Refined Data"],
+    ["Disenrolled Exclusion", "20", "CP Type", "Refined Data"],
+    ["Disenrolled Exclusion", "21", "Oxygen", "Refined Data"],
+    ["Disenrolled Exclusion", "22", "Caseload - Social Work", "Refined Data"],
+    ["Disenrolled Exclusion", "23", "Caseload - RN", "Refined Data"],
+    ["Disenrolled Exclusion", "24", "Caseload - PCP", "Refined Data"],
+    ["Disenrolled Exclusion", "25", "Caseload - HCC", "Refined Data"],
+    ["Disenrolled Exclusion", "26", "Caseload - Activities", "Refined Data"],
+    ["Disenrolled Exclusion", "27", "Caseload - OT", "Refined Data"],
+    ["Disenrolled Exclusion", "28", "Caseload - PT", "Refined Data"],
+    ["Disenrolled Exclusion", "29", "Caseload - RD", "Refined Data"],
+    ["Disenrolled Exclusion", "30", "Caseload - Supervising MD", "Refined Data"],
+    ["Disenrolled Exclusion", "31", "Capitation Date", "Refined Data"],
+    ["Disenrolled Exclusion", "32", "Enrollment Status", "Refined Data"],
+    ["Disenrolled Exclusion", "33", "Disenrollment Date", "Refined Data"],
+    ["Disenrolled Exclusion", "34", "Disenrollment Effective Date", "Refined Data"],
+    ["Disenrolled Exclusion", "35", "Disenrollment Reason", "Refined Data"],
+    ["Disenrolled Exclusion", "36", "Date of Death", "Refined Data"],
+    ["Disenrolled Exclusion", "37", "Contact - Last Name", "Refined Data"],
+    ["Disenrolled Exclusion", "38", "Contact - First Name", "Refined Data"],
+    ["Disenrolled Exclusion", "39", "Type of Contact", "Refined Data"],
+    ["Disenrolled Exclusion", "40", "Contact - Primary Language", "Refined Data"],
+    ["Disenrolled Exclusion", "41", "Relationship", "Refined Data"],
+    ["Disenrolled Exclusion", "42", "AD1 - Phone", "Refined Data"],
+    ["Disenrolled Exclusion", "43", "AD1 - Phone Valid Dates From", "Refined Data"],
+    ["Disenrolled Exclusion", "44", "AD1 - Phone Valid Dates To", "Refined Data"],
+    ["Disenrolled Exclusion", "45", "AD2 - Phone", "Refined Data"],
+    ["Disenrolled Exclusion", "46", "AD2 - Phone Valid Dates From", "Refined Data"],
+    ["Disenrolled Exclusion", "47", "AD2 - Phone Valid Dates To", "Refined Data"],
+    ["Disenrolled Exclusion", "48", "AD3 - Phone", "Refined Data"],
+    ["Disenrolled Exclusion", "49", "AD3 - Phone Valid Dates From", "Refined Data"],
+    ["Disenrolled Exclusion", "50", "AD3 - Phone Valid Dates To", "Refined Data"],
+    ["Disenrolled Exclusion", "51", "Company", "Refined Data"],
+    ["Disenrolled Exclusion", "52", "Contact - Notes", "Refined Data"],
+    ["Disenrolled Exclusion", "53", "Safety - 2 Person", "Refined Data"],
+    ["Disenrolled Exclusion", "54", "Wanderer", "Refined Data"],
+    ["Disenrolled Exclusion", "55", "Interpreter Needed", "Refined Data"],
+    ["Disenrolled Exclusion", "56", "Fall Risk", "Refined Data"],
+    ["Disenrolled Exclusion", "57", "DPOA or Guardian Active", "Refined Data"],
+    ["Disenrolled Exclusion", "58", "Palliative Care", "Refined Data"],
+    ["Disenrolled Exclusion", "59", "Last Name", "Refined Data"],
+    ["Disenrolled Exclusion", "60", "First Name", "Refined Data"],
+    ["Disenrolled Exclusion", "61", "Phone Number", "Refined Data"],
+    ["Disenrolled Exclusion", "62", "Address Line 1", "Refined Data"],
+    ["Disenrolled Exclusion", "63", "Address Line 2", "Refined Data"],
+    ["Disenrolled Exclusion", "64", "Additional Important Information", "Refined Data"],
     ["Disenrolled Exclusion", "65", "Added to Disenrolled Exclusion", "Disenroll Process"],
-    ["Disenrolled Exclusion", "66", "PMR #", "Demo P"],
-    ["Master List", "1", "Participant Name", "Demo P"],
-    ["Master List", "2", "Name", "Demo P"],
-    ["Master List", "3", "Preferred Name", "Demo P"],
-    ["Master List", "4", "Date of Birth", "Demo P"],
-    ["Master List", "5", "Address 1 - Street", "Demo P"],
-    ["Master List", "6", "City", "Demo P"],
-    ["Master List", "7", "State", "Demo P"],
-    ["Master List", "8", "Zip", "Demo P"],
-    ["Master List", "9", "Phone 1 - Value", "Demo P"],
-    ["Master List", "10", "Phone 2 - Value", "Demo P"],
-    ["Master List", "11", "Participant PMR#", "Demo P"],
-    ["Master List", "12", "Primary Language", "Demo P"],
-    ["Master List", "13", "Residence Type", "Demo P"],
-    ["Master List", "14", "Notes", "Demo P"],
-    ["Master List", "15", "IDT Meeting Date", "Demo P"],
-    ["Master List", "16", "Care Plan Start Date", "Demo P"],
-    ["Master List", "17", "Enrollment Date", "Demo P"],
-    ["Master List", "18", "Last Care Plan", "Demo P"],
-    ["Master List", "19", "Next Care Plan Due", "Demo P"],
-    ["Master List", "20", "CP Type", "Demo P"],
-    ["Master List", "21", "Completed", "Demo P"],
-    ["Master List", "22", "Face Sheet", "Demo P"],
-    ["Master List", "23", "HHA", "Demo P"],
-    ["Master List", "24", "Oxygen", "Demo P"],
-    ["Master List", "25", "Equipment", "Demo P"],
-    ["Master List", "26", "Caseload - Social Work", "Demo P"],
-    ["Master List", "27", "Caseload - RN", "Demo P"],
-    ["Master List", "28", "Caseload - PCP", "Demo P"],
-    ["Master List", "29", "Caseload - HCC", "Demo P"],
-    ["Master List", "30", "Caseload - Activities", "Demo P"],
-    ["Master List", "31", "Caseload - OT", "Demo P"],
-    ["Master List", "32", "Caseload - PT", "Demo P"],
-    ["Master List", "33", "Caseload - RD", "Demo P"],
-    ["Master List", "34", "Caseload - Supervising MD", "Demo P"],
-    ["Master List", "35", "Capitation Date", "Demo P"],
-    ["Master List", "36", "Enrollment Status", "Demo P"],
-    ["Master List", "37", "Primary PMR Row", "Demo P"],
+    ["Disenrolled Exclusion", "66", "PMR #", "Refined Data"],
+    ["Master List", "1", "Participant Name", "Refined Data"],
+    ["Master List", "2", "Name", "Refined Data"],
+    ["Master List", "3", "Preferred Name", "Refined Data"],
+    ["Master List", "4", "Date of Birth", "Refined Data"],
+    ["Master List", "5", "Address 1 - Street", "Refined Data"],
+    ["Master List", "6", "City", "Refined Data"],
+    ["Master List", "7", "State", "Refined Data"],
+    ["Master List", "8", "Zip", "Refined Data"],
+    ["Master List", "9", "Phone 1 - Value", "Refined Data"],
+    ["Master List", "10", "Phone 2 - Value", "Refined Data"],
+    ["Master List", "11", "Participant PMR#", "Refined Data"],
+    ["Master List", "12", "Primary Language", "Refined Data"],
+    ["Master List", "13", "Residence Type", "Refined Data"],
+    ["Master List", "14", "Notes", "Refined Data"],
+    ["Master List", "15", "IDT Meeting Date", "Refined Data"],
+    ["Master List", "16", "Care Plan Start Date", "Refined Data"],
+    ["Master List", "17", "Enrollment Date", "Refined Data"],
+    ["Master List", "18", "Last Care Plan", "Refined Data"],
+    ["Master List", "19", "Next Care Plan Due", "Refined Data"],
+    ["Master List", "20", "CP Type", "Refined Data"],
+    ["Master List", "21", "Completed", "Refined Data"],
+    ["Master List", "22", "Face Sheet", "Refined Data"],
+    ["Master List", "23", "HHA", "Refined Data"],
+    ["Master List", "24", "Oxygen", "Refined Data"],
+    ["Master List", "25", "Equipment", "Refined Data"],
+    ["Master List", "26", "Caseload - Social Work", "Refined Data"],
+    ["Master List", "27", "Caseload - RN", "Refined Data"],
+    ["Master List", "28", "Caseload - PCP", "Refined Data"],
+    ["Master List", "29", "Caseload - HCC", "Refined Data"],
+    ["Master List", "30", "Caseload - Activities", "Refined Data"],
+    ["Master List", "31", "Caseload - OT", "Refined Data"],
+    ["Master List", "32", "Caseload - PT", "Refined Data"],
+    ["Master List", "33", "Caseload - RD", "Refined Data"],
+    ["Master List", "34", "Caseload - Supervising MD", "Refined Data"],
+    ["Master List", "35", "Capitation Date", "Refined Data"],
+    ["Master List", "36", "Enrollment Status", "Refined Data"],
+    ["Master List", "37", "Primary PMR Row", "Refined Data"],
     ["Monthly Change", "1", "Last Name", "Populates via process Compare Raw Data to Raw Data"],
     ["Monthly Change", "2", "First Name", "Populates via process Compare Raw Data to Raw Data"],
     ["Monthly Change", "3", "Preferred Name", "Populates via process Compare Raw Data to Raw Data"],
@@ -551,7 +552,8 @@ var MASTER_FORMAT_DEFAULTS = {
     ["Monthly Change", "51", "Fall Risk", "Populates via process Compare Raw Data to Raw Data"],
     ["Monthly Change", "52", "DPOA or Guardian Active", "Populates via process Compare Raw Data to Raw Data"],
     ["Monthly Change", "53", "Palliative Care", "Populates via process Compare Raw Data to Raw Data"],
-    ["Monthly Change", "54", "Primary PMR Row", "Populates via process Compare Raw Data to Raw Data"]
+    ["Monthly Change", "54", "Primary PMR Row", "Populates via process Compare Raw Data to Raw Data"],
+    ["Monthly Change", "55", "Banner Summary", "Populates via Banner-field delta comparison"]
   ]
 };
 
@@ -628,29 +630,38 @@ function BuildDefaultFormatDashboard() {
   }
 
   const dashRows = [];
+  const emptyDashboardRow = new Array(dashWidth).fill("");
   dashRows.push(["Format Dashboard"]);
   dashRows.push(["Date Created", Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy HH:mm:ss")]);
+  // Rows 3-5 remain the governed title spacer, header row, and pre-section
+  // buffer. The first six-row subheader block therefore begins on row 6.
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
+  dashRows.push(emptyDashboardRow.slice());
 
   function appendDefaultDashboardSection_(rows, sectionName, headers, dataRows, width) {
     const emptyRow = new Array(width).fill("");
-    rows.push(emptyRow.slice()); // One blank row above the section header.
+    rows.push(emptyRow.slice()); // Subheader step 1: blank row above title.
 
     const sectionRow = emptyRow.slice();
     sectionRow[0] = sectionName;
-    rows.push(sectionRow);
+    rows.push(sectionRow); // Subheader step 2: section title.
+
+    rows.push(emptyRow.slice()); // Subheader step 3: visual spacer.
 
     const headerRow = emptyRow.slice();
     for (let i = 0; i < headers.length; i++) headerRow[i] = headers[i];
-    rows.push(headerRow);
+    rows.push(headerRow); // Subheader step 4: governed headers.
 
+    rows.push(emptyRow.slice()); // Subheader step 5: data buffer.
+
+    // Data begins in subheader step 6. Unlike the previous writer, no four-row
+    // tail is added; the next section's step-1 row supplies the sole separator.
     (dataRows || []).forEach(function(row) {
       const paddedRow = row.slice(0, width);
       while (paddedRow.length < width) paddedRow.push("");
       rows.push(paddedRow);
     });
-
-    // Preserve four blank rows after every completed section.
-    for (let blank = 0; blank < 4; blank++) rows.push(emptyRow.slice());
   }
 
   FORMAT_DASHBOARD_SECTION_REGISTRY.forEach(function(section) {
@@ -668,7 +679,7 @@ function BuildDefaultFormatDashboard() {
   if (typeof createTemplateFromBase_ !== "function") {
     throw new Error("createTemplateFromBase_ is required to build Default - Format Dashboard.");
   }
-  const defaultDashboard = createTemplateFromBase_("Default - Format Dashboard");
+  const defaultDashboard = createTemplateFromBase_("Default - Format Dashboard", "Format Dashboard");
   defaultDashboard.clearContents();
   if (typeof resizeSheetGrid_ === "function") {
     resizeSheetGrid_(defaultDashboard, paddedRows.length, dashWidth);
@@ -760,13 +771,7 @@ function restoreFormatDashboardFromDefault() {
     validBackgrounds = false;
   }
 
-  // Re-apply the native banding since we cleared it
-  const theme = typeof getTemplateTheme_ === "function" ? getTemplateTheme_("Format Dashboard") : { level4: "#fff", level5: "#fafafa" };
-  if (typeof applyNativeBandingSafe_ === "function") {
-      applyNativeBandingSafe_(sheet, 1, width, payload.values.length, theme.level4, theme.level5);
-  }
-
-  // Apply the explicitly saved backgrounds over the top of the new banding
+  // Format Dashboard surfaces intentionally use explicit fills only; do not restore native banding.
   if (validBackgrounds) {
     target.setBackgrounds(payload.backgrounds);
   }
@@ -821,11 +826,15 @@ function getFallbackDashboardConfig_() {
   fallbackSections.sectionB_Creation.forEach(function(row) {
     const sysName = String(row["system sheet name"] || "").trim();
     if (sysName) {
+      const templateRank = Number(row["template tab rank"]);
+      const rawActiveRank = String(row["active tab rank"] == null ? "" : row["active tab rank"]).trim();
+      const isDynamicRank = rawActiveRank.toUpperCase() === "DYNAMIC RANKING";
       config.creationRules[sysName] = {
         systemSheetName: sysName,
         namingPattern: String(row["output naming pattern"] || "").trim(),
-        templateRank: Number(row["template tab rank"]),
-        activeRank: Number(row["active tab rank"]),
+        templateRank: templateRank,
+        activeRank: isDynamicRank ? templateRank : Number(rawActiveRank),
+        dynamicRankRule: isDynamicRank ? { baseRank: templateRank, monthStride: 22, zeroOffsetMonth: 12 } : null,
         group: String(row["group"] || "").trim(),
         visibility: String(row["visibility"] || "").trim().toUpperCase(),
         collisionPolicy: String(row["collision policy"] || "").trim().toUpperCase(),
@@ -1033,14 +1042,16 @@ function loadDashboardConfig_(isSystemSetup, dashboardSheet) {
     const sysName = String(row["system sheet name"] || "").trim();
     if (sysName) {
       const tRank = Number(row["template tab rank"]) || 800;
-      const rawActive = row["active tab rank"];
-      const aRank = (rawActive === "" || rawActive == null || isNaN(Number(rawActive))) ? tRank : Number(rawActive);
+      const rawActive = String(row["active tab rank"] == null ? "" : row["active tab rank"]).trim();
+      const isDynamicRank = rawActive.toUpperCase() === "DYNAMIC RANKING";
+      const aRank = (rawActive === "" || isDynamicRank || isNaN(Number(rawActive))) ? tRank : Number(rawActive);
 
       config.creationRules[sysName] = {
         systemSheetName: sysName,
         namingPattern: String(row["output naming pattern"] || sysName).trim(),
         templateRank: tRank,
         activeRank: aRank,
+        dynamicRankRule: isDynamicRank ? { baseRank: tRank, monthStride: 22, zeroOffsetMonth: 12 } : null,
         group: String(row["group"] || "Other").trim(),
         visibility: String(row["visibility"] || "VISIBLE").trim().toUpperCase(),
         collisionPolicy: String(row["collision policy"] || "OVERWRITE").trim().toUpperCase(),
@@ -1263,7 +1274,7 @@ function getSubheadersFromDashboardConfig_(systemSheetName) {
       { title: "SECTION A - FORMAT DASHBOARD VALIDATION", headers: ["Dashboard Section", "Status", "Issue", "Quality Notes"], stampLastUpdated: true },
       { title: "SECTION B - TEMPLATE VALIDATION", headers: ["Template / Sheet Name", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
       { title: "SECTION C - RAW DATA VALIDATION", headers: ["Validation Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
-      { title: "SECTION D - DEMO P QUALITY VALIDATION", headers: ["Check Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
+      { title: "SECTION D - REFINED DATA QUALITY VALIDATION", headers: ["Check Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
       { title: "SECTION E - DISENROLLED EXCLUSION VALIDATION", headers: ["Audit Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
       { title: "SECTION F - MONTHLY CHANGE VALIDATION", headers: ["Layout Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
       { title: "SECTION G - MASTER LIST VALIDATION", headers: ["Audit Item", "Status", "Issue", "Quality Notes"], stampLastUpdated: false },
@@ -1272,13 +1283,14 @@ function getSubheadersFromDashboardConfig_(systemSheetName) {
   }
   if (nameLower.indexOf("change") !== -1) {
     return [
-      { title: "SECTION A - ENROLLMENTS", headers: ["Participant Name", "Name", "Preferred Name", "Date of Birth", "Enrollment Date", "Enrollment Status"], stampLastUpdated: false },
-      { title: "SECTION B - DISENROLLMENTS", headers: ["Participant Name", "Name", "Preferred Name", "Date of Birth", "Disenrollment Date", "Disenrollment Effective Date", "Disenrollment Reason"], stampLastUpdated: false },
-      { title: "SECTION C - DEMOGRAPHIC CHANGES", headers: ["Participant Name", "Name", "Preferred Name", "Date of Birth", "Address 1 - Street", "City", "State", "Zip", "Phone 1 - Value", "Phone 2 - Value", "Primary Language", "Residence Type"], stampLastUpdated: false },
-      { title: "SECTION D - CASELOAD CHANGES", headers: ["Participant Name", "Caseload - Social Work", "Caseload - RN", "Caseload - PCP", "Caseload - HCC", "Caseload - Activities", "Caseload - OT", "Caseload - PT", "Caseload - RD", "Caseload - Supervising MD"], stampLastUpdated: false },
-      { title: "SECTION E - CONTACT CHANGES", headers: ["Participant Name", "Contact - Last Name", "Contact - First Name", "Type of Contact", "Contact - Primary Language", "Relationship", "AD1 - Phone", "AD2 - Phone", "AD3 - Phone"], stampLastUpdated: false },
-      { title: "SECTION F - OTHER CHANGES", headers: ["Participant Name", "IDT Meeting Date", "Care Plan Start Date", "Last Care Plan", "Next Care Plan Due", "CP Type", "Completed", "Face Sheet", "HHA", "Oxygen", "Equipment", "Notes"], stampLastUpdated: false },
-      { title: "SECTION G - LEVEL OF CARE", headers: ["Participant Name", "Name", "Preferred Name", "Date of Birth", "Address 1 - Street", "City", "State", "Zip", "Phone 1 - Value", "Phone 2 - Value", "Primary Language", "Residence Type"], stampLastUpdated: false }
+      { title: "SECTION A - ENROLLMENTS", headers: ["Participant PMR#", "Participant Name", "Name", "Preferred Name", "Date of Birth", "Enrollment Date", "Enrollment Status"], stampLastUpdated: false },
+      { title: "SECTION B - DISENROLLMENTS", headers: ["Participant PMR#", "Participant Name", "Name", "Preferred Name", "Date of Birth", "Disenrollment Date", "Disenrollment Effective Date", "Disenrollment Reason"], stampLastUpdated: false },
+      { title: "SECTION C - DEMOGRAPHIC CHANGES", headers: ["Participant PMR#", "Participant Name", "Name", "Preferred Name", "Date of Birth", "Address Line 1", "Address Line 2", "City", "State", "Zip", "Phone Number", "Primary Language", "Residence Type"], stampLastUpdated: false },
+      { title: "SECTION D - CASELOAD CHANGES", headers: ["Participant PMR#", "Participant Name", "Caseload - Social Work", "Caseload - RN", "Caseload - PCP", "Caseload - HCC", "Caseload - Activities", "Caseload - OT", "Caseload - PT", "Caseload - RD", "Caseload - Supervising MD"], stampLastUpdated: false },
+      { title: "SECTION E - CONTACT CHANGES", headers: ["Participant PMR#", "Participant Name", "Contact - Last Name", "Contact - First Name", "Type of Contact", "Contact - Primary Language", "Relationship", "AD1 - Phone", "AD2 - Phone", "AD3 - Phone"], stampLastUpdated: false },
+      { title: "SECTION F - BANNER SUMMARY CHANGES", headers: ["Participant PMR#", "Participant Name", "Banner Summary", "Safety - 2 Person", "Wanderer", "Interpreter Needed", "Fall Risk", "DPOA or Guardian Active", "Palliative Care"], stampLastUpdated: false },
+      { title: "SECTION G - OTHER CHANGES", headers: ["Participant PMR#", "Participant Name", "IDT Meeting Date", "Care Plan Start Date", "Last Care Plan", "Next Care Plan Due", "CP Type", "Completed", "Face Sheet", "HHA", "Oxygen", "Equipment", "Notes"], stampLastUpdated: false },
+      { title: "SECTION H - LEVEL OF CARE", headers: ["Participant PMR#", "Participant Name", "Name", "Preferred Name", "Date of Birth", "Address Line 1", "Address Line 2", "City", "State", "Zip", "Phone Number", "Primary Language", "Residence Type"], stampLastUpdated: false }
     ];
   }
   return [];

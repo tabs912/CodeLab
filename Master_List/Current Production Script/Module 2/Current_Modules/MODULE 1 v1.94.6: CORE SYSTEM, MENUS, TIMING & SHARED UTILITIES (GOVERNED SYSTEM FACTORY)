@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 1 v1.94.2: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES
+// MODULE 1 v1.94.6: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES (GOVERNED SYSTEM FACTORY)
 // File: 01_Core_Globals_Utilities.gs
 // ============================================================================
 
@@ -33,8 +33,8 @@ const ML_MENU_CALLBACKS = Object.freeze({
   dataProcessing: Object.freeze([
     "formatMonthlySheets",
     "runMonthlyUpdate",
-    "updateDemoPMonthlySync",
-    "buildDemoPFromScratch",
+    "updateRefinedDataMonthlySync",
+    "buildRefinedDataFromScratch",
     "createDisenrolledList",
     "buildMonthlyChangeReport",
     "createMasterList"
@@ -61,6 +61,7 @@ const ML_MENU_CALLBACKS = Object.freeze({
   maintenanceRebuild: Object.freeze([
     "runDashboardQualityWorkflow",
     "runFrameworkSmokeValidation",
+    "runTemplateDateFormatValidation_",
     "formatBannerReport",
     "formatCarePlanDueReport",
     "formatUnlockedCarePlanReport",
@@ -81,15 +82,15 @@ const ML_MENU_CALLBACKS = Object.freeze({
 function onOpen(e) {
   const ui = SpreadsheetApp.getUi();
 
-  const demoPMenu = ui.createMenu("📁 Demo P")
-    .addItem("🔄 Update Demo P", "updateDemoPMonthlySync")
-    .addItem("🛠️ Build Demo P", "buildDemoPFromScratch");
+  const refinedDataMenu = ui.createMenu("📁 Refined Data")
+    .addItem("🔄 Update Refined Data", "updateRefinedDataMonthlySync")
+    .addItem("🛠️ Build Refined Data", "buildRefinedDataFromScratch");
 
   const dataProcessingMenu = ui.createMenu("📊 Data & Processing Engine")
     .addItem("📚 Format Monthly Sheets", "formatMonthlySheets")
     .addItem("🔁 Create Monthly Update", "runMonthlyUpdate")
     .addItem("🏁 Create Monthly Start", "runMonthlyStart")
-    .addSubMenu(demoPMenu)
+    .addSubMenu(refinedDataMenu)
     .addItem("⛔ Create / Update Disenrolled List", "createDisenrolledList")
     .addItem("🗓️ Monthly Change Report", "buildMonthlyChangeReport")
     .addItem("💡 Create Master List", "createMasterList");
@@ -126,7 +127,8 @@ function onOpen(e) {
 
   const qualityMenu = ui.createMenu("👌 Quality")
     .addItem("✅ Dashboard Quality Workflow", "runDashboardQualityWorkflow")
-    .addItem("💨 Framework Smoke Validation", "runFrameworkSmokeValidation");
+    .addItem("💨 Framework Smoke Validation", "runFrameworkSmokeValidation")
+    .addItem("📅 Validate Template Date Formats", "runTemplateDateFormatValidation_");
 
   const formatSheetsMenu = ui.createMenu("📝 Format Sheets")
     .addItem("Banner", "formatBannerReport")
@@ -180,8 +182,6 @@ function formatRawData() { return runFormatterPipeline_(["RD"], "Format Raw Data
 
 function hideTemplates() { return hideTemplates_(); }
 function showTemplates() { return showTemplates_(); }
-function updateDemoPMonthlySync() { return updateRefinedDataMonthlySync(); }
-function buildDemoPFromScratch() { return buildRefinedDataFromScratch(); }
 function enforceGlobalSheetSortOrder() { return organizeTabs(); }
 function setupSystemSheets() { return createActiveSystemSheets(); }
 function rebuildFormatDashboardDefaults() { return menuBuildDashboardTemplate(); }
@@ -343,33 +343,19 @@ function createActiveSystemSheets(timing) {
 
 function createActiveSheetFromTemplate_(templateName, activeName, timing) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  markFrameworkStep_(timing, "Clone Sheet: " + activeName, "Locating template: " + templateName);
   const template = ss.getSheetByName(templateName);
   if (!template) return null;
-
-  const existingActive = ss.getSheetByName(activeName);
-  if (existingActive) {
-    markFrameworkStep_(timing, "Delete Existing: " + activeName, "Clearing old active instance");
-    deleteSheetSafely_(ss, existingActive, "Replace active sheet from template");
-    SpreadsheetApp.flush();
+  if (typeof createGovernedSheet_ !== "function") {
+    throw new Error("System sheet creation requires the governed output factory.");
   }
-
-  markFrameworkStep_(timing, "Copy Template: " + activeName, "Executing template copyTo()");
-  const activeSheet = template.copyTo(ss);
-  activeSheet.setName(activeName);
-  activeSheet.showSheet();
-  SpreadsheetApp.flush();
-
-  if (typeof positionSheetBySectionFRank_ === "function") {
-    markFrameworkStep_(timing, "Position Sheet: " + activeName, "Ranking sheet position");
-    positionSheetBySectionFRank_(activeSheet);
-  }
-
-  if (typeof trimCreatedSheetToSize_ === "function") {
-    trimCreatedSheetToSize_(activeSheet, template.getMaxRows(), Math.max(template.getMaxColumns() - 1, 1));
-  }
-  return activeSheet;
+  markFrameworkStep_(timing, "Governed System Sheet: " + activeName, "Creating from " + templateName);
+  return createGovernedSheet_(activeName, null, {
+    customName: activeName,
+    templateName: templateName,
+    overwrite: true,
+    isSystemSetup: true,
+    timing: timing
+  });
 }
 
 function stampActiveSubheaderTimestampNote_(sheet, timeStr) {
@@ -388,7 +374,7 @@ function quickBuildAllTemplates() {
   notify_("Quick Build All Templates started...");
   runFrameworkTimed_("Quick Build Templates [Phase 1]", function(timing) {
     markFrameworkStep_(timing, "Create Templates", "Creating/refreshing all report templates in place");
-    if (typeof createAllReportTemplates === "function") createAllReportTemplates();
+    if (typeof createAllReportTemplates === "function") createAllReportTemplates(timing);
     return true;
   });
   notify_("Validating templates...");
@@ -1022,7 +1008,7 @@ function getCurrentRawDataSheet_(monthParts) {
   return ss.getSheetByName("Raw Data " + monthParts.label) || ss.getSheetByName(SYSTEM_SHEETS.SOURCE_PREFIX + "Raw Data " + monthParts.label);
 }
 
-function getCurrentDemoPSheet_() {
+function getCurrentRefinedDataSheet_() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Refined Data");
 }
 
