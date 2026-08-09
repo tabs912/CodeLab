@@ -5,10 +5,10 @@ The `Current_Modules/` directory contains only the single current deployable ver
 ## Deployment set
 
 1. `MODULE 1 v1.94.4: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES (REFINED DATA TERMINOLOGY)`
-2. `MODULE 2 v2.13: DATA PROCESSING & OUTPUT ENGINE (REFINED DATA & DISENROLLMENT RETENTION)`
+2. `MODULE 2 v2.14: DATA PROCESSING & OUTPUT ENGINE (MONTHLY CHANGE DRIVEN REPLACEMENT)`
 3. `MODULE 3 v2.0.10: LAYOUT MANAGEMENT & TEMPLATES (SYSTEM SURFACE FORMATTING)`
 4. `MODULE 4 v2.1.4: SYSTEM INDEX & QUALITY ASSURANCE (REFINED DATA TERMINOLOGY)`
-5. `MODULE 5 v3.21: FORMAT DASHBOARD & CONFIGURATION LOGIC (REFINED DATA TERMINOLOGY)`
+5. `MODULE 5 v3.22: FORMAT DASHBOARD & CONFIGURATION LOGIC (MONTHLY CHANGE GOVERNANCE)`
 
 Deploy only the five scripts in `Current_Modules/` together. Older files in the parent `Module 2/` directory are retained release snapshots and must not be loaded into the same Apps Script project with this set.
 
