@@ -1,0 +1,974 @@
+// ============================================================================
+// MODULE 3 v2.0: LAYOUT MANAGEMENT & TEMPLATES
+// File: 03_Layout_Archiving_Templates.gs
+// ============================================================================
+
+// ============================================================================
+// 3.1. SHEET TAB RANKING & ORGANIZATION ENGINE (HARDCODED FOR RELIABILITY)
+// ============================================================================
+
+function organizeTabs() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+
+  const visibilitySnapshot = new Map();
+  sheets.forEach(s => visibilitySnapshot.set(s.getSheetId(), s.isSheetHidden()));
+
+  const sheetData = sheets.map(sheet => {
+    const name = sheet.getName();
+    let match = { group: "Unformatted", rank: 999 };
+    if (typeof matchSheetToSectionFRule_ === "function") {
+      match = matchSheetToSectionFRule_(name);
+    }
+
+    let dateVal = 0;
+    const dateMatch = name.match(/(\d{2})[.\/-](\d{2,4})/);
+    if (dateMatch) {
+        let m = parseInt(dateMatch[1], 10);
+        let y = parseInt(dateMatch[2], 10);
+        if (y < 100) y += 2000;
+        dateVal = new Date(y, m - 1, 1).getTime();
+    }
+
+    return { sheet, name, rank: match.rank, dateVal };
+  });
+
+  sheetData.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    if (a.dateVal !== b.dateVal) return b.dateVal - a.dateVal;
+    return a.name.localeCompare(b.name);
+  });
+
+  for (let i = 0; i < sheetData.length; i++) {
+    const currentSheet = sheetData[i].sheet;
+    if (currentSheet.getIndex() !== (i + 1)) {
+      ss.setActiveSheet(currentSheet);
+      ss.moveActiveSheet(i + 1); 
+    }
+  }
+
+  ss.getSheets().forEach(s => {
+    const wasHidden = visibilitySnapshot.get(s.getSheetId());
+    if (wasHidden && !s.isSheetHidden()) s.hideSheet();
+    else if (!wasHidden && s.isSheetHidden()) s.showSheet();
+  });
+
+  ss.toast("Sheet Tabs Re-organized!", "Tab Engine", 4);
+}
+
+function positionSheetBySectionFRank_(sheet, optionalRank, spreadsheet) {
+  if (!sheet) return;
+  try {
+    var ss = spreadsheet || SpreadsheetApp.getActiveSpreadsheet();
+    var currentSheet = ss.getSheetByName(sheet.getName());
+    if (!currentSheet) return;
+
+    var targetRank = (optionalRank !== undefined && optionalRank !== null) ? optionalRank : getTargetRankForSheet_(currentSheet.getName());
+
+    var targetDateVal = 0;
+    var dateMatch = currentSheet.getName().match(/(\d{2})[.\/-](\d{2,4})/);
+    if (dateMatch) {
+        let m = parseInt(dateMatch[1], 10);
+        let y = parseInt(dateMatch[2], 10);
+        if (y < 100) y += 2000;
+        targetDateVal = new Date(y, m - 1, 1).getTime();
+    }
+
+    var sheets = ss.getSheets();
+    var targetPos = 1;
+
+    for (var i = 0; i < sheets.length; i++) {
+      if (sheets[i].getName() === currentSheet.getName()) continue;
+
+      var otherRank = getTargetRankForSheet_(sheets[i].getName());
+      var otherDateVal = 0;
+      var otherMatch = sheets[i].getName().match(/(\d{2})[.\/-](\d{2,4})/);
+      if (otherMatch) {
+        let m = parseInt(otherMatch[1], 10);
+        let y = parseInt(otherMatch[2], 10);
+        if (y < 100) y += 2000;
+        otherDateVal = new Date(y, m - 1, 1).getTime();
+      }
+
+      var placeAfter = false;
+      if (otherRank < targetRank) {
+        placeAfter = true;
+      } else if (otherRank === targetRank) {
+        if (otherDateVal > targetDateVal) {
+          placeAfter = true;
+        } else if (otherDateVal === targetDateVal) {
+          if (sheets[i].getName().localeCompare(currentSheet.getName()) < 0) {
+            placeAfter = true;
+          }
+        }
+      }
+
+      if (placeAfter) {
+        targetPos++;
+      }
+    }
+
+    if (currentSheet.getIndex() !== targetPos) {
+      ss.setActiveSheet(currentSheet);
+      ss.moveActiveSheet(Math.min(Math.max(1, targetPos), sheets.length)); 
+    }
+  } catch (e) {
+    if (typeof logBestEffortWarning_ === "function") logBestEffortWarning_("Non-fatal tab position operation failed: " + e.message);
+  }
+}
+
+function getTargetRankForSheet_(sheetName) {
+  const name = String(sheetName || "").trim().toLowerCase();
+
+  if (name === "index") return 1;
+  if (name === "refined data") return 2;
+  if (name.indexOf("disenrolled") === 0) return 10;
+
+  if (name.indexOf("master list") === 0) return 21;
+  if (name.indexOf("monthly change") === 0) return 22;
+  if (name.indexOf("raw data") === 0) return 23;
+  
+  if (name.indexOf("banners") === 0) return 24;
+  if (name.indexOf("cp due") === 0 || name.indexOf("care plan due") === 0) return 25;
+  if (name.indexOf("unlock cp") === 0 || name.indexOf("unlocked cp") === 0) return 26;
+
+  if (name.indexOf("source - raw data") === 0) return 27;
+  if (name.indexOf("source - banners") === 0) return 28;
+  if (name.indexOf("source - cp due") === 0) return 29;
+  if (name.indexOf("source - unlock cp") === 0 || name.indexOf("source - unlocked cp") === 0) return 30;
+
+  if (name.indexOf("archive - refined data") === 0) return 350;
+
+  if (name.indexOf("framework timing") === 0) return 500;
+  if (name.indexOf("dashboard quality") === 0) return 501;
+  if (name === "format dashboard") return 502;
+  if (name === "default - format dashboard") return 812;
+
+  if (name === "rff_base_template") return 814;
+  if (name.indexOf("template - ") === 0) {
+    if (name.indexOf("banners") !== -1) return 801;
+    if (name.indexOf("cp due") !== -1) return 802;
+    if (name.indexOf("unlock") !== -1) return 803;
+    if (name.indexOf("raw data") !== -1) return 804;
+    if (name.indexOf("refined data") !== -1 && name.indexOf("archive") === -1) return 805;
+    if (name.indexOf("disenrolled") !== -1) return 806;
+    if (name.indexOf("master list") !== -1) return 807;
+    if (name.indexOf("monthly change") !== -1) return 808;
+    if (name.indexOf("archive - refined data") !== -1) return 809;
+    if (name.indexOf("framework timing") !== -1) return 810;
+    if (name.indexOf("dashboard quality") !== -1) return 811;
+    return 800; 
+  }
+
+  return 999;
+}
+
+function matchSheetToSectionFRule_(sheetName) {
+  const rank = getTargetRankForSheet_(sheetName);
+  let group = "Unformatted";
+
+  if (rank === 1 || (rank >= 500 && rank <= 502)) group = "System & Configuration";
+  else if (rank === 2 || rank === 10 || rank === 350) group = "Core Operational";
+  else if (rank >= 21 && rank <= 23) group = "Monthly Active";
+  else if (rank >= 24 && rank <= 26) group = "Monthly Sub-Reports";
+  else if (rank >= 27 && rank <= 30) group = "Source Data";
+  else if (rank >= 800 && rank <= 814) group = "Template";
+
+  return { group: group, rank: rank };
+}
+
+// ============================================================================
+// 3.2. VISIBILITY CONTROLS (HIDE & SHOW)
+// ============================================================================
+
+function hideMonthlyImportSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Hide Monthly Sub-Reports (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+  const specs = [
+    { label: "Banners", keywords: ["Banners", "Banner Report", SYSTEM_SHEETS.SOURCE_PREFIX + "Banners"] },
+    { label: "CP Due Date", keywords: ["CP Due Date", "CP Due", "Care Plan Due Date Report", "Care Plan Due", SYSTEM_SHEETS.SOURCE_PREFIX + "CP Due"] },
+    { label: "Unlocked CP", keywords: ["Unlocked CP", "Unlock CP", "Unlocked Care Plan", SYSTEM_SHEETS.SOURCE_PREFIX + "Unlocked CP"] }
+  ];
+  return hideMonthlySheetsBySpecs_("Hide Monthly Sub-Reports", parsed, specs);
+}
+
+function hideMonthlyActiveSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Hide Active Sheets (Month & Prior)");
+  if (!monthParts) return null;
+  return hideMonthlySheetsBySpecs_("Hide Monthly Active Sheets", monthParts, [
+    { label: "Raw Data", keywords: ["Raw Data"] },
+    { label: "Master List", keywords: ["Master List"] },
+    { label: "Monthly Change", keywords: ["Monthly Change"] },
+    { label: "Disenrolled Exclusion", keywords: ["Disenrolled Exclusion", "Source - Disenrolled"] }
+  ]);
+}
+
+function hideTemplates_() { return hideReportTemplates(); }
+function showTemplates_() { return showReportTemplates(); }
+
+function getDashboardConfigForTemplateVisibility_(dashboardOverride) {
+  if (dashboardOverride) return dashboardOverride;
+  try {
+    return loadDashboardConfig_();
+  } catch (err) {
+    logBestEffortWarning_("Template visibility config unavailable; using prefix scan: " + err.message);
+    return { sheetDefinitions: [], creationRules: {} };
+  }
+}
+
+function hideReportTemplates(dashboardOverride, timing) {
+  if (timing) return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), true, timing);
+  return runFrameworkTimed_("Hide Report Templates", function(activeTiming) {
+    return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), true, activeTiming);
+  });
+}
+
+function showReportTemplates(dashboardOverride, timing) {
+  if (timing) return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), false, timing);
+  return runFrameworkTimed_("Show Report Templates", function(activeTiming) {
+    return setReportTemplateVisibility_(getDashboardConfigForTemplateVisibility_(dashboardOverride), false, activeTiming);
+  });
+}
+
+function setReportTemplateVisibility_(dashboard, hidden, timing) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetMap = {};
+
+  ss.getSheets().forEach(function(sheet) {
+    sheetMap[sheet.getName()] = sheet;
+  });
+
+  if (dashboard && dashboard.sheetDefinitions) {
+    dashboard.sheetDefinitions.forEach(function(sheetDef) {
+      const sheet = sheetMap[sheetDef.templateName];
+      if (!sheet || sheetDef.templateName === SYSTEM_SHEETS.BASE_TEMPLATE) return;
+      if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide template: " + sheetDef.templateName);
+      else showSheetIfNeeded_(sheet, timing, "Show template: " + sheetDef.templateName);
+    });
+  }
+
+  Object.keys(sheetMap).forEach(function(sheetName) {
+    if (sheetName === SYSTEM_SHEETS.BASE_TEMPLATE) return;
+    if (String(sheetName || "").indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) !== 0) return;
+
+    const sheet = sheetMap[sheetName];
+    if (hidden) hideSheetIfNeeded_(sheet, timing, "Hide orphan template: " + sheetName);
+    else showSheetIfNeeded_(sheet, timing, "Show orphan template: " + sheetName);
+  });
+
+  const baseSheet = ss.getSheetByName(SYSTEM_SHEETS.BASE_TEMPLATE);
+  if (baseSheet) hideSheetIfNeeded_(baseSheet, null, "Force base template hidden");
+
+  if (timing && typeof markFrameworkStep_ === "function") {
+    markFrameworkStep_(timing, hidden ? "All templates hidden" : "All templates shown");
+  }
+}
+
+function hideSystemSheets_() { return hideSystemSheetsNow(); }
+function showSystemSheets_() { return showSystemSheetsNow(); }
+
+function hideSystemSheetsNow() {
+  return runFrameworkTimed_("Hide System Sheets", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const systemSheets = [SYSTEM_SHEETS.TIMING, SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.DASHBOARD, SYSTEM_SHEETS.INDEX];
+
+    let hiddenCount = 0;
+    systemSheets.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (sheet) {
+        hideSheetIfNeeded_(sheet, timing, "Hide system sheet: " + name);
+        hiddenCount++;
+      }
+    });
+    if (typeof notify_ === "function") notify_("System sheets hidden: " + hiddenCount);
+  });
+}
+
+function showSystemSheetsNow() {
+  return runFrameworkTimed_("Show System Sheets", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const systemSheets = [SYSTEM_SHEETS.DASHBOARD, SYSTEM_SHEETS.TIMING, SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.INDEX];
+
+    let shownCount = 0;
+    systemSheets.forEach(function(name) {
+      const sheet = ss.getSheetByName(name);
+      if (sheet) {
+        showSheetIfNeeded_(sheet, timing, "Show system sheet: " + name);
+        shownCount++;
+      }
+    });
+    if (typeof notify_ === "function") notify_("System sheets shown: " + shownCount);
+  });
+}
+
+function hideMonthlySheetsBySpecs_(processName, parsedMonth, specs) {
+  return runFrameworkTimed_(processName + " " + parsedMonth.monthLabel + " & Prior", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const result = { hidden: [], skipped: [] };
+
+    specs.forEach(function(spec) {
+      const sheets = findArchiveMonthlyCandidateSheetsUpToDate_(ss, spec.keywords, parsedMonth.reportDate);
+      if (!sheets.length) {
+        result.skipped.push(spec.label + " not found");
+        return;
+      }
+      sheets.forEach(function(sheet) {
+        try {
+          if (!sheet.isSheetHidden()) {
+            activateVisibleSheetBeforeHiding_(sheet);
+            sheet.hideSheet();
+          }
+          result.hidden.push(sheet.getName());
+        } catch (err) {
+          result.skipped.push(sheet.getName() + ": " + err.message);
+        }
+      });
+    });
+    if (typeof notify_ === "function") notify_(processName + " complete for " + parsedMonth.monthLabel + " and prior. Hidden: " + result.hidden.length + "; Skipped: " + result.skipped.length + ".");
+    return result;
+  });
+}
+
+// ============================================================================
+// 3.3. ARCHIVING ENGINE
+// ============================================================================
+
+function archiveMonthlyImportSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Archive Monthly Sub-Reports (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+
+  return runFrameworkTimed_("Archive Monthly Sub-Reports " + parsed.monthLabel + " & Prior", function(timing) {
+    const result = archiveMonthlySheetsBySpecs_(parsed, [
+      { label: "Banners", keywords: ["Banners", "Banner Report", SYSTEM_SHEETS.SOURCE_PREFIX + "Banners"] },
+      { label: "CP Due Date", keywords: ["CP Due Date", "CP Due", "Care Plan Due Date Report", "Care Plan Due", SYSTEM_SHEETS.SOURCE_PREFIX + "CP Due"] },
+      { label: "Unlocked CP", keywords: ["Unlocked CP", "Unlock CP", "Unlocked Care Plan", SYSTEM_SHEETS.SOURCE_PREFIX + "Unlocked CP"] }
+    ], timing);
+
+    if (typeof populateActiveIndex === "function") populateActiveIndex();
+    notifyArchiveMonthlySheetsResult_("Archive Monthly Sub-Reports", parsed.monthLabel + " and prior", result);
+    return result;
+  });
+}
+
+function archiveMonthlyActiveSheets() {
+  const monthParts = promptForLockedYearReportMonth_("Archive Active Sheets (Month & Prior)");
+  if (!monthParts) return null;
+  const parsed = monthParts;
+
+  return runFrameworkTimed_("Archive Monthly Active Sheets " + parsed.monthLabel + " & Prior", function(timing) {
+    const result = archiveMonthlySheetsBySpecs_(parsed, [
+      { label: "Raw Data", keywords: ["Raw Data", SYSTEM_SHEETS.SOURCE_PREFIX + "Raw Data"] },
+      { label: "Master List", keywords: ["Master List"] },
+      { label: "Monthly Change", keywords: ["Monthly Change"] }
+    ], timing);
+
+    if (typeof populateActiveIndex === "function") populateActiveIndex();
+    notifyArchiveMonthlySheetsResult_("Archive Monthly Active Sheets", parsed.monthLabel + " and prior", result);
+    return result;
+  });
+}
+
+function archiveMonthlySheetsBySpecs_(parsedMonth, specs, timing) {
+  const writeLock = LockService.getDocumentLock();
+  if (!writeLock.tryLock(30000)) {
+    throw new Error("Another write workflow is already running: archiveMonthlySheetsBySpecs.");
+  }
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const archiveId = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID");
+    if (!archiveId) throw new Error("RFF_ARCHIVE_SPREADSHEET_ID is not configured.");
+
+    const archiveSs = SpreadsheetApp.openById(archiveId);
+    const result = { archived: [], skipped: [], failed: [] };
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Archive workbook connection established for batch", "Archive ID: " + archiveId);
+
+    specs.forEach(function(spec) {
+      const sheets = findArchiveMonthlyCandidateSheetsUpToDate_(ss, spec.keywords, parsedMonth.reportDate);
+      if (!sheets.length) {
+        logBestEffortWarning_("No local sheet found for " + spec.label + " " + parsedMonth.monthLabel + " or prior");
+        result.skipped.push(spec.label);
+        return;
+      }
+
+      sheets.forEach(function(sheet) {
+        const sheetName = sheet.getName();
+        try {
+          const archiveResult = copySheetToArchiveAndDeleteLocal_(ss, archiveSs, sheet, sheetName, timing);
+          result.archived.push(sheetName);
+          if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Archived monthly sheet: " + sheetName, archiveResult.localAction);
+        } catch (err) {
+          logBestEffortWarning_("Archive monthly sheet failed: " + sheetName + " - " + err.message);
+          result.failed.push(sheetName + ": " + err.message);
+        }
+      });
+    });
+
+    pingArchiveIndexUpdate_();
+
+    return result;
+
+  } finally {
+    writeLock.releaseLock();
+  }
+}
+
+function pingArchiveIndexUpdate_() {
+  try {
+    const archiveWebAppUrl = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_WEB_APP_URL");
+    if (archiveWebAppUrl) {
+      UrlFetchApp.fetch(archiveWebAppUrl, { muteHttpExceptions: true });
+    }
+  } catch (err) {
+    logBestEffortWarning_("Failed to ping Archive Index Web App: " + err.message);
+  }
+}
+
+function findArchiveMonthlyCandidateSheetsUpToDate_(ss, keywords, cutoffDate) {
+  const keywordList = (keywords || []).map(function(keyword) {
+    return String(keyword || "").trim().toLowerCase();
+  }).filter(Boolean);
+
+  const matches = [];
+  const seen = new Set();
+  const cutoffKey = cutoffDate ? Number(Utilities.formatDate(cutoffDate, Session.getScriptTimeZone(), "yyyyMM")) : 0;
+
+  ss.getSheets().forEach(function(sheet) {
+    const name = sheet.getName();
+    const lowerName = name.toLowerCase();
+    if (lowerName.indexOf("template") !== -1) return;
+
+    const hasKeyword = keywordList.some(function(keyword) { return lowerName.indexOf(keyword) !== -1; });
+    if (!hasKeyword) return;
+    if (seen.has(name)) return;
+
+    const sheetDate = extractFirstDateFromSheetName_(name);
+    if (sheetDate) {
+      const sheetKey = Number(Utilities.formatDate(sheetDate, Session.getScriptTimeZone(), "yyyyMM"));
+      if (sheetKey <= cutoffKey) {
+        seen.add(name);
+        matches.push(sheet);
+      }
+    }
+  });
+
+  matches.sort(function(a, b) { return a.getName().localeCompare(b.getName()); });
+  return matches;
+}
+
+function notifyArchiveMonthlySheetsResult_(title, monthLabel, result) {
+  const msg = title + " complete for " + monthLabel + ".\nArchived: " + (result.archived ? result.archived.length : 0) +
+              "\nSkipped: " + (result.skipped ? result.skipped.length : 0) +
+              "\nFailed: " + (result.failed ? result.failed.length : 0);
+  SpreadsheetApp.getActiveSpreadsheet().toast(msg, title, 5);
+}
+
+function copySheetToArchiveAndDeleteLocal_(ss, archiveSs, sheet, sheetName, timing) {
+  const archiveResult = archiveRawSourceSheet_(sheet, sheetName, timing, "Archive monthly sheet", archiveSs);
+  activateVisibleSheetBeforeHiding_(sheet);
+  ss.deleteSheet(sheet);
+  return { localAction: "Deleted local sheet " + sheetName, archiveName: archiveResult.archivedName };
+}
+
+function archiveRawSourceSheet_(sourceSheet, archiveName, timing, timingLabel, preOpenedArchiveSpreadsheet) {
+  if (!sourceSheet) throw new Error("A source sheet is required for archive.");
+  const archiveSpreadsheet = preOpenedArchiveSpreadsheet || openArchiveSpreadsheetOnce_();
+  const finalArchiveName = getUniqueArchiveSheetName_(archiveSpreadsheet, archiveName);
+  const copied = sourceSheet.copyTo(archiveSpreadsheet);
+  copied.setName(finalArchiveName);
+  if (copied.getMaxRows() !== sourceSheet.getMaxRows() || copied.getMaxColumns() !== sourceSheet.getMaxColumns()) {
+    archiveSpreadsheet.deleteSheet(copied);
+    throw new Error("Archived source verification failed.");
+  }
+  if (typeof markFrameworkStep_ === "function") {
+    markFrameworkStep_(timing, timingLabel || "Archive source", finalArchiveName);
+  }
+  return { archivedSuccessfully: true, sheet: copied, archiveSpreadsheetId: archiveSpreadsheet.getId(), archivedName: finalArchiveName };
+}
+
+
+// ============================================================================
+// 3.4. SLASH-DELIMITED FORMATTING ENGINE
+// ============================================================================
+
+function applyDelimitedProperty_(range, propertyValue, type) {
+  if (propertyValue === undefined || propertyValue === null || propertyValue === "") return;
+  const strVal = String(propertyValue);
+  
+  if (strVal.indexOf('/') === -1) {
+    applySingleCellProperty_(range, strVal.trim(), type);
+  } else {
+    const parts = strVal.split('/');
+    const startRow = range.getRow();
+    const startCol = range.getColumn();
+    const sheet = range.getSheet();
+    const maxCols = sheet.getMaxColumns();
+
+    for (let i = 0; i < parts.length; i++) {
+      const val = parts[i].trim();
+      if (val !== "" && (startCol + i) <= maxCols) {
+        const cell = sheet.getRange(startRow, startCol + i, range.getNumRows(), 1);
+        applySingleCellProperty_(cell, val, type);
+      }
+    }
+  }
+}
+
+function applySingleCellProperty_(range, val, type) {
+  if (!val) return;
+  if (type === "fontSize" && !isNaN(Number(val))) {
+    range.setFontSize(Number(val));
+  } else if (type === "fontWeight") {
+    const lower = val.toLowerCase();
+    range.setFontWeight(lower === "bold" ? "bold" : "normal");
+    range.setFontStyle(lower === "italic" ? "italic" : "normal");
+  } else if (type === "alignment") {
+    range.setHorizontalAlignment(val.toLowerCase());
+  } else if (type === "wrap") {
+    range.setWrapStrategy(getWrapStrategyEnum_(val));
+  } else if (type === "dateFormat") {
+    const isDateFormat = /^[mdy\/\-\.\s]+$/i.test(val) && val.toLowerCase().indexOf('m') !== -1;
+    if (isDateFormat) {
+      range.setNumberFormat(val);
+    } else {
+      range.setValue(val);
+    }
+  }
+}
+
+function getWrapStrategyEnum_(wrapStr) {
+  var w = String(wrapStr || "").toUpperCase();
+  if (w === "WRAP") return SpreadsheetApp.WrapStrategy.WRAP;
+  if (w === "OVERFLOW") return SpreadsheetApp.WrapStrategy.OVERFLOW;
+  return SpreadsheetApp.WrapStrategy.CLIP;
+}
+
+// ============================================================================
+// 3.5. TEMPLATE BUILDERS
+// ============================================================================
+
+function createOrRefreshBaseTemplate_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var baseSheet = ss.getSheetByName(SYSTEM_SHEETS.BASE_TEMPLATE);
+
+  if (!baseSheet) {
+    baseSheet = ss.insertSheet(SYSTEM_SHEETS.BASE_TEMPLATE);
+    if (typeof positionSheetBySectionFRank_ === "function") positionSheetBySectionFRank_(baseSheet, 814);
+  } else {
+    baseSheet.clear();
+    baseSheet.clearFormats();
+  }
+
+  var dashboard = (typeof loadDashboardConfig_ === "function") ? loadDashboardConfig_(true) : { globals: {} };
+  var globals = dashboard.globals || {};
+
+  baseSheet.setFrozenRows(Number(globals["Freeze Rows"]) || 4);
+  baseSheet.setFrozenColumns(Number(globals["Freeze Columns"]) || 2);
+
+  var baseCols = 80;
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(baseSheet, 100, baseCols + 1);
+
+  var fullRange = baseSheet.getRange(1, 1, 100, baseCols + 1);
+  fullRange.setFontFamily(globals["Standard Font"] || "Arial");
+  fullRange.setFontSize(Number(globals["Standard Font Size"]) || 10);
+  fullRange.setFontColor(globals["Standard Font Color"] || "#000000");
+  fullRange.setHorizontalAlignment("left");
+  fullRange.setVerticalAlignment("middle");
+  fullRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  fullRange.setNumberFormat(globals["Default Text Format"] || "@");
+  fullRange.setBorder(true, true, true, true, true, true, globals["Global Border Color"] || "#CCCCCC", SpreadsheetApp.BorderStyle.SOLID);
+
+  baseSheet.setRowHeight(1, Number(globals["Row 1 (Title)Height"]) || 25);
+  baseSheet.setRowHeight(2, Number(globals["Row 2 Height"]) || 20);
+  baseSheet.setRowHeight(3, Number(globals["Row 3 Height"]) || 10);
+
+  var dataRowHeight = Number(globals["Default Data Row Height"]) || 25;
+  for (var r = 4; r <= 100; r++) { baseSheet.setRowHeight(r, dataRowHeight); }
+
+  var defaultWidth = Number(globals["Default Column Width"]) || 105;
+  for (var c = 1; c <= baseCols + 1; c++) { baseSheet.setColumnWidth(c, defaultWidth); }
+
+  var cellA1 = baseSheet.getRange("A1");
+  cellA1.setFontSize(Number(globals["A1 (Title) Font Size"]) || 14);
+  cellA1.setFontWeight(globals["A1 (Title) Font Style"] || "Bold");
+  var wrapA1 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["A1 (Title) Wrap"]) : SpreadsheetApp.WrapStrategy.OVERFLOW;
+  cellA1.setWrapStrategy(wrapA1 || SpreadsheetApp.WrapStrategy.OVERFLOW);
+
+  var cellC1 = baseSheet.getRange("C1");
+  cellC1.setFontSize(Number(globals["C1 (Title) Font Size"]) || 5);
+  var wrapC1 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["C1 (Title) Wrap"]) : SpreadsheetApp.WrapStrategy.WRAP;
+  cellC1.setWrapStrategy(wrapC1 || SpreadsheetApp.WrapStrategy.WRAP);
+
+  var wrapRow4 = typeof getWrapStrategyEnum_ === "function" ? getWrapStrategyEnum_(globals["Row 4 (Header) Wrap"]) : SpreadsheetApp.WrapStrategy.WRAP;
+  baseSheet.getRange(4, 1, 1, baseCols).setWrapStrategy(wrapRow4 || SpreadsheetApp.WrapStrategy.WRAP);
+
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(baseSheet, 100, baseCols);
+  baseSheet.hideSheet();
+  return baseSheet;
+}
+
+function createTemplateFromBase_(targetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const existing = ss.getSheetByName(targetName);
+  if (existing) { ss.deleteSheet(existing); SpreadsheetApp.flush(); }
+
+  const base = ss.getSheetByName(SYSTEM_SHEETS.BASE_TEMPLATE) || createOrRefreshBaseTemplate_();
+  const newSheet = base.copyTo(ss);
+  newSheet.setName(targetName);
+  newSheet.showSheet();
+  SpreadsheetApp.flush();
+  return newSheet;
+}
+
+function buildGeneralTemplate_(config, timing) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sysName = config.systemSheetName;
+  var templateName = config.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sysName);
+
+  if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Build General Template", "Creating template base for: " + templateName);
+  var templateSheet = createTemplateFromBase_(templateName);
+
+  if (typeof positionSheetBySectionFRank_ === "function") positionSheetBySectionFRank_(templateSheet, config.rank);
+
+  var contentCols = Math.max(config.columnCount || 0, config.headers ? config.headers.length : 0, 1);
+  var targetCols = contentCols + 1;
+  var targetRows = config.minimumRows || 100;
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, targetRows, targetCols);
+
+  var theme = config.theme || (typeof getTemplateTheme_ === "function" ? getTemplateTheme_(sysName) : { level1: "#eee", level2: "#ddd", level3: "#ccc", level4: "#fff", level5: "#fafafa" });
+
+  if (config.usesAlternatingColors !== false && sysName !== SYSTEM_SHEETS.DASHBOARD) {
+    if (typeof applyNativeBandingSafe_ === "function") applyNativeBandingSafe_(templateSheet, 5, targetCols, targetRows, theme.level4, theme.level5);
+  }
+
+  if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Titles: " + templateName, "Applying title rows");
+  applyTitleRows_(templateSheet, config, theme);
+
+  if (config.usesSubheaders && config.subheaders && config.subheaders.length > 0) {
+    if (typeof markFrameworkStep_ === "function") markFrameworkStep_(timing, "Apply Subheaders: " + templateName, "Applying subheader blocks");
+    applySubheaderBlocks_(templateSheet, config.subheaders, theme, sysName, config.subheaderRowSpecs);
+  }
+
+  applyColumnWidthsEngine_(templateSheet, config);
+
+  if (theme.level1) templateSheet.setTabColor(theme.level1);
+  writeTemplateMetadata_(templateSheet, config, targetCols);
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(templateSheet, targetRows, contentCols);
+
+  templateSheet.hideSheet();
+  return templateSheet;
+}
+
+function applyTitleRows_(sheet, config, theme) {
+  var sysName = config.systemSheetName || "";
+  var fullGridCols = sheet.getMaxColumns();
+
+  var titleCell = sheet.getRange("A1");
+  titleCell.setValue(config.reportTitle || sysName);
+
+  if (!config.usesSubheaders && config.headers && config.headers.length > 0) {
+    var headerTextRange = sheet.getRange(4, 1, 1, config.headers.length);
+    headerTextRange.setValues([config.headers]);
+  }
+
+  if (config.titleDateFormat) {
+    applyDelimitedProperty_(sheet.getRange(2, 1, 1, fullGridCols), config.titleDateFormat, "dateFormat");
+  }
+
+  (config.titleRows || []).forEach(function(spec) {
+    const rowNumber = Math.max(Number(spec.row) || 1, 1);
+    if (rowNumber > sheet.getMaxRows()) return;
+
+    const rowRange = sheet.getRange(rowNumber, 1, 1, fullGridCols);
+    if (spec.height) sheet.setRowHeight(rowNumber, Number(spec.height));
+
+    const fillKey = String(spec.fillLevel || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (fillKey && theme[fillKey]) rowRange.setBackground(theme[fillKey]);
+    else if (!fillKey || fillKey === "none") rowRange.setBackground(null);
+
+    applyDelimitedProperty_(rowRange, spec.fontSize, "fontSize");
+    applyDelimitedProperty_(rowRange, spec.fontWeight, "fontWeight");
+    applyDelimitedProperty_(rowRange, spec.alignment, "alignment");
+    applyDelimitedProperty_(rowRange, spec.wrap, "wrap");
+  });
+}
+
+function applySubheaderBlocks_(sheet, subheaders, theme, sysName, subheaderRowSpecs) {
+  var currentRow = 5;
+  var maxCols = sheet.getMaxColumns();
+  var b2Specs = subheaderRowSpecs || [];
+
+  subheaders.forEach(function(block) {
+    var steps = [1, 2, 3, 4, 5, 6];
+    steps.forEach(function(stepNum) {
+      var stepSpecs = b2Specs.filter(function(s) { return Number(s.row) === stepNum; });
+      var primarySpec = stepSpecs.length > 0 ? stepSpecs[0] : null;
+
+      currentRow++;
+      var rHeight = (primarySpec && primarySpec.height && !isNaN(primarySpec.height)) ? Number(primarySpec.height) : 25;
+      sheet.setRowHeight(currentRow, rHeight);
+
+      var governedRowRange = sheet.getRange(currentRow, 1, 1, maxCols);
+      if (primarySpec) {
+        var fillLevelKey = String(primarySpec.fillLevel || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        var bgColor = (fillLevelKey && fillLevelKey !== "none") ? theme[fillLevelKey] : null;
+        governedRowRange.setBackground(bgColor || null);
+        
+        applyDelimitedProperty_(governedRowRange, primarySpec.fontSize, "fontSize");
+        applyDelimitedProperty_(governedRowRange, primarySpec.fontWeight, "fontWeight");
+        applyDelimitedProperty_(governedRowRange, primarySpec.alignment, "alignment");
+        applyDelimitedProperty_(governedRowRange, primarySpec.wrap, "wrap");
+      }
+
+      if (stepNum === 1 || stepNum === 5 || stepNum === 3) return;
+
+      if (stepNum === 2) {
+        var titleCell = sheet.getRange(currentRow, 1);
+        titleCell.setValue(block.title);
+
+        if (sysName.indexOf("Timing") !== -1 || sysName.indexOf("Quality") !== -1 || sysName.indexOf("Change") !== -1 || block.stampLastUpdated) {
+          sheet.getRange(currentRow, 3).setValue("Last Updated");
+        }
+        return;
+      }
+
+      if (stepNum === 4) {
+        if (block.headers && block.headers.length > 0) {
+          var headerTextRange = sheet.getRange(currentRow, 1, 1, block.headers.length);
+          headerTextRange.setValues([block.headers]);
+        }
+        return;
+      }
+
+      if (stepNum === 6) {
+        var placeholderCell = sheet.getRange(currentRow, 1);
+        placeholderCell.setValue("Insert new data here");
+        return;
+      }
+    });
+  });
+}
+
+function applyColumnWidthsEngine_(sheet, config) {
+  if (!sheet) return;
+  var targetCols = sheet.getMaxColumns();
+  var dashConfig = (typeof loadDashboardConfig_ === "function") ? loadDashboardConfig_(true) : {globals: {}};
+  var defaultColWidth = Number(dashConfig.globals["Default Column Width"]) || GLOBAL_DEFAULTS.DEFAULT_COL_WIDTH;
+  var widthSpec = String(config.columnWidths || "").trim();
+
+  if (widthSpec && widthSpec.toUpperCase() !== "FIT_TO_DATA") {
+    var parsedWidths = widthSpec.split("/").map(item => parseInt(item.trim(), 10));
+    if (parsedWidths.some(w => !isNaN(w) && w > 0)) {
+      if (parsedWidths.length === 1 && !isNaN(parsedWidths[0]) && parsedWidths[0] > 0) {
+        for (var col = 1; col <= targetCols; col++) { sheet.setColumnWidth(col, parsedWidths[0]); }
+      } else {
+        for (var i = 0; i < targetCols; i++) {
+          var colWidth = (i < parsedWidths.length && !isNaN(parsedWidths[i]) && parsedWidths[i] > 0) ? parsedWidths[i] : defaultColWidth;
+          sheet.setColumnWidth(i + 1, colWidth);
+        }
+      }
+      return;
+    }
+  }
+  for (var c = 1; c <= targetCols; c++) { sheet.setColumnWidth(c, defaultColWidth); }
+}
+
+function applyOperationalFormatting_(templateSheet, systemSheetName) {
+  if (!templateSheet) return;
+  let config;
+  if (typeof loadDashboardConfig_ === "function") {
+    config = loadDashboardConfig_(true);
+  } else {
+    return;
+  }
+  let sysKey = systemSheetName;
+  if (typeof getStandardSheetKey_ === "function") sysKey = getStandardSheetKey_(systemSheetName);
+
+  const headers = config.sheetHeaders[systemSheetName] || config.sheetHeaders[sysKey] || [];
+  if (!headers || headers.length === 0) return;
+
+  if (typeof resizeSheetGrid_ === "function") resizeSheetGrid_(templateSheet, templateSheet.getMaxRows(), headers.length + 1);
+
+  const headerRange = templateSheet.getRange(4, 1, 1, headers.length);
+  headerRange.setValues([headers]);
+
+  const colDefs = config.columnDefinitions || {};
+  const defaultWidth = Number(config.globals["Default Column Width"]) || GLOBAL_DEFAULTS.DEFAULT_COL_WIDTH;
+  const defaultDateFormat = config.globals["Default Date Format"] || "mm/dd/yyyy";
+  const defaultWrap = config.globals["Default Data Wrap"] || "CLIP";
+  const defaultHAlign = config.globals["Default Horizontal Alignment"] || "left";
+  const defaultVAlign = config.globals["Default Vertical Alignment"] || "middle";
+  const maxRows = templateSheet.getMaxRows();
+
+  for (let c = 0; c < headers.length; c++) {
+    const headerName = String(headers[c] || "").trim();
+    const colDef = colDefs[headerName] || colDefs[headerName.toLowerCase()] || {};
+    const colIdx = c + 1;
+
+    templateSheet.setColumnWidth(colIdx, (colDef.width && colDef.width > 0) ? colDef.width : defaultWidth);
+
+    if (colDef.fontSize && colDef.fontSize > 0) {
+      templateSheet.getRange(4, colIdx).setFontSize(colDef.fontSize);
+    }
+
+    if (maxRows >= DATA_START_ROW) {
+      const dataColRange = templateSheet.getRange(DATA_START_ROW, colIdx, maxRows - DATA_START_ROW + 1, 1);
+
+      if (colDef.format) {
+        dataColRange.setNumberFormat(colDef.format);
+      } else if (colDef.dateColumn) {
+        dataColRange.setNumberFormat(defaultDateFormat);
+      }
+
+      const hAlign = colDef.align || defaultHAlign;
+      if (hAlign) dataColRange.setHorizontalAlignment(hAlign.toLowerCase());
+
+      const vAlign = colDef.vAlign || defaultVAlign;
+      if (vAlign) dataColRange.setVerticalAlignment(vAlign.toLowerCase());
+
+      const wrapStr = colDef.wrap || defaultWrap;
+      if (wrapStr) {
+        dataColRange.setWrapStrategy(
+          wrapStr.toUpperCase() === "WRAP" ? SpreadsheetApp.WrapStrategy.WRAP :
+          wrapStr.toUpperCase() === "OVERFLOW" ? SpreadsheetApp.WrapStrategy.OVERFLOW :
+          SpreadsheetApp.WrapStrategy.CLIP
+        );
+      }
+    }
+  }
+
+  if (typeof trimCreatedSheetToSize_ === "function") trimCreatedSheetToSize_(templateSheet, templateSheet.getMaxRows(), headers.length);
+}
+
+function writeTemplateMetadata_(sheet, config, targetColumns) {
+  if (!sheet || !config) throw new Error("Template metadata requires a sheet and configuration.");
+  const column = Math.max(Math.min(Number(targetColumns) || 1, sheet.getMaxColumns()), 1);
+  const version = typeof MASTER_LIST_MERGE_ML_VERSION !== "undefined" ? MASTER_LIST_MERGE_ML_VERSION : "v2.0";
+  sheet.getRange(1, column).setNote("Template Mold: " + config.systemSheetName + "\nVersion: " + version + "\nUpdated: " + new Date().toISOString());
+}
+
+function createSystemTemplates() {
+  buildFrameworkTimingTemplate_();
+  buildDashboardQualityTemplate_();
+  buildIndexTemplate_();
+}
+
+function buildFrameworkTimingTemplate_() { 
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    return buildGeneralTemplate_(getTemplateConfigFromDashboard_(SYSTEM_SHEETS.TIMING)); 
+  }
+}
+
+function buildDashboardQualityTemplate_() { 
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    return buildGeneralTemplate_(getTemplateConfigFromDashboard_(SYSTEM_SHEETS.QUALITY)); 
+  }
+}
+
+function buildIndexTemplate_() {
+  let config = {};
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    config = getTemplateConfigFromDashboard_(SYSTEM_SHEETS.INDEX);
+  }
+
+  if (!config.headers || config.headers.length === 0) {
+    config.headers = [
+      "Section/Month", "Sheet Tab Name", "Workspace Link", "Visibility",
+      "", "Archive Month", "Archive Sheet Name", "Link to Sheet", "Restore Action", "Status"
+    ];
+    config.columnCount = 10;
+  }
+
+  const template = buildGeneralTemplate_(config);
+  template.getRange("F1").setValue("Archive Index").setFontSize(14).setFontWeight("bold");
+  template.getRange("F2").setValue("Archive File ID");
+  if (config.theme && config.theme.titleFontColor) template.getRange("F1").setFontColor(config.theme.titleFontColor);
+  if (config.theme && config.theme.level1) template.getRange(1, 5, template.getMaxRows(), 1).setBackground(config.theme.level1);
+
+  const rules = template.getConditionalFormatRules();
+
+  const uniqueGroups = new Set(["Unformatted", "Templates", "Source Data"]);
+  if (config.dashboard && config.dashboard.creationRules) {
+    Object.keys(config.dashboard.creationRules).forEach(key => {
+      const rule = config.dashboard.creationRules[key];
+      if (rule && rule.group) {
+        uniqueGroups.add(String(rule.group).trim());
+      }
+    });
+  }
+
+  const groupArray = Array.from(uniqueGroups).map(g => g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const groupFormula = '=REGEXMATCH($A5, "^(' + groupArray.join("|") + ')$")';
+
+  if (config.theme && config.theme.level3) {
+    const rule1 = SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied(groupFormula)
+      .setBackground(config.theme.level3).setBold(true).setRanges([template.getRange("A5:D1000")]).build();
+    rules.push(rule1);
+
+    const rule2 = SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=REGEXMATCH($F5, "^(January|February|March|April|May|June|July|August|September|October|November|December)")')
+      .setBackground(config.theme.level3).setBold(true).setRanges([template.getRange("F5:J1000")]).build();
+    rules.push(rule2);
+  }
+
+  template.setConditionalFormatRules(rules);
+  return template;
+}
+
+function createAllReportTemplates() {
+  createOrRefreshBaseTemplate_();
+  buildTemplateBannerReport();
+  buildTemplateCarePlanDue();
+  buildTemplateUnlockedCarePlan();
+  buildTemplateRawData();
+  buildTemplateRefinedData();
+  buildTemplateDisenrolledExclusion();
+  buildTemplateMasterList();
+  buildTemplateMonthlyChange();
+  buildTemplateArchiveRefinedData();
+}
+
+function buildOperationalReportTemplate_(systemSheetName) {
+  let templateSheet;
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    templateSheet = buildGeneralTemplate_(getTemplateConfigFromDashboard_(systemSheetName));
+  }
+  applyOperationalFormatting_(templateSheet, systemSheetName);
+  applyOperationalTemplateSort_(templateSheet);
+  return templateSheet;
+}
+
+function applyOperationalTemplateSort_(sheet) {
+  if (!sheet) return;
+  const existingFilter = sheet.getFilter();
+  if (existingFilter) existingFilter.remove();
+  const columnCount = Math.max(sheet.getLastColumn() - 1, 1);
+  const rowCount = Math.max(sheet.getMaxRows() - HEADER_ROW + 1, 2);
+  sheet.getRange(HEADER_ROW, 1, rowCount, columnCount).createFilter();
+}
+
+function buildTemplateArchiveRefinedData() {
+  let config = {};
+  if (typeof getTemplateConfigFromDashboard_ === "function") {
+    config = getTemplateConfigFromDashboard_("Archive - Refined Data");
+  }
+  if (typeof getHeadersForSheetType_ === "function") {
+    config.headers = getHeadersForSheetType_(config.dashboard, "Refined Data");
+    config.columnCount = config.headers ? config.headers.length : 0;
+  }
+  const templateSheet = buildGeneralTemplate_(config);
+  applyOperationalFormatting_(templateSheet, "Refined Data");
+  applyOperationalTemplateSort_(templateSheet);
+  return templateSheet;
+}
+
+function buildTemplateBannerReport() { return buildOperationalReportTemplate_("Banners"); }
+function buildTemplateCarePlanDue() { return buildOperationalReportTemplate_("CP Due Date"); }
+function buildTemplateUnlockedCarePlan() { return buildOperationalReportTemplate_("Unlock CP"); }
+function buildTemplateRawData() { return buildOperationalReportTemplate_("Raw Data"); }
+function buildTemplateRefinedData() { return buildOperationalReportTemplate_("Refined Data"); }
+function buildTemplateDisenrolledExclusion() { return buildOperationalReportTemplate_("Disenrolled Exclusion"); }
+function buildTemplateMasterList() { return buildOperationalReportTemplate_("Master List"); }
+function buildTemplateMonthlyChange() { return buildOperationalReportTemplate_("Monthly Change"); }
