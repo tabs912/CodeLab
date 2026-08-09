@@ -60,7 +60,7 @@ The modular set includes:
 3. Rename the original import `Source - Raw Data mm.yy`.
 4. Hide the preserved source.
 
-Module 2 v2.8.1 preserves imported columns that are not listed in Dashboard Section H by appending them after the governed columns. The source/output lifecycle still differs from `v1.8.9.3`.
+Module 2 v2.10 preserves imported columns that are not listed in Dashboard Section H by appending them after the governed columns. The source/output lifecycle still differs from `v1.8.9.3`.
 
 ### 2. CP Due and Unlock CP dates
 
