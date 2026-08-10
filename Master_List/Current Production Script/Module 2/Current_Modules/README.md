@@ -5,10 +5,10 @@ This directory contains the single current deployable version of each Module 2 s
 ## Deployment set
 
 1. `MODULE 1 v1.94.6: CORE SYSTEM, MENUS, TIMING & SHARED UTILITIES (GOVERNED SYSTEM FACTORY)`
-2. `MODULE 2 v2.17: DATA PROCESSING & OUTPUT ENGINE (UNIVERSAL SHEET FACTORY)`
+2. `MODULE 2 v2.17.1: DATA PROCESSING & OUTPUT ENGINE (SECTION B RANK GOVERNANCE)`
 3. `MODULE 3 v2.0.12: LAYOUT MANAGEMENT & TEMPLATES (GOVERNED TEMPLATE FACTORY)`
 4. `MODULE 4 v2.1.5: SYSTEM INDEX & QUALITY ASSURANCE (C-H QUALITY WORKFLOW)`
-5. `MODULE 5 v3.24: FORMAT DASHBOARD & CONFIGURATION LOGIC (MASTER HEIGHT & FACTORY GOVERNANCE)`
+5. `MODULE 5 v3.24.1: FORMAT DASHBOARD & CONFIGURATION LOGIC (SECTION B RANK GOVERNANCE)`
 
 Deploy only these current versions together. Older sibling files in `Module 2/` are retained release snapshots and must not be loaded into the same Apps Script project with this set.
 
