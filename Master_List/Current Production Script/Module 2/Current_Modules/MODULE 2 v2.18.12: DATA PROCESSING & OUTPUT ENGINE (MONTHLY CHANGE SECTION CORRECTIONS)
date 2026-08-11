@@ -305,7 +305,7 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   const isTemplateBuild = options.isTemplate === true;
   const templateSpec = (dashboard.sheetDefinitions && dashboard.sheetDefinitions[sheetType]) || {};
 
- let targetName = "";
+let targetName = "";
   if (options.customName) {
     // FIX: Always prioritize an explicitly requested custom name first
     targetName = options.customName;
@@ -1339,7 +1339,7 @@ function replaceChangedRefinedDataPMRs_(existingRows, existingHeaders, rawRows, 
     const rawGroup = rawByPmr.get(pmr) || [];
     if (!rawGroup.length) throw new Error("Raw Data has no rows for changed PMR " + pmr + ".");
     const existingGroup = existingByPmr.get(pmr) || [];
-    const replaceAll = sections.has("Contact Changes") || sections.has("Enrollments");
+    const replaceAll = sections.has("Contact Changes");
     if (replaceAll) {
       if (sections.has("Contact Changes")) existingGroup.forEach(function(row) { archived.push({ row: row.slice(), sectionChanged: "Contact Changes" }); });
       let added = mapRowsToHeaders_(rawGroup, rawHeaders, targetHeaders);
@@ -2075,4 +2075,3 @@ function appendMonthlyChangeRowsWithHighlights_(sheet, block, rowInfos, targetHe
   if (highlightCells.length) sheet.getRangeList(highlightCells).setBackground("#f3ffc7");
   return appended;
 }
-
