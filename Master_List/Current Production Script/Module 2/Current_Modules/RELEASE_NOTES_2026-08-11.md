@@ -73,3 +73,7 @@ This coordinated five-module release improves monthly report correctness, source
 ## Three-group enrollment history
 
 - **Module 2 v2.18.14:** Adds the requested ` 3` enrollment-history columns. The oldest non-primary enrollment dataset is stored in group 3, the next-oldest historical dataset is stored in group 2 when present, and imported `#` values remain unchanged.
+
+## Format Dashboard history-header correction
+
+- **Module 5 v3.25.6:** Adds all group 2 and group 3 enrollment-history headers to Format Dashboard Sections C, G, and H so `Template - Raw Data` is built with the columns. Raw Data now has 67 governed columns, with `#` retained as the final column.
