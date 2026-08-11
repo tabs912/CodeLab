@@ -42,3 +42,10 @@ This coordinated five-module release improves monthly report correctness, source
 1. Run Format Monthly Sheets and confirm Raw Data G1 contains Total Participants, Total Enrolled Participants, and Total Disenrolled Participants.
 2. Select an unformatted Raw Data source, run the individual Format Raw Data trigger, and confirm the same three G1 totals and G2 timestamp are written.
 3. Run each Banners, CP Due Date, and Unlock CP individual trigger and confirm it uses the shared pipeline while retaining its route-specific source/archive behavior.
+
+## Follow-up correction — template themes, sources, ranks, and titles
+
+- **Module 2 v2.18.10:** Defers initial Disenrolled Exclusion trimming, preserves and hides the individual Raw Data source before output collision handling, applies dynamic source ranks with December as offset month zero, and writes Raw Data totals as a dash-separated overflow title.
+- **Module 3 v2.0.16:** Allows title rows 1 and 2 to inherit standard font size and style when Section E overrides are blank.
+- **Module 4 v2.1.7:** Keeps Index group-divider conditional formatting on the Index template only; active Index refreshes no longer rebuild those rules.
+- **Module 5 v3.25.3:** Supplies `titleFontColor` to cached template themes, makes title font overrides optional, governs G1 overflow, retains `#` as the last Raw Data column, and retains `Columns With Change` as the last Monthly Change column.
