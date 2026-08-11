@@ -53,3 +53,9 @@ This coordinated five-module release improves monthly report correctness, source
 ## Final optimization — batched column widths
 
 - **Module 3 v2.0.17:** Replaces uniform per-column width loops with `setColumnWidths()` batch calls. Operational templates now receive the governed default width in one call and issue individual width calls only for Section G overrides that differ from the default.
+
+## Final correction — Section E, dynamic ranks, and Refined Data safety
+
+- **Module 2 v2.18.11:** Excludes Disenrolled Exclusion from factory-time trimming, writes Refined Data dates to B2/D2 for scratch and unchanged builds, and converts enrollment/disenrollment total mismatches into end-of-process notices instead of stopping processing.
+- **Module 3 v2.0.18:** Removes `Last Updated` from Monthly Change subheaders and calculates monthly/source tab positions from the dynamic rank table (`base + ((12 - month) × 22)`).
+- **Module 5 v3.25.4:** Restores the requested Section E row 1 and row 2 font-size/weight specifications while retaining G1 overflow.
