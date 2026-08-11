@@ -65,3 +65,11 @@ This coordinated five-module release improves monthly report correctness, source
 - **Module 1 v1.94.12:** Automatically repeats the Disenrolled Exclusion update once when either enrollment or disenrollment safety notices are returned during Create Monthly Update.
 - **Module 2 v2.18.12:** Processes all enrollment/disenrollment rows across the six governed status fields, excludes `#` and `Oxygen` from change tracking, removes generic Other Changes processing, and restricts Level of Care output to approved Residence Type destinations.
 - **Module 5 v3.25.5:** Removes the duplicate Other Changes block and orders Level of Care before Contact Changes in the Monthly Change template.
+
+## Data-engine batch optimization
+
+- **Module 2 v2.18.13:** Caches dashboard governance configuration once per sheet-resolution pass, batches Refined Data added/updated processing, prunes disenrolled rows in place, and carries oldest historical enrollment values into governed ` 2` columns without changing the imported `#` value.
+
+## Three-group enrollment history
+
+- **Module 2 v2.18.14:** Adds the requested ` 3` enrollment-history columns. The oldest non-primary enrollment dataset is stored in group 3, the next-oldest historical dataset is stored in group 2 when present, and imported `#` values remain unchanged.
