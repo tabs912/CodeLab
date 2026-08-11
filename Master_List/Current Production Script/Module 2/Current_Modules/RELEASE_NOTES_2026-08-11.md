@@ -59,3 +59,9 @@ This coordinated five-module release improves monthly report correctness, source
 - **Module 2 v2.18.11:** Excludes Disenrolled Exclusion from factory-time trimming, writes Refined Data dates to B2/D2 for scratch and unchanged builds, and converts enrollment/disenrollment total mismatches into end-of-process notices instead of stopping processing.
 - **Module 3 v2.0.18:** Removes `Last Updated` from Monthly Change subheaders and calculates monthly/source tab positions from the dynamic rank table (`base + ((12 - month) × 22)`).
 - **Module 5 v3.25.4:** Restores the requested Section E row 1 and row 2 font-size/weight specifications while retaining G1 overflow.
+
+## Monthly Change and safety retry correction
+
+- **Module 1 v1.94.12:** Automatically repeats the Disenrolled Exclusion update once when either enrollment or disenrollment safety notices are returned during Create Monthly Update.
+- **Module 2 v2.18.12:** Processes all enrollment/disenrollment rows across the six governed status fields, excludes `#` and `Oxygen` from change tracking, removes generic Other Changes processing, and restricts Level of Care output to approved Residence Type destinations.
+- **Module 5 v3.25.5:** Removes the duplicate Other Changes block and orders Level of Care before Contact Changes in the Monthly Change template.
