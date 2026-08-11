@@ -305,13 +305,16 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   const isTemplateBuild = options.isTemplate === true;
   const templateSpec = (dashboard.sheetDefinitions && dashboard.sheetDefinitions[sheetType]) || {};
 
-  let targetName = "";
-  if (isTemplateBuild) {
-    targetName = options.customName || templateSpec.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sheetType);
+ let targetName = "";
+  if (options.customName) {
+    // FIX: Always prioritize an explicitly requested custom name first
+    targetName = options.customName;
+  } else if (isTemplateBuild) {
+    targetName = templateSpec.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sheetType);
   } else if (monthParts) {
     targetName = buildMonthlySheetName_(rule.namingPattern, monthParts.firstDay, monthParts.lastDay);
   } else {
-    targetName = options.customName || sheetType;
+    targetName = sheetType;
   }
 
   // A dedicated Section B template row governs the template independently of
@@ -2072,3 +2075,4 @@ function appendMonthlyChangeRowsWithHighlights_(sheet, block, rowInfos, targetHe
   if (highlightCells.length) sheet.getRangeList(highlightCells).setBackground("#f3ffc7");
   return appended;
 }
+
