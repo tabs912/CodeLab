@@ -31,3 +31,14 @@ This coordinated five-module release improves monthly report correctness, source
 ## Known issues intentionally unchanged
 
 - Google Apps Script and Spreadsheet service integration behavior requires validation in the bound workbook; this repository has no local Spreadsheet service emulator.
+
+## Follow-up correction — unified monthly formatter entry and totals
+
+- **Module 1 v1.94.11:** Routes the batch Format Monthly Sheets trigger and every individual format trigger through `executeMonthlyFormatterWorkflow_`, which is the sole menu-entry adapter to the monthly formatter pipeline.
+- **Module 2 v2.18.9:** Uses an immutable per-route options object and shared route completion plus a single pipeline-level `finalizeMonthlyParticipantTotals_` path. Raw Data participant, enrolled, and disenrolled totals are now written by the same finalizer whether formatting runs through Format Monthly Sheets or any individual format trigger.
+
+### Follow-up validation
+
+1. Run Format Monthly Sheets and confirm Raw Data G1 contains Total Participants, Total Enrolled Participants, and Total Disenrolled Participants.
+2. Select an unformatted Raw Data source, run the individual Format Raw Data trigger, and confirm the same three G1 totals and G2 timestamp are written.
+3. Run each Banners, CP Due Date, and Unlock CP individual trigger and confirm it uses the shared pipeline while retaining its route-specific source/archive behavior.
