@@ -1,0 +1,672 @@
+// ============================================================================
+// MODULE 4 v2.1.5: SYSTEM INDEX & QUALITY ASSURANCE (C-H QUALITY WORKFLOW)
+// File: 04_Index_Quality_Validation.gs
+// ============================================================================
+
+// ============================================================================
+// 4.1. SYSTEM INDEX CORE
+// ============================================================================
+
+function updateIndexSheet(archiveSs) {
+  if (typeof populateIndexData === "function") {
+    populateIndexData(SYSTEM_SHEETS.INDEX);
+  } else if (typeof populateActiveIndex === "function") {
+    populateActiveIndex();
+  }
+
+  if (typeof syncArchiveIndexToActiveIndex_ === "function") {
+    syncArchiveIndexToActiveIndex_();
+  }
+}
+
+function populateActiveIndex() {
+  populateIndexData(SYSTEM_SHEETS.INDEX);
+}
+
+function populateIndexData(targetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = targetName || SYSTEM_SHEETS.INDEX;
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return;
+
+  const timestampStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "MM/dd/yyyy HH:mm:ss");
+  const archiveId = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || "";
+
+  sheet.getRange("B2").setValue(timestampStr);
+  sheet.getRange("G2").setValue(archiveId);
+
+  const activeSheets = ss.getSheets();
+  const activeSheetMap = new Map();
+
+  activeSheets.forEach(s => {
+    const name = s.getName();
+    if (name !== sheetName && name !== SYSTEM_SHEETS.TEMPLATE_PREFIX + SYSTEM_SHEETS.INDEX) {
+      let match = { group: "Unformatted", rank: 999 };
+      if (typeof matchSheetToSectionFRule_ === "function") {
+        match = matchSheetToSectionFRule_(name);
+      }
+
+      const finalGroup = (name.indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) === 0 || name === SYSTEM_SHEETS.BASE_TEMPLATE || name === SYSTEM_SHEETS.DASHBOARD_DEFAULT) ? "Template" : match.group;
+
+      activeSheetMap.set(name, {
+        sheet: s,
+        group: finalGroup,
+        rank: match.rank,
+        visibility: s.isSheetHidden() ? "Hidden" : "Visible",
+        link: `=HYPERLINK("#gid=${s.getSheetId()}", "Open Live Tab")`
+      });
+    }
+  });
+
+  const lastRow = sheet.getLastRow();
+  let existingActiveMatrix = [];
+  if (lastRow >= 5) {
+    existingActiveMatrix = sheet.getRange(5, 1, lastRow - 4, 4).getValues();
+  }
+
+  const groupMap = new Map();
+  let currentGroup = "Unformatted";
+
+  existingActiveMatrix.forEach(row => {
+    const colA = String(row[0] || "").trim();
+    const colB = String(row[1] || "").trim();
+
+    if (colA !== "") {
+      currentGroup = colA;
+      if (!groupMap.has(currentGroup)) groupMap.set(currentGroup, []);
+    } else if (colB !== "") {
+      if (activeSheetMap.has(colB)) {
+        const liveInfo = activeSheetMap.get(colB);
+        if (!groupMap.has(currentGroup)) groupMap.set(currentGroup, []);
+        groupMap.get(currentGroup).push({
+          name: colB, link: liveInfo.link, visibility: liveInfo.visibility, rank: liveInfo.rank
+        });
+        activeSheetMap.delete(colB);
+      }
+    }
+  });
+
+  activeSheetMap.forEach((info, newSheetName) => {
+    if (!groupMap.has(info.group)) groupMap.set(info.group, []);
+    groupMap.get(info.group).push({
+      name: newSheetName, link: info.link, visibility: info.visibility, rank: info.rank
+    });
+  });
+
+  const exactGroupOrder = [
+    "Core Operational",
+    "Monthly Active",
+    "Monthly Sub-Reports",
+    "System & Configuration",
+    "Unformatted",
+    "Source Data",
+    "Template"
+  ];
+
+  const sortedGroups = Array.from(groupMap.keys()).sort((a, b) => {
+    let indexA = exactGroupOrder.indexOf(a);
+    let indexB = exactGroupOrder.indexOf(b);
+
+    if (indexA === -1) indexA = 99;
+    if (indexB === -1) indexB = 99;
+
+    return indexA - indexB;
+  });
+
+  const finalActiveMatrix = [];
+
+  sortedGroups.forEach(groupName => {
+    const items = groupMap.get(groupName);
+    if (!items || items.length === 0) return;
+
+    finalActiveMatrix.push([groupName, "", "", ""]);
+
+    items.sort((a, b) => {
+      if (groupName === "Template" || groupName === "Templates") {
+        if (a.name === SYSTEM_SHEETS.DASHBOARD_DEFAULT) return -1;
+        if (b.name === SYSTEM_SHEETS.DASHBOARD_DEFAULT) return 1;
+      }
+      const dateA = typeof extractFirstDateFromSheetName_ === "function" ? extractFirstDateFromSheetName_(a.name).getTime() : 0;
+      const dateB = typeof extractFirstDateFromSheetName_ === "function" ? extractFirstDateFromSheetName_(b.name).getTime() : 0;
+
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      if (dateA !== dateB) return dateB - dateA;
+      return a.name.localeCompare(b.name);
+    });
+
+    items.forEach(item => {
+      finalActiveMatrix.push(["", item.name, item.link, item.visibility]);
+    });
+  });
+
+  const targetWriteRows = Math.max(finalActiveMatrix.length, existingActiveMatrix.length);
+
+  if (targetWriteRows > 0) {
+    if (typeof resizeSheetGrid_ === "function") {
+      resizeSheetGrid_(sheet, Math.max(targetWriteRows + 4, 20), 10);
+    }
+    sheet.getRange(5, 1, targetWriteRows, 4).clearContent();
+    if (finalActiveMatrix.length > 0) {
+      sheet.getRange(5, 1, finalActiveMatrix.length, 4).setValues(finalActiveMatrix);
+    }
+  }
+}
+
+function syncArchiveIndexToActiveIndex_(targetSheet) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const indexSheet = targetSheet || ss.getSheetByName(SYSTEM_SHEETS.INDEX);
+  if (!indexSheet) return;
+
+  const archiveId = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || "";
+  const restoreUrl = PropertiesService.getDocumentProperties().getProperty("INDEX_RESTORE_WEB_APP_URL") || "";
+
+  indexSheet.getRange("G2").setValue(archiveId);
+
+  if (!archiveId) {
+    if (typeof logBestEffortWarning_ === "function") {
+      logBestEffortWarning_("Sync skipped: No Archive Spreadsheet ID found in document properties.");
+    }
+    return;
+  }
+
+  let archiveSs;
+  try {
+    archiveSs = SpreadsheetApp.openById(archiveId);
+  } catch (err) {
+    if (typeof logBestEffortWarning_ === "function") {
+      logBestEffortWarning_("Sync failed: Could not open Archive Spreadsheet ID " + archiveId + ". Error: " + err.message);
+    }
+    return;
+  }
+
+  const archiveIndexSheet = archiveSs.getSheetByName(SYSTEM_SHEETS.INDEX);
+  if (!archiveIndexSheet) return;
+
+  const archiveLastRow = Math.max(archiveIndexSheet.getLastRow(), 4);
+  const activeLastRow = Math.max(indexSheet.getLastRow(), 4);
+
+  if (activeLastRow >= 5) {
+    indexSheet.getRange(5, 6, activeLastRow - 4, 5).clearContent();
+  }
+
+  if (archiveLastRow < 5) return;
+
+  const archiveData = archiveIndexSheet.getRange(5, 1, archiveLastRow - 4, 5).getValues();
+  const outputMatrix = [];
+
+  archiveData.forEach(row => {
+    const month = row[0] || "";
+    const sheetName = row[2] || "";
+    const link = row[3] || "";
+
+    let restoreAction = "";
+    if (sheetName) {
+      if (restoreUrl) {
+        const safeName = encodeURIComponent(String(sheetName).trim());
+        restoreAction = `=HYPERLINK("${restoreUrl}?restoreTarget=${safeName}", "Restore to Active Workspace")`;
+      } else {
+        restoreAction = "Configure Web App URL for 1-Click Restore";
+      }
+    }
+
+    const status = row[4] || "";
+    outputMatrix.push([month, sheetName, link, restoreAction, status]);
+  });
+
+  if (typeof resizeSheetGrid_ === "function") {
+    resizeSheetGrid_(indexSheet, Math.max(outputMatrix.length + 4, 20), 10);
+  }
+
+  if (outputMatrix.length > 0) {
+    indexSheet.getRange(5, 6, outputMatrix.length, 5).setValues(outputMatrix);
+  }
+}
+
+function refreshIndexAfterSheetWorkflow_(label) {
+  try { if (typeof populateActiveIndex === "function") populateActiveIndex(); } catch (e) { logBestEffortWarning_("Failed to refresh Index after " + label + ": " + e.message); }
+}
+
+function checkSheetDeletionAndUpdateIndex_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const currentSheetCount = ss.getSheets().length;
+  const props = PropertiesService.getDocumentProperties();
+  const previousSheetCount = Number(props.getProperty("RFF_LAST_KNOWN_SHEET_COUNT") || 0);
+
+  if (previousSheetCount > 0 && currentSheetCount < previousSheetCount) {
+    if (typeof populateActiveIndex === "function") {
+      populateActiveIndex();
+    }
+    ss.toast("Sheet deletion detected. Index updated!", "Index Engine", 3);
+  }
+
+  props.setProperty("RFF_LAST_KNOWN_SHEET_COUNT", String(currentSheetCount));
+}
+
+// ============================================================================
+// 4.2. WEB APPS & RESTORATION
+// ============================================================================
+
+function restoreSheetFromActiveIndexRow() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const activeSheet = ss.getActiveSheet();
+
+  if (activeSheet.getName().indexOf(SYSTEM_SHEETS.INDEX) === -1) {
+    SpreadsheetApp.getUi().alert("Navigation Alert", "Please select a row on the Index sheet to navigate or restore.", SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const dataStart = (typeof DATA_START_ROW !== "undefined") ? DATA_START_ROW : 5;
+  const activeRow = activeSheet.getActiveRange().getRow();
+  if (activeRow < dataStart) {
+    SpreadsheetApp.getUi().alert("Navigation Alert", "Please select a valid data row (Row 5 or lower).", SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const sheetName = String(activeSheet.getRange(activeRow, 2).getValue() || "").trim();
+  if (!sheetName) {
+    SpreadsheetApp.getUi().alert("Navigation Alert", "No valid sheet tab name found on the selected row.", SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const targetSheet = ss.getSheetByName(sheetName);
+  if (targetSheet) {
+    if (targetSheet.isSheetHidden()) {
+      targetSheet.showSheet();
+    }
+    ss.setActiveSheet(targetSheet);
+    ss.toast(`Unhid and navigated to: "${sheetName}"`, "Index Navigation", 3);
+  } else {
+    const restoreUrl = PropertiesService.getDocumentProperties().getProperty("INDEX_RESTORE_WEB_APP_URL") || "";
+    const message = restoreUrl
+      ? `Sheet "${sheetName}" was not found locally. It may be in central archive cold storage. Please use the Restore Tool: ${restoreUrl}`
+      : `Sheet "${sheetName}" was not found locally. It may be in central archive cold storage. Configure the Restore Web App URL to use the Restore Tool.`;
+    SpreadsheetApp.getUi().alert("Sheet Not Found", message, SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+function restoreSheetFromArchiveWorkbook(targetSheetName) {
+  const mainSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const name = String(targetSheetName || "").trim();
+  if (!name) throw new Error("Missing archive sheet name to restore.");
+  if (mainSpreadsheet.getSheetByName(name)) throw new Error('Sheet "' + name + '" already exists locally.');
+
+  const archiveSpreadsheet = openArchiveSpreadsheetOnce_();
+  const archiveSheet = archiveSpreadsheet.getSheetByName(name);
+  if (!archiveSheet) throw new Error('Sheet "' + name + '" was not found in the archive workbook.');
+
+  if (typeof createGovernedSheet_ !== "function" || typeof getGovernedSheetTypeForName_ !== "function") {
+    throw new Error("Archive restoration requires the governed output factory.");
+  }
+  const dashboard = loadDashboardConfig_(true);
+  const sheetType = getGovernedSheetTypeForName_(name, dashboard);
+  const restoredSheet = createGovernedSheet_(sheetType, null, {
+    customName: name,
+    sourceSheet: archiveSheet,
+    overwrite: false,
+    isSystemSetup: true
+  });
+
+  restoredSheet.showSheet();
+
+  if (typeof populateActiveIndex === "function") {
+    populateActiveIndex();
+  }
+
+  mainSpreadsheet.setActiveSheet(restoredSheet);
+  return restoredSheet;
+}
+
+function escapeHtml_(text) {
+  return String(text == null ? "" : text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function doGet(e) {
+  const targetSheetName = e && e.parameter ? String(e.parameter.restoreTarget || "").trim() : "";
+  if (!targetSheetName) return HtmlService.createHtmlOutput("<p>Missing recovery sheet routing token.</p>");
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(15000)) return HtmlService.createHtmlOutput("<p>Server busy. Try the restore link again.</p>");
+  try {
+    restoreSheetFromArchiveWorkbook(targetSheetName);
+    return HtmlService.createHtmlOutput("<h3>Restoration Complete</h3><p>Restored <b>" + escapeHtml_(targetSheetName) + "</b>.</p>");
+  } catch (err) {
+    return HtmlService.createHtmlOutput("<h3>Restore Failed</h3><p>" + escapeHtml_(err && err.message ? err.message : err) + "</p>");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function configureIndexRestoreWebAppUrl() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getDocumentProperties();
+  const currentUrl = props.getProperty("INDEX_RESTORE_WEB_APP_URL") || "";
+
+  const response = ui.prompt(
+    "Configure Restore Web App URL",
+    `Current Web App URL: ${currentUrl || "Not Configured"}\n\nEnter published Web App URL for external sheet restores:`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() === ui.Button.OK) {
+    const newUrl = response.getResponseText().trim();
+    props.setProperty("INDEX_RESTORE_WEB_APP_URL", newUrl);
+    ui.alert("Configuration Saved", "Index Restore Web App URL successfully updated.", ui.ButtonSet.OK);
+    updateIndexSheet();
+  }
+}
+
+function configureArchiveSpreadsheetId() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getDocumentProperties();
+  const currentId = props.getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || "";
+
+  const response = ui.prompt(
+    "Configure Archive Spreadsheet ID",
+    `Current Archive File ID: ${currentId || "Not Configured"}\n\nEnter Google Drive File ID for the central archive spreadsheet:`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() === ui.Button.OK) {
+    const newId = response.getResponseText().trim();
+    if (newId) {
+      try {
+        SpreadsheetApp.openById(newId);
+        props.setProperty("RFF_ARCHIVE_SPREADSHEET_ID", newId);
+        ui.alert("Configuration Saved", "Archive Spreadsheet ID verified and saved.", ui.ButtonSet.OK);
+        updateIndexSheet();
+      } catch (err) {
+        ui.alert("Validation Error", "Could not open spreadsheet with provided ID: " + err.message, ui.ButtonSet.OK);
+      }
+    }
+  }
+}
+
+function configureArchiveWebAppUrl() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getDocumentProperties();
+  const currentUrl = props.getProperty("RFF_ARCHIVE_WEB_APP_URL") || "";
+
+  const response = ui.prompt(
+    "Configure Archive Web App URL",
+    `Current Archive Web App URL: ${currentUrl || "Not Configured"}\n\nEnter published Web App URL of the Archive File to trigger instant Index updates:`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() === ui.Button.OK) {
+    const newUrl = response.getResponseText().trim();
+    props.setProperty("RFF_ARCHIVE_WEB_APP_URL", newUrl);
+    ui.alert("Configuration Saved", "Archive Web App URL saved.", ui.ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// 4.3. QUALITY & VALIDATION CORE
+// ============================================================================
+
+function runDashboardQualityConfigVerificationSections_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dashboard = ss.getSheetByName(SYSTEM_SHEETS.DASHBOARD) || ss.getSheetByName(SYSTEM_SHEETS.DASHBOARD_DEFAULT);
+  if (!dashboard) throw new Error("Format Dashboard is required for Dashboard Quality verification.");
+  const values = dashboard.getDataRange().getValues();
+  const sections = {};
+  let currentSection = "";
+  values.forEach(function(row, rowIndex) {
+    const firstCell = String(row[0] || "").trim();
+    if (firstCell.indexOf("SECTION ") === 0) {
+      currentSection = firstCell;
+      sections[currentSection] = { titleRow: rowIndex + 1, rows: [] };
+    } else if (currentSection) {
+      sections[currentSection].rows.push(row);
+    }
+  });
+
+  const requiredPrefixes = ["SECTION B", "SECTION C", "SECTION D", "SECTION E", "SECTION F", "SECTION G", "SECTION H"];
+  const results = requiredPrefixes.map(function(prefix) {
+    const title = Object.keys(sections).find(function(name) { return name.indexOf(prefix) === 0; });
+    if (!title) return [prefix, "FAIL", "Required section is missing."];
+    const meaningfulRows = sections[title].rows.filter(function(row) {
+      return row.some(function(value) { return String(value == null ? "" : value).trim() !== ""; });
+    });
+    return meaningfulRows.length ? [title, "PASS", meaningfulRows.length + " configured row(s) detected."] : [title, "WARNING", "Section exists but has no configured data rows."];
+  });
+  return results;
+}
+
+function writeDashboardQualitySection_(title, headers, rows) {
+  let sheet;
+  if (typeof ensureDashboardQualityReport_ === "function") {
+    sheet = ensureDashboardQualityReport_();
+  } else {
+    sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SYSTEM_SHEETS.QUALITY);
+  }
+  if (!sheet) return;
+  const normalizedRows = (rows || []).map(function(row) { return row.slice(); });
+  const appended = appendDataToSubheaderSection_(sheet, title, normalizedRows, headers);
+  if (!appended) return;
+  const targetHeaders = getSubheaderSectionHeaders_(sheet, title);
+  const statusColumn = targetHeaders.map(normalizeSubheaderColumnName_).indexOf("status") + 1;
+  const sourceStatusIndex = headers.map(normalizeSubheaderColumnName_).indexOf("status");
+  if (statusColumn > 0 && sourceStatusIndex >= 0) {
+    normalizedRows.forEach(function(row, index) {
+      if (String(row[sourceStatusIndex] || "").toUpperCase() === "FAIL") {
+        sheet.getRange(appended.startRow + index, statusColumn).setBackground("#F4CCCC");
+      }
+    });
+  }
+}
+
+function ensureDashboardQualityReport_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SYSTEM_SHEETS.QUALITY);
+  if (sheet) return sheet;
+  if (!ss.getSheetByName(SYSTEM_SHEETS.TEMPLATE_PREFIX + SYSTEM_SHEETS.QUALITY)) {
+    if (!ss.getSheetByName(SYSTEM_SHEETS.DASHBOARD_DEFAULT) && !ss.getSheetByName(SYSTEM_SHEETS.DASHBOARD)) {
+      if (typeof buildFormatDashboardTemplate_ === "function") buildFormatDashboardTemplate_();
+    }
+    if (typeof buildGeneralTemplate_ === "function" && typeof getTemplateConfigFromDashboard_ === "function") {
+      buildGeneralTemplate_(getTemplateConfigFromDashboard_(SYSTEM_SHEETS.QUALITY));
+    }
+  }
+  sheet = createActiveSheetFromTemplate_(SYSTEM_SHEETS.TEMPLATE_PREFIX + SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.QUALITY);
+  if (!sheet) throw new Error("Dashboard Quality Report could not be created from its governed template.");
+  return sheet;
+}
+
+function runDashboardQualityStartUp() {
+  return runFrameworkTimed_("Dashboard Quality Start Up", function(timing) {
+    const results = runDashboardQualityConfigVerificationSections_();
+    writeDashboardQualitySection_("SECTION A - FORMAT DASHBOARD VALIDATION", ["Dashboard Section", "Status", "Quality Notes"], results);
+    markFrameworkStep_(timing, "Format Dashboard Sections B-H audited", results.length + " sections");
+    return results;
+  });
+}
+
+function runDashboardQualityValidateTemplates() {
+  return runFrameworkTimed_("Dashboard Quality Validate Templates", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    const templateNames = [
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Banners",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "CP Due Date",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Unlock CP",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Raw Data",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Refined Data",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Disenrolled Exclusion",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Master List",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Monthly Change",
+      SYSTEM_SHEETS.TEMPLATE_PREFIX + "Archive - Refined Data",
+      SYSTEM_SHEETS.BASE_TEMPLATE
+    ];
+
+    // Fuzzy matching to neutralize invisible double-space issues
+    const actualSheetNames = ss.getSheets().map(s => s.getName());
+    const rows = templateNames.map(function(templateName) {
+      let exists = actualSheetNames.includes(templateName);
+      if (!exists) {
+        const fuzzyTarget = templateName.replace(/\s+/g, ' ').trim().toLowerCase();
+        exists = actualSheetNames.some(name => name.replace(/\s+/g, ' ').trim().toLowerCase() === fuzzyTarget);
+      }
+      return [templateName, exists ? "PASS" : "FAIL", exists ? "Template found." : "Template is missing."];
+    });
+
+    writeDashboardQualitySection_("SECTION B - TEMPLATE VALIDATION", ["Template / Sheet Name", "Status", "Quality Notes"], rows);
+    const dateFormatRows = runTemplateDateFormatValidation_({ suppressAlerts: true });
+    markFrameworkStep_(timing, "Templates and date formats validated", rows.length + " templates; " + dateFormatRows.length + " governed date column(s)");
+    return rows.concat(dateFormatRows);
+  });
+}
+
+/**
+ * Audits Template - sheets to verify Section G date-column number formats.
+ */
+function runTemplateDateFormatValidation_(options) {
+  options = options || {};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  let config;
+  try {
+    config = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null;
+    if (!config) throw new Error("loadDashboardConfig_ not found.");
+  } catch (err) {
+    if (!options.suppressAlerts) ui.alert("Validation Error", "Error reading Format Dashboard: " + err.message, ui.ButtonSet.OK);
+    return [];
+  }
+
+  const dateDefinitions = new Map();
+  const columnDefinitions = config.columnDefinitions || {};
+  Object.keys(columnDefinitions).forEach(function(header) {
+    const definition = columnDefinitions[header];
+    const normalizedHeader = String(header || "").trim().toLowerCase();
+    const numberFormat = String(definition && definition.format || "").trim();
+    if (normalizedHeader && definition && definition.dateColumn === true) {
+      dateDefinitions.set(normalizedHeader, numberFormat);
+    }
+  });
+  if (!dateDefinitions.size) {
+    if (!options.suppressAlerts) ui.alert("Validation Skipped", "No Date Columns are defined in Section G of the Dashboard.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const templateSheets = ss.getSheets().filter(function(sheet) {
+    return sheet.getName().indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) === 0;
+  });
+  if (!templateSheets.length) {
+    if (!options.suppressAlerts) ui.alert("Validation Skipped", "No 'Template - ' sheets found to audit. Build templates first.", ui.ButtonSet.OK);
+    return [];
+  }
+
+  const headerRow = Number(config.globals && config.globals["Header Row"]) || HEADER_ROW;
+  const dataStartRow = Number(config.globals && config.globals["Data Start Row"]) || DATA_START_ROW;
+  const findings = [];
+  let checkedCount = 0;
+  templateSheets.forEach(function(sheet) {
+    const lastColumn = sheet.getLastColumn();
+    if (lastColumn < 1) return;
+    const headers = sheet.getRange(headerRow, 1, 1, lastColumn).getValues()[0];
+    headers.forEach(function(header, index) {
+      const normalizedHeader = String(header || "").trim().toLowerCase();
+      if (!normalizedHeader || !dateDefinitions.has(normalizedHeader)) return;
+      const expectedFormat = dateDefinitions.get(normalizedHeader);
+      const appliedFormat = sheet.getRange(dataStartRow, index + 1).getNumberFormat();
+      const passed = expectedFormat !== "" && appliedFormat === expectedFormat;
+      findings.push([sheet.getName() + " | " + header, passed ? "PASS" : "FAIL", passed ? "Section G date format applied: " + appliedFormat : "Expected " + (expectedFormat || "a configured Number Format") + "; found " + (appliedFormat || "General / Plain Text")]);
+      checkedCount++;
+    });
+  });
+
+  writeDashboardQualitySection_("SECTION B - TEMPLATE VALIDATION", ["Template / Sheet Name", "Status", "Quality Notes"], findings);
+  const failures = findings.filter(function(row) { return row[1] === "FAIL"; });
+  if (!options.suppressAlerts) {
+    if (!failures.length) {
+      ui.alert("Validation Passed: Date Formats", "Checked " + checkedCount + " date columns across all templates. Every template applied the configured Section G date format.", ui.ButtonSet.OK);
+    } else {
+      ui.alert("Validation Failed: Date Formats", failures.length + " date column(s) are missing or incorrectly formatted. Review Section B of Dashboard Quality Report.", ui.ButtonSet.OK);
+    }
+  }
+  return findings;
+}
+
+/**
+ * Menu Callback: Complete Quality Diagnostic Workflow
+ * Executes governed process audits for Sections C through H only.
+ */
+function runDashboardQualityWorkflow() {
+  return runFrameworkTimed_("Dashboard Quality Workflow Sections C-H", function(timing) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    ss.toast("Running Quality Diagnostics (Sections C - H)...", "QA Engine", 5);
+    const results = runDashboardQualityProcessValidationSections_();
+    markFrameworkStep_(timing, "Dashboard Quality Sections C-H complete", results.length + " validation result(s)");
+    ss.toast("Quality Diagnostics Complete! Check Sections C - H.", "QA Engine", 5);
+    return results;
+  });
+}
+
+function runDashboardQualityProcessValidationSections_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dashboard = loadDashboardConfig_();
+  const validations = [
+    ["SECTION C - RAW DATA VALIDATION", "Raw Data"],
+    ["SECTION D - REFINED DATA QUALITY VALIDATION", "Refined Data"],
+    ["SECTION E - DISENROLLED EXCLUSION VALIDATION", "Disenrolled Exclusion"],
+    ["SECTION F - MONTHLY CHANGE VALIDATION", "Monthly Change"],
+    ["SECTION G - MASTER LIST VALIDATION", "Master List"]
+  ];
+  const results = [];
+  validations.forEach(function(item) {
+    const title = item[0];
+    const sheetType = item[1];
+    const governedHeaders = getHeadersForSheetType_(dashboard, sheetType);
+    let activeSheet = null;
+    if (typeof getLatestSheetByPrefix_ === "function") activeSheet = getLatestSheetByPrefix_(sheetType);
+    let status = "PASS";
+    let details = governedHeaders.length + " governed header(s); active sheet " + (activeSheet ? "found" : "not present (not yet built)") + ".";
+    if (!governedHeaders.length) { status = "FAIL"; details = "No governed headers are configured."; } else if (!activeSheet) { status = "WARNING"; }
+    const row = [sheetType, status, details];
+    writeDashboardQualitySection_(title, ["Validation Item", "Status", "Quality Notes"], [row]);
+    results.push(row);
+  });
+  const failedCount = results.filter(function(row) { return row[1] === "FAIL"; }).length;
+  const warningCount = results.filter(function(row) { return row[1] === "WARNING"; }).length;
+  const summary = [["Dashboard Quality Workflow", failedCount ? "FAIL" : (warningCount ? "WARNING" : "PASS"), results.length + " process section(s); " + failedCount + " failed; " + warningCount + " warning(s)."]];
+  writeDashboardQualitySection_("SECTION H - SUMMARY", ["Metric / Action", "Result", "Notes"], summary);
+  return results.concat(summary);
+}
+
+function runFrameworkSmokeValidation() {
+  const requiredFunctions = [
+    ["formatMonthlySheets", typeof formatMonthlySheets], ["runMonthlyUpdate", typeof runMonthlyUpdate],
+    ["runMonthlyStart", typeof runMonthlyStart], ["updateRefinedDataMonthlySync", typeof updateRefinedDataMonthlySync],
+    ["buildRefinedDataFromScratch", typeof buildRefinedDataFromScratch], ["createDisenrolledList", typeof createDisenrolledList],
+    ["buildMonthlyChangeReport", typeof buildMonthlyChangeReport], ["createMasterList", typeof createMasterList],
+    ["runDashboardQualityWorkflow", typeof runDashboardQualityWorkflow], ["createAllReportTemplates", typeof createAllReportTemplates],
+    ["populateActiveIndex", typeof populateActiveIndex]
+  ];
+  const missingFunctions = requiredFunctions.filter(function(item) { return item[1] !== "function"; }).map(function(item) { return item[0]; });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const requiredSheets = [SYSTEM_SHEETS.DASHBOARD, SYSTEM_SHEETS.QUALITY, SYSTEM_SHEETS.INDEX];
+  const missingSheets = requiredSheets.filter(function(name) { return !ss.getSheetByName(name); });
+  if (missingFunctions.length || missingSheets.length) throw new Error("Framework smoke validation failed. Missing functions: " + (missingFunctions.join(", ") || "None") + "; Missing sheets: " + (missingSheets.join(", ") || "None"));
+  notify_("Framework smoke validation passed.");
+  return { functionsChecked: requiredFunctions.length, sheetsChecked: requiredSheets.length };
+}
+
+function runFullQualityCheck() {
+  let smoke, quality;
+  if (typeof runFrameworkSmokeValidation === "function") smoke = runFrameworkSmokeValidation();
+  if (typeof runDashboardQualityWorkflow === "function") quality = runDashboardQualityWorkflow();
+  notify_("Full Quality Check complete.");
+  return { smoke: smoke, quality: quality };
+}
+
+function runFormatDashboardUpdates() {
+  const results = runDashboardQualityConfigVerificationSections_();
+  writeDashboardQualitySection_("SECTION A - FORMAT DASHBOARD VALIDATION", ["Dashboard Section", "Status", "Quality Notes"], results);
+  const failed = results.filter(function(row) { return row[1] === "FAIL"; });
+  if (failed.length) throw new Error("Format Dashboard Updates found " + failed.length + " missing required section(s).");
+  notify_("Format Dashboard Updates validation complete.");
+  return results;
+}
