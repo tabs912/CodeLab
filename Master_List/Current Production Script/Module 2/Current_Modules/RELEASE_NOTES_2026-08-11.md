@@ -49,3 +49,7 @@ This coordinated five-module release improves monthly report correctness, source
 - **Module 3 v2.0.16:** Allows title rows 1 and 2 to inherit standard font size and style when Section E overrides are blank.
 - **Module 4 v2.1.7:** Keeps Index group-divider conditional formatting on the Index template only; active Index refreshes no longer rebuild those rules.
 - **Module 5 v3.25.3:** Supplies `titleFontColor` to cached template themes, makes title font overrides optional, governs G1 overflow, retains `#` as the last Raw Data column, and retains `Columns With Change` as the last Monthly Change column.
+
+## Final optimization — batched column widths
+
+- **Module 3 v2.0.17:** Replaces uniform per-column width loops with `setColumnWidths()` batch calls. Operational templates now receive the governed default width in one call and issue individual width calls only for Section G overrides that differ from the default.
