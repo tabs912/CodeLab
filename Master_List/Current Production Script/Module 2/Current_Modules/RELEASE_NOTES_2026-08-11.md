@@ -69,15 +69,3 @@ This coordinated five-module release improves monthly report correctness, source
 ## Data-engine batch optimization
 
 - **Module 2 v2.18.13:** Caches dashboard governance configuration once per sheet-resolution pass, batches Refined Data added/updated processing, prunes disenrolled rows in place, and carries oldest historical enrollment values into governed ` 2` columns without changing the imported `#` value.
-
-## Three-group enrollment history
-
-- **Module 2 v2.18.14:** Adds the requested ` 3` enrollment-history columns. The oldest non-primary enrollment dataset is stored in group 3, the next-oldest historical dataset is stored in group 2 when present, and imported `#` values remain unchanged.
-
-## Format Dashboard history-header correction
-
-- **Module 5 v3.25.6:** Adds all group 2 and group 3 enrollment-history headers to Format Dashboard Sections C, G, and H so `Template - Raw Data` is built with the columns. Raw Data now has 67 governed columns, with `#` retained as the final column.
-
-## Raw Data number-column preservation
-
-- **Module 2 v2.18.15:** Explicitly copies each imported `#` value into the governed Raw Data matrix before history columns are processed and verifies the written Active Raw Data `#` column after output creation.
