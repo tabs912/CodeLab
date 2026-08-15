@@ -1,5 +1,5 @@
 // ============================================================================
-// MODULE 2 v2.18.12: DATA PROCESSING & OUTPUT ENGINE (MONTHLY CHANGE SECTION CORRECTIONS)
+// MODULE 2 v2.18.13: DATA PROCESSING & OUTPUT ENGINE (BATCHED GOVERNANCE AND REFINED SYNC)
 // File: 02_Data_Processing_Engine.gs
 // ============================================================================
 
@@ -71,9 +71,15 @@ function resolveSheetGovernance_(baseName, ruleNode, isTemplate) {
 
   const activeSheets = ss.getSheets();
   let insertIndex = activeSheets.length;
+
+  // BATCH OPTIMIZATION: Load the dashboard once to pass to the rank checker
+  let cachedConfig = null;
+  try { cachedConfig = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null; } catch (e) {}
+
   for (let i = 0; i < activeSheets.length; i++) {
     const currentSheetName = activeSheets[i].getName();
-    const currentRank = getRankForSheetName_(currentSheetName, isTemplate);
+    // Pass the cachedConfig to prevent 50+ redundant sheet reads
+    const currentRank = getRankForSheetName_(currentSheetName, isTemplate, cachedConfig);
     if (evaluatedRank < currentRank ||
         (evaluatedRank === currentRank && finalName.localeCompare(currentSheetName) < 0)) {
       insertIndex = i;
@@ -101,12 +107,10 @@ function resolveSheetGovernance_(baseName, ruleNode, isTemplate) {
  * @param {boolean} asTemplate Whether template rank should be used.
  * @return {number} Resolved rank or safe fallback.
  */
-function getRankForSheetName_(sheetName, asTemplate) {
-  let config;
-  try {
-    config = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null;
-  } catch (err) {
-    return 999;
+function getRankForSheetName_(sheetName, asTemplate, cachedConfig) {
+  let config = cachedConfig;
+  if (!config) {
+    try { config = typeof loadDashboardConfig_ === "function" ? loadDashboardConfig_() : null; } catch (e) {}
   }
   if (!config) return 999;
 
@@ -114,9 +118,7 @@ function getRankForSheetName_(sheetName, asTemplate) {
   const definitions = config.sheetDefinitions || {};
   const exactName = String(sheetName || "").trim();
   const lookupName = exactName.replace(/^Template\s*-\s*/i, "").trim();
-  // Section B may assign a template row a rank that intentionally differs
-  // from its active-sheet row. Preserve that exact template lookup before
-  // falling back to the underlying system sheet name.
+
   let rule = (asTemplate ? getTemplateCreationRule_(creationRules, exactName) : null) ||
     creationRules[exactName] || definitions[exactName] ||
     creationRules[lookupName] || definitions[lookupName] || null;
@@ -305,16 +307,13 @@ function createGovernedSheet_(sheetType, monthParts, options) {
   const isTemplateBuild = options.isTemplate === true;
   const templateSpec = (dashboard.sheetDefinitions && dashboard.sheetDefinitions[sheetType]) || {};
 
-let targetName = "";
-  if (options.customName) {
-    // FIX: Always prioritize an explicitly requested custom name first
-    targetName = options.customName;
-  } else if (isTemplateBuild) {
-    targetName = templateSpec.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sheetType);
+  let targetName = "";
+  if (isTemplateBuild) {
+    targetName = options.customName || templateSpec.templateName || (SYSTEM_SHEETS.TEMPLATE_PREFIX + sheetType);
   } else if (monthParts) {
     targetName = buildMonthlySheetName_(rule.namingPattern, monthParts.firstDay, monthParts.lastDay);
   } else {
-    targetName = sheetType;
+    targetName = options.customName || sheetType;
   }
 
   // A dedicated Section B template row governs the template independently of
@@ -1049,15 +1048,32 @@ function syncBannerFieldsIntoRawRows_(rawRows, rawHeaders, bannerRows, bannerHea
 }
 
 function assignPrimaryPMRRowsToMatrix_(rows, headers) {
+  // 1. Dynamically add the historical " 2" headers to the matrix if they don't exist
+  const historicalHeaders = [
+    "Capitation Date 2", "Enrollment Status 2", "Disenrollment Date 2",
+    "Disenrollment Effective Date 2", "Disenrollment Reason 2", "Date of Death 2"
+  ];
+
+  historicalHeaders.forEach(function(h) {
+    if (headers.indexOf(h) === -1) headers.push(h);
+  });
+
+  // Pad all existing rows to ensure they match the new header length (this preserves the # column)
+  rows.forEach(function(row) {
+    while (row.length < headers.length) row.push("");
+  });
+
   const headerMap = buildHeaderIndexMap_(headers);
   const pmrIndex = getPMRIndex_(headerMap);
   const primaryIndex = headerMap["Primary PMR Row"];
   if (pmrIndex < 0 || primaryIndex === undefined) throw new Error("Raw Data schema requires PMR and Primary PMR Row columns.");
+
+  // Clear any existing Primary PMR Row flags
   rows.forEach(function(row) {
-    const pmr = String(row[pmrIndex] == null ? "" : row[pmrIndex]).trim().toUpperCase();
-    if (!pmr) row[primaryIndex] = "";
-    else row[primaryIndex] = "";
+    row[primaryIndex] = "";
   });
+
+  // 2. Group rows by PMR
   const groups = new Map();
   rows.forEach(function(row) {
     const pmr = String(row[pmrIndex] == null ? "" : row[pmrIndex]).trim().toUpperCase();
@@ -1065,8 +1081,13 @@ function assignPrimaryPMRRowsToMatrix_(rows, headers) {
     if (!groups.has(pmr)) groups.set(pmr, []);
     groups.get(pmr).push(row);
   });
+
   const scoreHeaders = [["Date of Birth", 1000], ["Enrollment Date", 250], ["Capitation Date", 200], ["Address Line 1", 100], ["Phone Number", 50], ["Primary Language", 25], ["Participant Name", 20]];
+  const dateCols = ["Capitation Date", "Enrollment Date"].map(function(h) { return headerMap[h]; }).filter(function(i) { return i !== undefined; });
+
+  // 3. Score the Primary Row, then extract historical data from the oldest row
   groups.forEach(function(group) {
+    // A. Original logic: Find the best Primary Row
     let best = group[0];
     let bestScore = -1;
     group.forEach(function(row) {
@@ -1077,6 +1098,44 @@ function assignPrimaryPMRRowsToMatrix_(rows, headers) {
       if (score > bestScore) { best = row; bestScore = score; }
     });
     best[primaryIndex] = "Yes";
+
+    // B. Historical logic: Find the oldest row to pull historical data
+    if (group.length > 1) {
+      let oldest = group[0];
+      let oldestTime = Infinity;
+
+      group.forEach(function(row) {
+        let rowTime = null;
+        for (let i = 0; i < dateCols.length; i++) {
+           let val = row[dateCols[i]];
+           if (val instanceof Date) rowTime = val.getTime();
+           else if (val && new Date(val).getTime()) rowTime = new Date(val).getTime();
+           if (rowTime) break;
+        }
+        if (rowTime && rowTime < oldestTime) {
+           oldestTime = rowTime;
+           oldest = row;
+        }
+      });
+
+      // Move the fields from the oldest row to the 'best' (Primary) row's " 2" columns
+      const fieldsToMove = [
+        ["Capitation Date", "Capitation Date 2"],
+        ["Enrollment Status", "Enrollment Status 2"],
+        ["Disenrollment Date", "Disenrollment Date 2"],
+        ["Disenrollment Effective Date", "Disenrollment Effective Date 2"],
+        ["Disenrollment Reason", "Disenrollment Reason 2"],
+        ["Date of Death", "Date of Death 2"]
+      ];
+
+      fieldsToMove.forEach(function(pair) {
+        let srcIdx = headerMap[pair[0]];
+        let destIdx = headerMap[pair[1]];
+        if (srcIdx !== undefined && destIdx !== undefined && oldest[srcIdx] != null) {
+          best[destIdx] = oldest[srcIdx];
+        }
+      });
+    }
   });
 }
 
@@ -1335,23 +1394,28 @@ function replaceChangedRefinedDataPMRs_(existingRows, existingHeaders, rawRows, 
   const archived = [];
   existingByPmr.forEach(function(rows, pmr) { if (!changeMap.has(pmr)) output.push.apply(output, rows); });
 
+  // Arrays to hold the batched rows for processing
+  const batchedAdded = [];
+  const batchedUpdated = [];
+
   changeMap.forEach(function(sections, pmr) {
     const rawGroup = rawByPmr.get(pmr) || [];
     if (!rawGroup.length) throw new Error("Raw Data has no rows for changed PMR " + pmr + ".");
     const existingGroup = existingByPmr.get(pmr) || [];
-    const replaceAll = sections.has("Contact Changes");
+    const replaceAll = sections.has("Contact Changes") || sections.has("Enrollments");
+
     if (replaceAll) {
       if (sections.has("Contact Changes")) existingGroup.forEach(function(row) { archived.push({ row: row.slice(), sectionChanged: "Contact Changes" }); });
-      let added = mapRowsToHeaders_(rawGroup, rawHeaders, targetHeaders);
-      added = stampRefinedTrackingFields_(added, targetHeaders, "Added", monthParts);
-      added = applyRefinedDataProcesses_(added, targetHeaders, timing, { runContactFunctions: true });
-      output.push.apply(output, added);
+      let mappedAdded = mapRowsToHeaders_(rawGroup, rawHeaders, targetHeaders);
+      batchedAdded.push.apply(batchedAdded, mappedAdded);
       return;
     }
+
     if (!existingGroup.length) throw new Error("Refined Data has no existing row for updated PMR " + pmr + ".");
     const rawPrimary = rawGroup.find(function(row) { return rawPrimaryIdx >= 0 && isPrimaryPMRRowValue_(row[rawPrimaryIdx]); }) || rawGroup[0];
     const mappedRawPrimary = mapRowsToHeaders_([rawPrimary], rawHeaders, targetHeaders)[0];
     const updated = existingGroup[0].slice();
+
     sections.forEach(function(section) {
       archived.push({ row: existingGroup[0].slice(), sectionChanged: section });
       (REFINED_CHANGE_SECTION_RULES[section] || []).forEach(function(header) {
@@ -1359,12 +1423,24 @@ function replaceChangedRefinedDataPMRs_(existingRows, existingHeaders, rawRows, 
         if (index >= 0) updated[index] = mappedRawPrimary[index];
       });
     });
-    stampRefinedTrackingFields_([updated], targetHeaders, "Updated", monthParts);
-    const processed = applyRefinedDataProcesses_([updated], targetHeaders, timing, { runContactFunctions: false });
-    output.push.apply(output, processed);
+
+    batchedUpdated.push(updated);
   });
 
-  markFrameworkStep_(timing, "Section-aware Refined Data changes applied", changeMap.size + " PMR(s)");
+  // BATCH PROCESS: Run the formatting and tracking stamps on the entire groups exactly once
+  if (batchedAdded.length > 0) {
+    stampRefinedTrackingFields_(batchedAdded, targetHeaders, "Added", monthParts);
+    const processedAdded = applyRefinedDataProcesses_(batchedAdded, targetHeaders, timing, { runContactFunctions: true });
+    output.push.apply(output, processedAdded);
+  }
+
+  if (batchedUpdated.length > 0) {
+    stampRefinedTrackingFields_(batchedUpdated, targetHeaders, "Updated", monthParts);
+    const processedUpdated = applyRefinedDataProcesses_(batchedUpdated, targetHeaders, timing, { runContactFunctions: false });
+    output.push.apply(output, processedUpdated);
+  }
+
+  markFrameworkStep_(timing, "Section-aware Refined Data changes applied", changeMap.size + " PMR(s) batched and processed");
   return { merged: output, replaced: archived };
 }
 
@@ -1634,12 +1710,29 @@ function createDisenrolledListForMonth_(monthParts) {
       let updatedRefinedSheet = refinedSheet;
       let updatedRefinedHeaders = refinedData.headers;
       let updatedRefinedRows = retainedRows;
+
       if (rowsSelectedForRemoval > 0) {
         const refinedHeaders = getHeadersForSheetType_(dashboard, "Refined Data");
         const mappedRetained = mapRowsToHeaders_(retainedRows, refinedData.headers, refinedHeaders);
-        updatedRefinedSheet = createGovernedSheet_("Refined Data", null, { customName: refinedSheet.getName(), dataRows: mappedRetained, headers: refinedHeaders, overwrite: true, timing: timing });
+
+        // BATCH OPTIMIZATION: Clear and overwrite in place instead of destroying/rebuilding the sheet
+        const maxDataRows = Math.max(refinedSheet.getMaxRows() - DATA_START_ROW + 1, 1);
+        refinedSheet.getRange(DATA_START_ROW, 1, maxDataRows, refinedSheet.getMaxColumns()).clearContent();
+
+        if (mappedRetained.length > 0) {
+          refinedSheet.getRange(DATA_START_ROW, 1, mappedRetained.length, refinedHeaders.length).setValues(mappedRetained);
+        }
+
+        if (typeof trimCreatedSheetToData_ === "function") {
+          trimCreatedSheetToData_(refinedSheet, DATA_START_ROW, refinedHeaders.length);
+        }
+
         updatedRefinedHeaders = refinedHeaders;
         updatedRefinedRows = mappedRetained;
+
+        if (typeof markFrameworkStep_ === "function") {
+          markFrameworkStep_(timing, "Refined Data - In-place Disenrollment Prune", "Cleared and replaced grid without rebuilding sheet");
+        }
       }
       writeUniqueParticipantTotalToG1_(updatedRefinedSheet, updatedRefinedHeaders, updatedRefinedRows, "Total Enrollments", "Enrolled", timing);
 

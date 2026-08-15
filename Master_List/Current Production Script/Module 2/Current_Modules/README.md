@@ -8,7 +8,7 @@ This directory contains the single current deployable version of each Module 2 s
 2. `MODULE 2 v2.18.13: DATA PROCESSING & OUTPUT ENGINE (BATCHED GOVERNANCE AND REFINED SYNC)`
 3. `MODULE 3 v2.0.18: LAYOUT MANAGEMENT & TEMPLATES (DYNAMIC MONTHLY TAB RANKS)`
 4. `MODULE 4 v2.1.7: SYSTEM INDEX & QUALITY ASSURANCE (TEMPLATE DIVIDERS ONLY)`
-5. `MODULE 5 v3.25.5: FORMAT DASHBOARD & CONFIGURATION LOGIC (MONTHLY CHANGE SECTION ORDER)`
+5. `MODULE 5 v3.25.6: FORMAT DASHBOARD & CONFIGURATION LOGIC (RAW DATA HISTORY HEADERS)`
 
 Deploy only these current versions together. Older sibling files in `Module 2/` are retained release snapshots and must not be loaded into the same Apps Script project with this set.
 
