@@ -1,32 +1,33 @@
 # Master List v1.9.74 — Exhaustive Engineering Code Review
 
 **Review date:** 2026-08-18
-**Governing source:** `Master_List/Current Production Script/v1.9.74`
+**Governing source:** `Master_List/Current Production Script/v1.9.74`, supplemented by the user-supplied Module 4 v2.1.11 update (`ensureRestoreButtonOnIndex_`)
 **Review prompt:** `Master_List/Prompts/ML_Exhaustive_Review_v2`
-**Method:** static syntax/AST inventory, call-graph review, execution-path inspection, specification comparison, and review of the normalized timing extracts. No production code was modified and no live workbook execution was performed.
+**Method:** static syntax/AST inventory, call-graph review, execution-path inspection, specification comparison, review of the normalized timing extracts, and a focused API/dependency delta review of the supplied Module 4 update. No production code was modified and no live workbook execution was performed.
 
 ## 1. Executive Review Summary
 
 | Measure | Result |
 |---|---|
-| Overall health | **62/100 — materially functional architecture with one startup defect and unsafe replacement boundaries** |
+| Overall health | **57/100 — materially functional architecture with startup, Index-refresh, and unsafe replacement defects** |
 | Production readiness | **Not approved pending Phase A corrections** |
 | Critical | **1** |
-| High | **2** |
+| High | **3** |
 | Medium | **3** |
 | Low | **1** |
-| Highest-risk workflows | `onOpen`; governed overwrite paths (especially Refined Data/Master List/monthly outputs); Disenrolled Exclusion mutation |
+| Highest-risk workflows | `onOpen`; every Index refresh after the restore image exists; governed overwrite paths; Disenrolled Exclusion mutation |
 | Primary bottlenecks | Historical averages: Monthly Update 144.679 s, Monthly Start 123.196 s, Format Monthly Sheets 106.731 s, template refresh 85.917 s; targeted row deletion and repeated index/report refresh remain secondary costs |
-| Primary maintainability concerns | Six duplicate declarations (three duplicate names are exact repeated helpers); broad best-effort catches; a smoke test that checks symbol presence but cannot detect startup execution failure |
-| Recommended next action | Remove the stray startup identifier, make governed replacement copy/write/validate before deleting the prior output, and stage disenrollment changes in memory before committing both sheets. |
+| Primary maintainability concerns | Six duplicate declarations; an invalid OverGridImage getter in the Module 4 update; broad best-effort catches; a smoke test that checks symbol presence but not executable paths |
+| Recommended next action | Remove the stray startup identifier, replace `getAssignScript()` with the supported `getScript()` image getter, make governed replacement safe, and stage disenrollment changes before committing both sheets. |
 
-The script retains the approved single-file, dashboard-driven, template-first architecture, fixed header row 4/data row 5 convention, batched matrix transforms, Primary PMR ownership, document locks on material write workflows, and source-archive behavior. No missing menu callback or confirmed missing top-level helper was found. The blocking issues are narrow and correctable without redesigning business logic.
+The script retains the approved single-file, dashboard-driven, template-first architecture, fixed header row 4/data row 5 convention, batched matrix transforms, Primary PMR ownership, document locks on material write workflows, and source-archive behavior. No missing menu callback or confirmed missing top-level helper was found. The supplied Module 4 delta adds one function but also introduces a confirmed invalid method call. The blocking issues are narrow and correctable without redesigning business logic.
 
 ## 2. Repository and File Inventory
 
 | Artifact | Role in review | Status |
 |---|---|---|
-| `Master_List/Current Production Script/v1.9.74` | Governing executable; 7,908 lines / 383,329 bytes | Reviewed completely through AST inventory, targeted path inspection, and searches |
+| `Master_List/Current Production Script/v1.9.74` | Governing executable baseline; 7,908 lines / 383,329 bytes | Reviewed completely through AST inventory, targeted path inspection, and searches |
+| User-supplied Module 4 v2.1.11 delta | Adds `ensureRestoreButtonOnIndex_` and invokes it from `populateIndexData` | Reviewed as the proposed/current Module 4 correction; the clean first copy in the prompt was treated as authoritative and the duplicated escaped rendering was ignored |
 | `Master_List/Prompts/ML_Exhaustive_Review_v2` | Required review scope and output contract | Applied |
 | `Framework/spec/EXHAUSTIVE_CODE_REVIEW_PROTOCOL.md` | Repository exhaustive-review protocol | Applied |
 | `Framework/spec/GOOGLE_APPS_SCRIPT_STANDARDS.md` | Apps Script service-call/batching standard | Applied |
@@ -37,18 +38,18 @@ The script retains the approved single-file, dashboard-driven, template-first ar
 | `Master_List/Reports/*` | Prior reports and binary runtime/quality exports | Inventory reviewed; binaries were not modified or committed |
 | Apps Script manifest | External/container-bound per project README | Optional; absence is not a finding |
 
-The active branch had no configured remote and GitHub authentication was unavailable, so repository synchronization could not be attempted without violating the repository authentication policy. The requested production artifact was present and was used as supplied.
+The repository copy already labels Module 4 as v2.1.11 but does not contain the supplied restore-button helper/call; therefore the audit distinguishes the committed baseline from the supplied delta. The active branch had no configured remote and GitHub authentication was unavailable, so repository synchronization could not be attempted without violating the repository authentication policy. The requested production artifact was present and was used as supplied.
 
 ## 3. Function and Dependency Inventory
 
 | Metric | Count / result |
 |---|---|
-| Top-level function declarations | **295** |
-| Unique top-level function names | **289** |
+| Top-level function declarations | **296** after applying the supplied Module 4 delta (**295** in the committed baseline) |
+| Unique top-level function names | **290** after the delta (**289** baseline) |
 | Duplicate declarations | **6 declarations beyond uniqueness, across 6 names** |
 | Menu `.addItem()` callbacks | **37 references; 0 missing** |
 | Confirmed undefined top-level call dependencies | **0** |
-| Functions containing write/destructive-style service operations | **84** (conservative AST classification) |
+| Functions containing write/destructive-style service operations | **85** after the delta (**84** baseline; conservative AST classification) |
 | No-static-path candidates | **23 declarations** before manual classification |
 | Supported/simple trigger entry points | `onOpen`, `onEdit` |
 | Web-app entry point | `doGet` |
@@ -71,6 +72,19 @@ The complete compact inventory is in Appendix A. “No static path” means no c
 - **Recommended correction:** Delete only the stray identifier line. Do not alter the guarded startup calls.
 - **Breaking-change risk:** None.
 - **Focused test:** Open/reload the bound workbook; confirm no failed `onOpen` execution, menu presence, sheet-count property update, and archive-index sync behavior.
+
+### ML1974-008 — Restore-button detection calls a nonexistent OverGridImage method and breaks later Index refreshes
+
+- **Severity:** HIGH
+- **Confidence:** Confirmed
+- **Category:** Correctness / API dependency / Index workflow
+- **Function/workflow:** Supplied `ensureRestoreButtonOnIndex_` → `populateIndexData` → `populateActiveIndex`
+- **Description:** The new helper calls `images[i].getAssignScript()`. The Apps Script `OverGridImage` API provides `getScript()` to read the assigned function and `assignScript()` to set it; `getAssignScript()` is not a supported method.
+- **Evidence/execution path:** The first Index refresh can insert and assign the restore image because an empty image list skips the bad call. On the next refresh, `sheet.getImages()` returns that image, the loop invokes `getAssignScript()`, and execution throws a `TypeError` before the Index matrix is rebuilt. The call to `ensureRestoreButtonOnIndex_` is outside a protective best-effort boundary in `populateIndexData`.
+- **Operational impact:** Once the restore image exists—or whenever any over-grid image exists—menu workflows and finalization paths that call `populateActiveIndex()` can fail during Index refresh. This can turn an otherwise completed monthly workflow into an apparent failure at its final Index stage and leave the Index stale.
+- **Recommended correction:** Change the comparison to `images[i].getScript() === "restoreSheetFromActiveIndexRow"`. Keep `assignScript()` for setting the callback. Wrap only the optional image inspection/insertion in a contextual best-effort warning so Index data population always continues. Also route manual `buildRestoreButtonIcon` through the idempotent helper to prevent duplicate buttons.
+- **Breaking-change risk:** None for the getter correction; low for wrapper consolidation.
+- **Focused test:** Index with no images; Index with the assigned restore image; Index with an unrelated image; blocked icon download; repeated `populateActiveIndex()`; Monthly Start/Update final Index refresh.
 
 ### ML1974-002 — Governed overwrite deletes the valid target before replacement exists
 
@@ -130,7 +144,7 @@ The complete compact inventory is in Appendix A. “No static path” means no c
 - **Confidence:** Confirmed
 - **Category:** Diagnostics / testability
 - **Function/workflow:** `runFrameworkSmokeValidation`
-- **Description:** The smoke test checks only 11 `typeof` values and three sheet names. It can pass while `onOpen` immediately fails, as v1.9.74 demonstrates.
+- **Description:** The smoke test checks only 11 `typeof` values and three sheet names. It can pass while `onOpen` immediately fails in the committed baseline or while `populateActiveIndex()` calls the invalid image API in the supplied Module 4 delta.
 - **Evidence/execution path:** `typeof onOpen` is not checked and the function is never invoked with mocked services; the stray identifier is outside the required-symbol checks.
 - **Operational impact:** The built-in smoke result is misleading for startup readiness, although it remains useful for missing workflow symbols/sheets.
 - **Recommended correction:** Add a side-effect-safe callback registry validation and a dedicated startup self-check that validates the startup call chain without invoking UI/service mutations. Do not turn this into broad release certification.
@@ -230,7 +244,7 @@ Strengths: source and output data are generally read in matrices; mapping uses M
 
 Document locks protect formatting, Refined Data, disenrollment, Master List, Monthly Change, archive batches, and web restoration. This is proportionate to a one-to-three-user workbook. Trigger creation deletes prior triggers for the same handler before creating a 15-minute sync trigger, preventing duplicates.
 
-The critical trigger issue is ML1974-001. `onEdit` is intentionally lightweight and non-locking, appropriate for formatting/config presentation, but its silent catch should log a best-effort warning. No enterprise orchestration, global busy service, or broader locking scheme is recommended.
+The critical trigger issue is ML1974-001. The installed/archive sync itself remains proportionate, but the supplied restore-button hook makes every later Index refresh vulnerable to ML1974-008. `onEdit` is intentionally lightweight and non-locking, appropriate for formatting/config presentation, but its silent catch should log a best-effort warning. No enterprise orchestration, global busy service, or broader locking scheme is recommended.
 
 ## 10. Error Handling and Logging Review
 
@@ -260,7 +274,8 @@ Maintainability is reduced by duplicate declarations, stale comments such as “
 ### Phase A — Confirmed correctness defects
 
 1. Remove the lone `JavaScript` token from `onOpen`.
-2. Add a focused startup self-check and verify the simple trigger path.
+2. Replace `getAssignScript()` with `getScript()` and keep image-button work best-effort so Index population cannot be blocked.
+3. Add a focused startup/Index self-check and verify the simple trigger path.
 
 ### Phase B — Broken dependencies and runtime stability
 
@@ -293,6 +308,7 @@ There are no missing menu callbacks or confirmed undefined dependencies to repai
 | Change area | Focused tests |
 |---|---|
 | Startup token | Reload workbook; check `onOpen` execution log, complete menu, sheet-count property, archive sync; test absent optional hooks |
+| Restore button / Index | No image, correct image, unrelated image, failed fetch, repeated refresh, manual icon command, and monthly final Index refresh; confirm no duplicate button and no blocked Index write |
 | Governed replacement | Existing/no-existing target; template copy failure; data write failure; final rename collision; hidden/visible output; dynamic rank; temporary-sheet cleanup |
 | Refined Data | Scratch and sync; no-change path; changed contact/participant; archive rows; injected factory failure preserves prior Refined Data |
 | Disenrollment | New, already-durable, re-enrolled, mixed, no-op; failure before/after each write; repeat-on-notice remains idempotent; totals and hidden historical rows |
@@ -302,11 +318,13 @@ There are no missing menu callbacks or confirmed undefined dependencies to repai
 
 ## 14. Final Conclusion
 
-**Not approved due to identified code defects.** The critical `onOpen` failure is certain, and the governed overwrite/disenrollment commit ordering creates plausible partial-output paths in supported workflows. The framework does not require redesign: the approved single-file, dashboard-driven, template-first, Primary PMR architecture can remain unchanged. After the three Phase A/B corrections and focused regression tests, the remaining medium/low items should not independently block production use.
+**Not approved due to identified code defects.** The critical `onOpen` failure and the supplied Module 4 invalid `getAssignScript()` call are certain, and the governed overwrite/disenrollment commit ordering creates plausible partial-output paths in supported workflows. The framework does not require redesign: the approved single-file, dashboard-driven, template-first, Primary PMR architecture can remain unchanged. After the four Phase A/B corrections and focused regression tests, the remaining medium/low items should not independently block production use.
 
 ---
 
 ## Appendix A — Complete Compact Top-Level Function Inventory
+
+**Baseline inventory note:** The table below inventories the committed v1.9.74 file. The supplied Module 4 delta adds `ensureRestoreButtonOnIndex_`; see Appendix B for its adjusted edge and classification.
 
 **Legend:** Role is inferred from menu/trigger reachability and naming. “Write” is a conservative AST flag for Spreadsheet/Properties/trigger or structural mutation calls in the function body. Callers and dependencies show direct top-level static edges only; callbacks/dynamic calls may not appear.
 
@@ -607,3 +625,14 @@ There are no missing menu callbacks or confirmed undefined dependencies to repai
 | `getDashboardStructuralSectionBounds_` | 7832 | Internal helper | getTemplateTheme_, recalculateDashboardHexCodes_ | — | No |
 | `getTemplateTheme_` | 7858 | Internal helper | applyIndexGroupDividerRules_, getTemplateConfigFromDashboard_ | getHslPercentsFromDashboard_, getDashboardStructuralSectionBounds_, isValidHex_, calculateThemeLevels_ | No |
 | `recalculateDashboardHexCodes_` | 7883 | Internal helper | BuildDefaultFormatDashboard, onEdit, restoreFormatDashboardFromDefault | getHslPercentsFromDashboard_, getDashboardStructuralSectionBounds_, isValidHex_, calculateThemeLevels_ | Yes |
+
+## Appendix B — Supplied Module 4 v2.1.11 Delta
+
+| Function / edge | Classification | Direct callers | Direct dependencies | Write | Review result |
+|---|---|---|---|:---:|---|
+| `ensureRestoreButtonOnIndex_` | Internal best-effort UI helper | `populateIndexData` | `UrlFetchApp.fetch`; `sheet.getImages`; `sheet.insertImage`; `OverGridImage.getScript`; `OverGridImage.assignScript` | Yes | **Correction required:** supplied code uses invalid `getAssignScript()` instead of `getScript()` |
+| `populateIndexData` → `ensureRestoreButtonOnIndex_` | New direct edge | All `populateActiveIndex` and `updateIndexSheet` paths | Restore-button inspection before Index matrix construction | Indirect | Move/guard the optional image operation so failure cannot prevent Index data refresh |
+
+### Delta disposition
+
+The Module 4 update does **not** resolve any of ML1974-001 through ML1974-007. It adds one new High finding, ML1974-008, and changes the aggregate counts to **1 Critical / 3 High / 3 Medium / 1 Low**. With `getScript()` substituted and image handling made non-blocking, the automatic restore-button feature is otherwise compatible with the existing Index architecture. The second escaped/Markdown-rendered copy in the supplied prompt is not executable source and was not treated as a separate module.
