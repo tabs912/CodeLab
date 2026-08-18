@@ -1,97 +1,90 @@
-# Master List v1.9.74.1 — All-Waves Correction Checklist
+# Master List Remediation — All-Waves Correction Checklist
 
-Use this checklist with the exhaustive review and remediation plan. Complete waves in order. Create a new versioned production script; do not overwrite v1.9.74.1.
+**Current reviewed script:** `Master_List/Current Production Script/v1.9.7.4.3`
 
-## Before Starting
+**Legend:** `[x]` statically implemented in v1.9.7.4.3; `[ ]` still required or requires runtime verification.
 
-- [ ] Confirm `Master_List/Current Production Script/v1.9.74.1` is the governing baseline.
-- [ ] Create the next version as **v1.9.74.2**.
-- [ ] Preserve menu names, workflow entry points, dashboard rules, Primary PMR logic, and template-first behavior.
-- [ ] Confirm no binary or `Archive_To_Move` files are included.
+## Before the Next Correction
+
+- [x] Preserve menu names, workflow entry points, dashboard rules, Primary PMR logic, and template-first behavior.
+- [x] Remove the simple-`onOpen` cross-file archive sync.
+- [ ] Create a new versioned production script; do not overwrite v1.9.7.4.3.
+- [ ] Use **v1.9.7.4.4** for the next coordinated correction.
 
 ## Wave 1 — Disenrollment Correctness and Data Safety
 
-**Findings:** ML19741-003, ML19741-004, ML19741-005
-
-- [ ] Require valid PMR columns in Refined Data, existing Disenrolled Exclusion, and target headers.
-- [ ] Stop before any write when a required PMR column is missing or ambiguous.
-- [ ] Calculate and validate every output matrix width before clearing either sheet.
-- [ ] Normalize Refined Data rows to the exact write-range width.
-- [ ] Normalize Disenrolled Exclusion rows to the exact write-range width.
-- [ ] Capture pre-write Refined Data and Disenrolled Exclusion matrices.
-- [ ] Write and verify Disenrolled Exclusion.
-- [ ] Write and verify Refined Data.
-- [ ] Restore the first sheet if the second sheet write fails.
-- [ ] Update totals and historical-row visibility only after both writes succeed.
-- [ ] Test missing/renamed PMR headers, extra physical columns, zero retained rows, re-enrollments, new disenrollments, mixed changes, and injected write failures.
+- [x] Require a valid existing Disenrolled Exclusion PMR column when data exists.
+- [x] Require a valid target Disenrolled Exclusion PMR column.
+- [x] Normalize Refined Data rows to the write-range width.
+- [x] Normalize Disenrolled Exclusion rows to the write-range width.
+- [x] Preserve the pre-write Disenrolled Exclusion matrix.
+- [x] Restore Disenrolled Exclusion if the Refined Data write fails.
+- [ ] Preserve the exact pre-write Refined Data matrix and width.
+- [ ] Restore Refined Data as well as Exclusion after any second-stage clear/write failure.
+- [ ] Verify both restorations before reporting that rollback succeeded.
+- [ ] Distinguish the original write error from any recovery error.
+- [ ] Test failure before and after every clear/write, zero rows, mixed changes, re-enrollment, and repeated execution.
 
 ## Wave 2 — Index Restore-Button Stability
 
-**Findings:** ML19741-001 and part of ML19741-006
-
-- [ ] Replace `getAssignScript()` with `getScript()`.
-- [ ] Keep `assignScript("restoreSheetFromActiveIndexRow")` as the setter.
-- [ ] Ensure image inspection or download failure cannot stop Index data refresh.
-- [ ] Log one contextual best-effort warning when image setup fails.
-- [ ] Make `buildRestoreButtonIcon()` call the same idempotent helper.
-- [ ] Prevent duplicate restore buttons.
-- [ ] Test no image, matching image, unrelated image, failed download, repeated refresh, menu refresh, and Monthly Start/Update finalization.
+- [x] Replace `getAssignScript()` with `getScript()`.
+- [x] Keep `assignScript("restoreSheetFromActiveIndexRow")` as the setter.
+- [x] Catch and log automatic restore-button inspection/download errors.
+- [x] Ensure automatic button failure does not stop Index matrix refresh.
+- [x] Prevent duplicates through `ensureRestoreButtonOnIndex_`.
+- [ ] Make `buildRestoreButtonIcon()` delegate to the idempotent helper.
+- [ ] Test no image, matching image, unrelated image, failed download, repeated automatic refresh, and repeated manual invocation.
 
 ## Wave 3 — Governed Replacement and Trigger Safety
 
-**Findings:** ML19741-002, ML19741-007
-
 ### Governed replacement
 
-- [ ] Generate temporary and backup names within the 100-character Sheets limit.
-- [ ] Build and validate the new sheet before touching the prior target.
-- [ ] Rename the prior target to a backup name.
-- [ ] Rename the completed new sheet to the governed final name.
-- [ ] Verify the final sheet before deleting the backup.
-- [ ] Restore the backup name if the final rename or validation fails.
-- [ ] Test failures at copy, write, old-target rename, new-target rename, verification, and backup deletion.
+- [x] Build the new governed sheet before replacing the prior target.
+- [x] Rename the prior target to a backup before assigning the final name.
+- [x] Restore the backup if the final swap fails.
+- [x] Cap temporary and backup names at the Sheets name limit.
+- [ ] Generate unique temporary and backup names rather than deterministic names.
+- [ ] Move copy and initial temporary naming inside cleanup protection.
+- [ ] Test existing temp/backup collisions, two rapid calls, 100-character names, and every swap failure boundary.
 
-### Trigger decision
+### Trigger behavior
 
-- [ ] Choose archive synchronization behavior:
-  - [ ] **Recommended:** scheduled 15-minute trigger plus manual sync; remove cross-file sync from simple `onOpen`.
-  - [ ] Alternative: create and document an authorized installable open trigger.
-- [ ] Confirm trigger duplicate prevention and owner authorization.
-- [ ] Test simple open, scheduled sync, manual sync, and inaccessible archive behavior.
+- [x] Remove cross-file archive synchronization from simple `onOpen`.
+- [x] Retain scheduled and manual archive synchronization paths.
+- [ ] Runtime-test simple open, scheduled sync, manual sync, trigger ownership, and inaccessible archive behavior.
 
 ## Wave 4 — Evidence-Based Performance Improvements
 
-- [ ] Run corrected v1.9.74.2 timing for Monthly Start, Monthly Update, Format Monthly Sheets, template refresh, disenrollment, and Index refresh.
-- [ ] Compare identical-input output matrices before comparing elapsed time.
-- [ ] Identify only measured, material bottlenecks.
-- [ ] Consolidate redundant Index, configuration, timing, or flush operations only when evidence supports the change.
-- [ ] Confirm no performance change alters output, workflow order, or error handling.
-- [ ] Use **v1.9.74.3** only if code changes are justified.
+- [x] Remove row-by-row re-enrollment deletion.
+- [x] Add batched number-format application.
+- [ ] Correct Monthly Change formatting row count so ranges never exceed the grid.
+- [ ] Remove the duplicate Monthly Change format call and completion timing step.
+- [ ] Measure automatic quality checks added to formatter, Refined, Disenrollment, Master List, and Monthly Change workflows.
+- [ ] Pass the exact output sheet/month to automatic quality validation.
+- [ ] Avoid running hidden quality work inside a core lock when measured cost is material.
+- [ ] Compare identical-input outputs before accepting performance changes.
 
-## Wave 5 — Orphan and Interface Cleanup
+## Wave 5 — Orphan, Duplicate, and Interface Cleanup
 
-**Findings:** ML19741-008, ML19741-009
-
-- [ ] Search direct, indirect, dynamic, trigger, menu, image-script, and external references.
-- [ ] Remove `removeReenrolledRowsFromExclusion_` if no dynamic consumer exists.
-- [ ] Remove `appendDisenrolledRowsAtBottom_` if no dynamic consumer exists.
-- [ ] Decide the `updateIndexSheet(archiveSs)` contract:
-  - [ ] Remove the unused parameter after confirming no external caller uses it; or
-  - [ ] Honor and document the parameter consistently.
-- [ ] Preserve the zero-argument menu callback.
-- [ ] Rerun complete disenrollment and Index regression tests.
+- [x] Remove `removeReenrolledRowsFromExclusion_`.
+- [x] Remove `appendDisenrolledRowsAtBottom_`.
+- [x] Remove the unused `archiveSs` parameter from `updateIndexSheet()`.
+- [x] Preserve the zero-argument Index menu callback.
+- [ ] Remove the duplicate/unreachable Refined Data return.
+- [ ] Remove the duplicate Master List timing mark and return.
+- [ ] Remove duplicate Monthly Change formatting, timing, and return statements.
+- [ ] Confirm one quality/format/timing invocation per completed workflow.
 
 ## Wave 6 — Diagnostics and Maintainability
 
-**Finding:** remaining ML19741-006 work
-
-- [ ] Add side-effect-free smoke checks for required headers and supported image methods.
-- [ ] Ensure smoke validation fails for an invalid Index dependency or missing required PMR schema.
-- [ ] Replace operationally relevant empty catches with contextual best-effort warnings.
-- [ ] Keep optional formatting/index warnings nonfatal.
-- [ ] Remove stale “FIX” or historical comments in functions touched by remediation.
-- [ ] Do not add evidence-only logging or redesign the single-file architecture.
-- [ ] Test smoke PASS plus each focused failure condition.
+- [x] Add smoke checks for the image getter and configured PMR schemas.
+- [x] Log `onEdit` failures contextually.
+- [x] Log automatic restore-button failures contextually.
+- [ ] Replace silent automatic-quality catches with contextual nonfatal warnings.
+- [ ] Ensure automatic quality validates the exact output just created.
+- [ ] Remove stale `FIX`/`NEW` comments and duplicated JSDoc in touched functions.
+- [ ] Ensure rollback messages do not claim success unless both sheets are restored.
+- [ ] Runtime-test smoke PASS and each focused failure condition.
 
 ## Final Regression and Release Checks
 
@@ -99,23 +92,23 @@ Use this checklist with the exhaustive review and remediation plan. Complete wav
 - [ ] Run Monthly Update end to end.
 - [ ] Run individual formatter workflows.
 - [ ] Run Refined Data build and monthly sync.
-- [ ] Run Disenrolled Exclusion update and repeat it to verify idempotence.
+- [ ] Run Disenrolled Exclusion update and repeat it for idempotence.
 - [ ] Run Monthly Change and Master List creation.
 - [ ] Run Index build/update, archive sync, and restore.
 - [ ] Run Dashboard Quality and Framework Smoke Validation.
-- [ ] Confirm all menu callbacks and trigger handler names remain valid.
-- [ ] Confirm final sheet names, ranks, visibility, headers, totals, and Primary PMR behavior.
-- [ ] Review timing results for regressions.
+- [ ] Confirm all 39 menu callbacks and trigger handlers remain valid.
+- [ ] Confirm final names, ranks, visibility, headers, formats, totals, and Primary PMR behavior.
+- [ ] Review current timing results for regressions.
 - [ ] Run `./Framework/tools/prepare_pr.sh`.
 - [ ] Confirm only intended text/source artifacts are staged.
 - [ ] Confirm no binary or excluded-area files are staged.
 
-## Completion
+## Wave Status
 
-- [ ] Wave 1 approved and complete.
-- [ ] Wave 2 approved and complete.
-- [ ] Wave 3 approved and complete.
-- [ ] Wave 4 measured and either completed or documented as unnecessary.
-- [ ] Wave 5 approved and complete.
-- [ ] Wave 6 approved and complete.
-- [ ] Release notes and change log completed for the final version.
+- [ ] **Wave 1:** Partially complete — dual-sheet rollback is not complete.
+- [ ] **Wave 2:** Partially complete — manual restore-button command is not idempotent.
+- [ ] **Wave 3:** Partially complete — core safety is improved; uniqueness/cleanup and runtime trigger tests remain.
+- [ ] **Wave 4:** Partially complete — changes were added without corrected-release timing and include duplicate/out-of-grid formatting.
+- [ ] **Wave 5:** Partially complete — stubs/parameter are corrected; unreachable duplicates remain.
+- [ ] **Wave 6:** Partially complete — smoke checks improved; exact-target quality and warning cleanup remain.
+- [ ] Release notes and final change log completed.
