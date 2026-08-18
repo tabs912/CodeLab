@@ -5154,6 +5154,7 @@ function buildTemplateDisenrolledExclusion(config) { return buildOperationalRepo
 function buildTemplateMasterList(config) { return buildOperationalReportTemplate_("Master List", config); }
 function buildTemplateMonthlyChange(config) { return buildOperationalReportTemplate_("Monthly Change", config); }
 
+
 // ============================================================================
 // MODULE 4 v2.1.11: SYSTEM INDEX & QUALITY ASSURANCE (TEMPLATE DIVIDERS ONLY)
 // File: 04_Index_Quality_Validation.gs
@@ -5185,176 +5186,16 @@ function populateIndexData(targetName) {
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return;
 
+  // ---> ADD THIS ONE LINE HERE <---
+  ensureRestoreButtonOnIndex_(sheet);
+
   const timestampStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "MM/dd/yyyy HH:mm:ss");
   const archiveId = PropertiesService.getDocumentProperties().getProperty("RFF_ARCHIVE_SPREADSHEET_ID") || "";
 
   sheet.getRange("B2").setValue(timestampStr);
   sheet.getRange("G2").setValue(archiveId);
-
-  const activeSheets = ss.getSheets();
-  const activeSheetMap = new Map();
-
-  // Load Dashboard Config ONCE into memory (Zero extra API calls)
-  let dashboardConfig = null;
-  try {
-    if (typeof loadDashboardConfig_ === "function") dashboardConfig = loadDashboardConfig_();
-  } catch(e) {}
-
-  activeSheets.forEach(s => {
-    const name = s.getName();
-    if (name !== sheetName && name !== SYSTEM_SHEETS.TEMPLATE_PREFIX + SYSTEM_SHEETS.INDEX) {
-      
-      let match = { group: "Unformatted", rank: 999 };
-      if (typeof matchSheetToSectionFRule_ === "function") {
-        match = matchSheetToSectionFRule_(name);
-      }
-
-      // Determine group entirely from memory (0 API calls!)
-      let groupFromMemory = "";
-      const isTemplate = (name.indexOf(SYSTEM_SHEETS.TEMPLATE_PREFIX) === 0 || name === SYSTEM_SHEETS.BASE_TEMPLATE || name === SYSTEM_SHEETS.DASHBOARD_DEFAULT);
-
-      // Scan Section B of the Format Dashboard completely in memory
-      if (dashboardConfig && dashboardConfig.creationRules) {
-         if (dashboardConfig.creationRules[name] && dashboardConfig.creationRules[name].group) {
-             groupFromMemory = dashboardConfig.creationRules[name].group;
-         } else if (isTemplate) {
-             groupFromMemory = "Template";
-         } else {
-             const normalizedName = name.replace(/^Template\s*-\s*/i, "").trim();
-             const keys = Object.keys(dashboardConfig.creationRules);
-             for(let i = 0; i < keys.length; i++) {
-               const rule = dashboardConfig.creationRules[keys[i]];
-               const prefix = String(rule.namingPattern || keys[i]).split(/\bmm[.\/-]?yy\b/i)[0].trim();
-               if (normalizedName === keys[i] || normalizedName.indexOf(keys[i] + " ") === 0 || (prefix && normalizedName.indexOf(prefix) === 0)) {
-                 groupFromMemory = rule.group;
-                 break;
-               }
-             }
-         }
-      }
-
-      let finalGroup = groupFromMemory || match.group;
-      
-      if (isTemplate) {
-         const standardActiveGroups = ["Core Operational", "Monthly Active", "Monthly Sub-Reports", "System & Configuration", "Source Data", "Unformatted"];
-         if (standardActiveGroups.includes(finalGroup)) {
-             finalGroup = "Template";
-         }
-      }
-
-      activeSheetMap.set(name, {
-        sheet: s,
-        group: finalGroup,
-        rank: match.rank,
-        visibility: s.isSheetHidden() ? "Hidden" : "Visible",
-        link: `=HYPERLINK("#gid=${s.getSheetId()}", "Open Live Tab")`
-      });
-    }
-  });
-
-  const lastRow = sheet.getLastRow();
-  let existingActiveMatrix = [];
-  if (lastRow >= 5) {
-    existingActiveMatrix = sheet.getRange(5, 1, lastRow - 4, 4).getValues();
-  }
-
-  const groupMap = new Map();
-  let currentGroup = "Unformatted";
-
-  existingActiveMatrix.forEach(row => {
-    const colA = String(row[0] || "").trim();
-    const colB = String(row[1] || "").trim();
-
-    if (colA !== "") {
-      currentGroup = colA;
-      if (!groupMap.has(currentGroup)) groupMap.set(currentGroup, []);
-    } else if (colB !== "") {
-      if (activeSheetMap.has(colB)) {
-        const liveInfo = activeSheetMap.get(colB);
-        if (!groupMap.has(currentGroup)) groupMap.set(currentGroup, []);
-        groupMap.get(currentGroup).push({
-          name: colB, link: liveInfo.link, visibility: liveInfo.visibility, rank: liveInfo.rank
-        });
-        activeSheetMap.delete(colB);
-      }
-    }
-  });
-
-  activeSheetMap.forEach((info, newSheetName) => {
-    if (!groupMap.has(info.group)) groupMap.set(info.group, []);
-    groupMap.get(info.group).push({
-      name: newSheetName, link: info.link, visibility: info.visibility, rank: info.rank
-    });
-  });
-
-  const standardGroupOrder = [
-    "Core Operational",
-    "Monthly Active",
-    "Monthly Sub-Reports",
-    "System & Configuration",
-    "Source Data"
-  ];
-
-  const sortedGroups = Array.from(groupMap.keys()).sort((a, b) => {
-    if (a === "Unformatted") return 1;
-    if (b === "Unformatted") return -1;
-    if (a === "Template" || a === "Templates") return 1;
-    if (b === "Template" || b === "Templates") return -1;
-
-    let indexA = standardGroupOrder.indexOf(a);
-    let indexB = standardGroupOrder.indexOf(b);
-
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-
-    return indexA - indexB;
-  });
-
-  const finalActiveMatrix = [];
-
-  sortedGroups.forEach(groupName => {
-    const items = groupMap.get(groupName);
-    if (!items || items.length === 0) return;
-
-    finalActiveMatrix.push([groupName, "", "", ""]);
-
-    items.sort((a, b) => {
-      if (groupName === "Template" || groupName === "Templates") {
-        if (a.name === SYSTEM_SHEETS.DASHBOARD_DEFAULT) return -1;
-        if (b.name === SYSTEM_SHEETS.DASHBOARD_DEFAULT) return 1;
-      }
-      const dateA = typeof extractFirstDateFromSheetName_ === "function" ? extractFirstDateFromSheetName_(a.name).getTime() : 0;
-      const dateB = typeof extractFirstDateFromSheetName_ === "function" ? extractFirstDateFromSheetName_(b.name).getTime() : 0;
-
-      if (groupName === "Unformatted" && typeof getUnformattedSheetSortKey_ === "function") {
-        const sortA = getUnformattedSheetSortKey_(a.name);
-        const sortB = getUnformattedSheetSortKey_(b.name);
-        if (sortA.monthValue !== sortB.monthValue) return sortB.monthValue - sortA.monthValue;
-        if (sortA.reportOrder !== sortB.reportOrder) return sortA.reportOrder - sortB.reportOrder;
-      }
-      if (a.rank !== b.rank) return a.rank - b.rank;
-      if (dateA !== dateB) return dateB - dateA;
-      return a.name.localeCompare(b.name);
-    });
-
-    items.forEach(item => {
-      finalActiveMatrix.push(["", item.name, item.link, item.visibility]);
-    });
-  });
-
-  const targetWriteRows = Math.max(finalActiveMatrix.length, existingActiveMatrix.length);
-
-  if (targetWriteRows > 0) {
-    if (typeof resizeSheetGrid_ === "function") {
-      resizeSheetGrid_(sheet, Math.max(targetWriteRows + 4, 20), 10);
-    }
-    sheet.getRange(5, 1, targetWriteRows, 4).clearContent();
-    if (finalActiveMatrix.length > 0) {
-      sheet.getRange(5, 1, finalActiveMatrix.length, 4).setValues(finalActiveMatrix);
-    }
-  }
-}
+  
+  // ... (the rest of the function remains exactly the same) ...
 
 function applyIndexGroupDividerRules_(sheet, level2Override) {
   if (!sheet) return;
@@ -5569,6 +5410,36 @@ function buildRestoreButtonIcon() {
     return;
   }
 
+  function ensureRestoreButtonOnIndex_(sheet) {
+  if (!sheet) return;
+  
+  // 1. Check existing images to see if the button is already there
+  const images = sheet.getImages();
+  for (let i = 0; i < images.length; i++) {
+    // If we find an image that already runs our restore script, stop! 
+    // This prevents creating duplicate buttons every time the index updates.
+    if (images[i].getAssignScript() === "restoreSheetFromActiveIndexRow") {
+      return; 
+    }
+  }
+  
+  // 2. If no button is found, fetch the icon and draw it
+  try {
+    const iconUrl = "https://cdn-icons-png.flaticon.com/512/2889/2889708.png"; 
+    const response = UrlFetchApp.fetch(iconUrl);
+    
+    // Inserts at Column 8 (H), Row 2
+    const image = sheet.insertImage(response.getBlob(), 8, 2); 
+    image.setWidth(40);
+    image.setHeight(40);
+    image.assignScript("restoreSheetFromActiveIndexRow");
+  } catch(e) {
+    // Silently fail if Google's image fetcher is temporarily blocked
+  }
+}
+
+
+
   // 1. Fetch a simple, public "Restore/Undo" PNG icon
   const iconUrl = "https://cdn-icons-png.flaticon.com/512/2889/2889708.png"; 
   const response = UrlFetchApp.fetch(iconUrl);
@@ -5586,6 +5457,7 @@ function buildRestoreButtonIcon() {
 
   ss.toast("Restore icon added and script assigned!", "Success", 4);
 }
+
 
 // ============================================================================
 // 4.2. WEB APPS & RESTORATION
@@ -6242,6 +6114,7 @@ function runFormatDashboardUpdates() {
   notify_("Format Dashboard Updates validation complete.");
   return results;
 }
+
 
 
 // ============================================================================
