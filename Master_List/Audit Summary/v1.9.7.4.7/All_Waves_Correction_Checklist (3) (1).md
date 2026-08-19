@@ -1,95 +1,89 @@
-# **Master List Remediation — All-Waves Correction Checklist**
+# Master List Remediation — All-Waves Correction Checklist
 
-**Current reviewed script:** `Master_List/Current Production Script/v1.9.7.4.6` **Current evidence:** timing and Dashboard Quality reports in `Master_List/Audit Summary/v1.9.7.4.6/` **Legend:** `[x]` statically implemented or demonstrated by supplied evidence; `[ ]` still required.
+**Current reviewed script:** `Master_List/Current Production Script/v1.9.7.4.7`
+**Current evidence:** final timing and Dashboard Quality reports in `Master_List/Audit Summary/v1.9.7.4.7/`
+**Legend:** `[x]` statically implemented or demonstrated by supplied evidence; `[ ]` still required.
 
-## **Release preparation**
+## Release preparation
 
-- [x] Review v1.9.7.4.6 as the governing source.  
-- [x] Incorporate the supplied timing and quality evidence.  
-- [ ] Create a new versioned production script; do not overwrite v1.9.7.4.6.  
-- [ ] Use `v1.9.7.4.7` for the next correction.
+- [x] Review v1.9.7.4.7 as the governing source.
+- [x] Incorporate the supplied final timing and quality evidence.
+- [x] Identify the restore authorization/routing defect.
+- [ ] Create a new versioned production script; do not overwrite v1.9.7.4.7.
+- [ ] Use `v1.9.7.4.8` for the restore correction.
 
-## **Wave 1 — Deterministic declarations and setup**
+## Wave 1 — Deterministic declarations and setup
 
-- [x] Consolidate `isPrimaryPMRRowValue_` to one declaration.  
-- [x] Consolidate `writeUniqueParticipantTotalToG1_` and retain the approved rich-text totals behavior.  
-- [x] Consolidate `hideReportTemplates_` to one declaration.  
-- [x] Consolidate `runDashboardQualityValidateTemplates` to one declaration and one row schema.  
-- [x] Remove the duplicate `setupArchiveSyncTrigger()` call from `quickSystemSetup()`.  
-- [x] Leave exactly one owned 15-minute archive trigger after setup.  
-- [x] Use one guarded lock release per workflow; keep quality outside the lock.  
-- [x] Confirm zero duplicate top-level function names and all menu/trigger callbacks resolve.
+- [x] Consolidate the previously duplicated top-level declarations.
+- [x] Remove the duplicate archive-trigger setup call.
+- [x] Keep quality outside the document-lock commit scope.
+- [ ] Runtime-confirm one owned archive-sync trigger and every menu/trigger callback.
 
-## **Wave 2 — Data safety and recovery**
+## Wave 2 — Data safety and recovery
 
-- [x] Preserve both Refined Data and Disenrolled Exclusion pre-write matrices.  
-- [x] Restore both matrices after a dual-sheet commit failure.  
-- [x] Use collision-checked bounded temporary and backup names.  
-- [x] Track governed-factory lifecycle state and protect committed final sheets from outer cleanup.  
-- [x] Inject failures before/after every clear, write, rename, delete, and flush.  
-- [x] Prove one valid governed target survives every factory failure boundary.  
-- [x] Prove dual-sheet operations either fully commit or fully restore.  
-- [x] Test zero rows, mixed changes, re-enrollment, and idempotent repeat.
+- [x] Preserve dual-sheet pre-write matrices and implement recovery paths.
+- [x] Use collision-checked governed-factory temporary and backup names.
+- [x] Track governed-factory lifecycle state.
+- [ ] Execute and retain evidence for failure injection at every clear, write, rename, delete, and flush boundary.
+- [ ] Prove dual-sheet operations fully commit or fully restore.
+- [ ] Prove one valid governed target survives every factory failure boundary.
 
-## **Wave 3 — Template and setup performance**
+## Wave 3 — Template and setup performance
 
-- [x] Record Quick System Setup Phase 1 at 135.217 seconds.  
-- [x] Record Quick Build Templates at 105.257–112.072 seconds.  
-- [x] Batch operational subheader values and formatting.  
-- [ ] Cache dashboard/theme/configuration inputs reused by template builders.  
-- [x] Eliminate avoidable range/service calls inside template row loops.  
-- [ ] Compare values, merges, formats, dimensions, visibility, and ordering to the baseline.  
-- [ ] Demonstrate a material timing improvement on equivalent data.
+- [x] Supply a final timing report.
+- [x] Record Quick System Setup Phase 1 at 84.263 seconds.
+- [x] Record Quick Build Templates at 153.373 seconds.
+- [ ] Demonstrate equivalent values, merges, formats, dimensions, visibility, and ordering after batching changes.
+- [ ] Reduce the measured template-build regression on equivalent data.
 
-## **Wave 4 — Monthly workflow performance**
+## Wave 4 — Monthly and archive performance
 
-- [x] Record Format Monthly Sheets 08.26 at 114.408 seconds.  
-- [x] Identify Raw Data source-only verification at 33.880 seconds.  
-- [x] Record Monthly Change 08.26 at 41.207 seconds.  
-- [x] Record Create Monthly Update 08.26 at 134.985 seconds.  
-- [x] Identify Monthly Update Index refresh at 21.597 seconds.  
-- [x] Short-circuit verification when no source-only columns require preservation.  
-- [x] Reuse already-read matrices and avoid redundant full-grid comparisons.  
-- [x] Profile and batch Index refresh calls.  
-- [ ] Obtain business approval before removing the repeated disenrollment safety pass.  
-- [ ] Prove output matrices and participant totals are identical before accepting optimizations.
+- [x] Record Format Monthly Sheets runs up to 180.711 seconds.
+- [x] Record Create Monthly Update runs up to 200.183 seconds.
+- [x] Record Archive Monthly Sub-Reports at 140.031 seconds.
+- [ ] Optimize only with equivalent workbook state, row counts, and output matrices.
+- [ ] Resolve repeated disenrollment only after business approval.
+- [ ] Profile Index refresh, source-only verification, sheet visibility, and archive copy calls.
 
-## **Wave 5 — Restore and interface cleanup**
+## Wave 5 — Archive restore — blocking
 
-- [x] Use Index checkboxes as the current restore interaction.  
-- [x] Decide whether the legacy image-button path is retired or supported.  
-- [x] Before removal, check menus, triggers, assigned scripts, `onEdit`, strings, and external consumers.  
-- [ ] Runtime-test checkbox selection, divider rows, cancellation, success, archive failure, and repeat sync.  
-- [x] Retain one documented, unambiguous restore interface.
+- [x] Reproduce/report an error when restoring from the Archive.
+- [x] Confirm checkbox restoration is invoked from reserved `onEdit(e)`.
+- [x] Confirm that path requires cross-workbook `openById()` and `copyTo()` authorization.
+- [ ] Remove cross-workbook restoration from the simple-trigger execution path.
+- [ ] Implement an authorized **Restore Selected Archive Sheet(s)** menu command, or securely deploy and validate the web-app route.
+- [ ] Resolve the governed **Archive Sheet Name** header explicitly rather than the first generic `sheet name` header.
+- [ ] Clear a checkbox only after successful restoration; preserve/reinstate selection on cancellation or failure.
+- [ ] Open the archive once per authorized batch and refresh the Index once.
+- [ ] Provide accurate per-sheet success, collision, missing-sheet, configuration, and permission messages.
+- [ ] Runtime-test success, cancellation, divider rows, local collision, missing archive sheet, invalid archive ID, denied permission, copy/rename failure, and repeat restore.
+- [ ] Confirm no duplicate/racing simple and installable edit handlers.
 
-## **Wave 6 — Quality, diagnostics, and release evidence**
+## Wave 6 — Quality, diagnostics, and release evidence
 
-- [x] Dashboard sections B–H pass.  
-- [x] All ten governed templates and governed date formats pass.  
-- [x] Supplied quality summary has zero failures and two expected missing-active-sheet warnings.  
-- [x] Raw Data, Refined Data, Disenrolled Exclusion, Monthly Change, and Master List health checks pass.  
-- [x] Targeted quality checks run post-lock and take about 1.8–3.2 seconds each.  
-- [ ] Build CP Due Date and Unlock CP active outputs and rerun quality to clear expected presence warnings.  
-- [x] Run Framework Smoke Validation and all focused failure cases.  
-- [ ] Repeat timing on equivalent workbook state and row counts.  
-- [ ] Update release notes, change log, known issues, and dependency/performance impacts.
+- [x] Supplied Dashboard Quality output reports no failed quality items in its summary.
+- [x] Active CP Due Date, Unlock CP, Raw Data, Refined Data, Disenrolled Exclusion, Monthly Change, and Master List checks pass in the supplied report.
+- [ ] Add restore timing/outcome evidence; current reports do not validate restoration.
+- [ ] Run Framework Smoke Validation after the restore correction.
+- [ ] Repeat timing and quality on equivalent workbook state.
+- [ ] Update release notes, change log, known issues, and authorization/deployment requirements.
 
-## **Final regression and PR checks**
+## Final regression and PR checks
 
-- [ ] Run Monthly Start and Monthly Update end to end.  
-- [ ] Run individual formatters, Refined build/sync, disenrollment twice, Monthly Change, and Master List.  
-- [ ] Run Index build/update, archive sync, checkbox restore, and deletion refresh.  
-- [ ] Test simple open, manual/scheduled sync, inaccessible archive, and concurrent execution.  
-- [ ] Confirm names, ranks, visibility, headers, formats, totals, and Primary PMR behavior.  
-- [ ] Run `./Framework/tools/prepare_pr.sh`.  
-- [ ] Confirm only intended text/source artifacts and no binaries or excluded files are staged.
+- [ ] Successfully restore at least one archived sheet through the supported authorized entry point.
+- [ ] Run the complete restore negative-test matrix.
+- [ ] Run Monthly Start, Monthly Update, individual formatters, Refined sync, disenrollment, Monthly Change, and Master List.
+- [ ] Run Index build/update, archive sync, restore, deletion refresh, and inaccessible-archive tests.
+- [ ] Test simple open/edit, manual and scheduled sync, web app if retained, and concurrent execution.
+- [ ] Confirm names, ranks, visibility, headers, formats, totals, and Primary PMR behavior.
+- [ ] Run `./Framework/tools/prepare_pr.sh`.
+- [ ] Confirm only intended text/source artifacts and no binary or excluded files are staged.
 
-## **Wave status**
+## Wave status
 
-- [ ] **Wave 1:** Required — duplicate declarations/setup and lock cleanup remain.  
-- [ ] **Wave 2:** Statically implemented; destructive runtime verification remains.  
-- [ ] **Wave 3:** Required — setup/template timing is a measured bottleneck.  
-- [ ] **Wave 4:** Required — monthly workflow bottlenecks are measured; changes require equivalence tests.  
-- [ ] **Wave 5:** Decision and runtime restore testing remain.  
-- [ ] **Wave 6:** Quality evidence is strong; missing-output, smoke, timing, and release gates remain.
-
+- [ ] **Wave 1:** Static corrections present; runtime callback/trigger ownership evidence remains.
+- [ ] **Wave 2:** Static safeguards present; destructive runtime evidence remains.
+- [ ] **Wave 3:** Timing regressed; equivalence and performance acceptance remain.
+- [ ] **Wave 4:** Significant monthly/archive bottlenecks remain.
+- [ ] **Wave 5:** **Blocked/failed — simple-trigger restore crosses an authorization boundary.**
+- [ ] **Wave 6:** Quality evidence is positive, but restore and full release gates remain.
